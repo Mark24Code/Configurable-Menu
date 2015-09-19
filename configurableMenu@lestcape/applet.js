@@ -7199,6 +7199,8 @@ ConfigurableMenu.prototype = {
    on_paint: function(actor) {
       if(Main.popup_rendering)
          Main.popup_rendering = false;
+      if(Main.popup_rendering_actor)
+         Main.popup_rendering_actor = null;
    },
 
    setEffect: function(effect) {
