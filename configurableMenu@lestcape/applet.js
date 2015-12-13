@@ -70,15 +70,7 @@ let appsys = Cinnamon.AppSystem.get_default();
 
 const USER_DESKTOP_PATH = FileUtils.getUserDesktopDir();
 
-//const MAX_FAV_ICON_SIZE = 32;
-//const HOVER_ICON_SIZE = 68;
-//const APPLICATION_ICON_SIZE = 22;
-//const CATEGORY_ICON_SIZE = 22
 const MAX_RECENT_FILES = 20;
-const CATEGORY_ARROW_SIZE = 12;
-const INITIAL_BUTTON_LOAD = 30;
-const POPUP_ANIMATION_TIME = 0.15;
-;
 
 function _(str) {
    let resultConf = Gettext.dgettext("configurableMenu@lestcape", str);
@@ -87,52 +79,7 @@ function _(str) {
    }
    return Gettext.gettext(str);
 };
-/*
-function SettingComboHandler(settings, comboName) {
-   this._init(settings, comboName);
-}
 
-SettingComboHandler.prototype = {
-   _init: function(settings, comboName) {
-      this.settings = settings;
-      this.comboName = comboName;
-      this.pathToOriginalSettings = GLib.get_home_dir() + "/.local/share/cinnamon/applets/" + uuid + "/settings-schema.json";
-      this.orgSettingsJson= JSON.parse(Cinnamon.get_file_contents_utf8_sync(this.pathToOriginalSettings));
-      this.file_changed_timeout = 0;
-   },
-
-   _readDataFromCombo: function() {
-   },
-
-   _writeDataToCombo: function(json, data) {
-      try {
-         let fontItem, lengthItem, family;
-         json["search-engine"]["options"] = data;
-         let raw_file = JSON.stringify(new_json, null, 4);
-         let file = Gio.file_new_for_path(patch);
-         if(file.delete(null, null)) {
-            let f = Gio.file_new_for_path(this.file.get_path());
-            let raw = f.replace(null, false, Gio.FileCreateFlags.NONE, null);
-            let out_file = Gio.BufferedOutputStream.new_sized (raw, 4096);
-            Cinnamon.write_string_to_stream(out_file, JSON.stringify(this.json, null, 4));
-            out_file.close(null);
-            if(this.file_changed_timeout == 0)
-               this.file_changed_timeout = Mainloop.timeout_add(300, Lang.bind(this, this._reloadData))
-         } else {
-            //global.logError("Failed gain write access to settings file for applet/desklet '" + this.uuid + "', instance ") + this.instanceId;
-         }
-      } catch(e) {
-         this.showErrorMessage(e.message);
-      }
-   },
-
-   _reloadData: function() {
-      Mainloop.source_remove(this.file_changed_timeout);
-      this.file_changed_timeout = 0;
-      this.settings._maybe_update_settings_file();
-   }
-};
-*/
 function SpecialBookmarks(name, icon, path) {
    this._init(name, icon, path);
 }
@@ -316,638 +263,6 @@ VisibleChildIterator.prototype = {
    }
 };
 
-function ConfigurableMenu(launcher, orientation, subMenu) {
-   this._init(launcher, orientation, subMenu);
-}
-
-ConfigurableMenu.prototype = {
-   //__proto__: PopupMenu.PopupMenuBase.prototype,
-     __proto__: Applet.AppletPopupMenu.prototype,
-
-   _init: function(launcher, orientation, subMenu) {
-      PopupMenu.PopupMenuBase.prototype._init.call (this, launcher.actor, 'popup-menu-content');
-      try {
-         this._arrowAlignment = 0.0;
-         this._arrowSide = orientation;
-         this.subMenu = subMenu;
-         this.effectType = "none";
-         this.effectTime = 0.4;
-
-         this._boxPointer = new ConfigurableMenus.ConfigurablePointer(orientation,
-                                                    { x_fill: true,
-                                                      y_fill: true,
-                                                      x_align: St.Align.START });
-         this.actor = this._boxPointer.actor;
-         Main.uiGroup.add_actor(this.actor);
-
-         this.actor._delegate = this;
-         this.actor.style_class = 'popup-menu-boxpointer';
-         this.actor.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
-
-         this._boxWrapper = new Cinnamon.GenericContainer();
-         this._boxWrapper.connect('get-preferred-width', Lang.bind(this, this._boxGetPreferredWidth));
-         this._boxWrapper.connect('get-preferred-height', Lang.bind(this, this._boxGetPreferredHeight));
-         this._boxWrapper.connect('allocate', Lang.bind(this, this._boxAllocate));
-         this._boxPointer.bin.set_child(this._boxWrapper);
-         this._boxWrapper.add_actor(this.box);
-         this.actor.add_style_class_name('popup-menu');
-
-         global.focus_manager.add_group(this.actor);
-         this.actor.reactive = true;
-         this.actor.hide();
-      } catch(e) {
-         Main.notify("ErrorMenuCreation", e.message);
-      }
-   },
-
-   on_paint: function(actor) {
-      if(Main.popup_rendering)
-         Main.popup_rendering = false;
-      if(Main.popup_rendering_actor)
-         Main.popup_rendering_actor = null;
-   },
-
-   setEffect: function(effect) {
-      this.effectType = effect;
-   },
-
-   setEffectTime: function(effectTime) {
-      this.effectTime = effectTime;
-   },
-
-   setArrowSide: function(side) {
-      this._arrowSide = side;
-      this._boxPointer.setArrowSide(side);
-   },
-
-   _boxGetPreferredWidth: function (actor, forHeight, alloc) {
-      let columnWidths = this.getColumnWidths();
-      this.setColumnWidths(columnWidths);
-      // Now they will request the right sizes
-      [alloc.min_size, alloc.natural_size] = this.box.get_preferred_width(forHeight);
-   },
-
-   _boxGetPreferredHeight: function (actor, forWidth, alloc) {
-      [alloc.min_size, alloc.natural_size] = this.box.get_preferred_height(forWidth);
-   },
-
-   _boxAllocate: function (actor, box, flags) {
-      this.box.allocate(box, flags);
-   },
-
-   _onKeyPressEvent: function(actor, event) {
-      if(event.get_key_symbol() == Clutter.Escape) {
-         this.close(true);
-         return true;
-      }
-      return false;
-   },
-
-   setArrowOrigin: function(origin) {
-      this._boxPointer.setArrowOrigin(origin);
-   },
-
-   setSourceAlignment: function(alignment) {
-      this._boxPointer.setSourceAlignment(alignment);
-   },
-
-   // Setting the max-height won't do any good if the minimum height of the
-   // menu is higher then the screen; it's useful if part of the menu is
-   // scrollable so the minimum height is smaller than the natural height
-   setMaxHeight: function() {
-      if(Main.panelManager) {
-         let [x, y] = this.sourceActor.get_transformed_position();
-
-         let i = 0;
-         let monitor;
-         for (; i < global.screen.get_n_monitors(); i++) {
-            monitor = global.screen.get_monitor_geometry(i);
-            if(x >= monitor.x && x < monitor.x + monitor.width &&
-               x >= monitor.y && y < monitor.y + monitor.height) {
-               break;
-            }
-         }
-
-         let maxHeight = monitor.height - this.actor.get_theme_node().get_length('-boxpointer-gap');
-
-         let panels = Main.panelManager.getPanelsInMonitor(i);
-         for(let j in panels) {
-            maxHeight -= panels[j].actor.height;
-         }
-
-         this.actor.style = ('max-height: ' + maxHeight / global.ui_scale + 'px;');
-      } else {
-         let monitor = Main.layoutManager.primaryMonitor;
-         let maxHeight = Math.round(monitor.height - Main.panel.actor.height - this.actor.get_theme_node().get_length('-boxpointer-gap'));
-         if (Main.panel2!=null) maxHeight -= Main.panel2.actor.height;
-            this.actor.style = ('max-height: ' + maxHeight + 'px;');
-      }
-   },
-
-//*************************************************
-   _onKeyFocusOut: function (actor) {
-      if(this._popupMenu.isOpen)
-          return true;
-        this.setActive(false);
-      return false;
-    },
-
-   showBoxPointer: function(arrow) {
-      this._boxPointer.showArrow(arrow);
-   },
-
-   fixToCorner: function(fixCorner) {
-      this._boxPointer.fixToCorner(this.sourceActor, fixCorner);
-   },
-
-   fixToScreen: function(fixCorner) {
-      this._boxPointer.fixToScreen(this.sourceActor, fixCorner);
-   },
-
-   setResizeArea: function(resizeSize) {
-      this._boxPointer.setResizeArea(resizeSize);
-   },
-
-   setResizeAreaColor: function(resizeColor) {
-      this._boxPointer.setResizeAreaColor(resizeColor);
-   },
-
-   repositionActor: function(actor) {
-      if((this.sourceActor)&&(this.sourceActor != actor)) {
-         if(this.isOpen)
-            this._boxPointer.trySetPosition(actor, this._arrowAlignment);
-      }
-   },
-
-   setSubMenu: function(subMenu) {
-      this.subMenu = subMenu;
-   },
-
-   getCurrentMenuThemeNode: function() {
-      return this._boxPointer.getCurrentMenuThemeNode();
-   },
-
-   shiftPosition: function(x, y) {
-      this._boxPointer.shiftPosition(x, y);
-   },
-
-   openClean: function(animate) {
-      Applet.AppletPopupMenu.prototype.open.call(this, animate);
-   },
-
-   closeClean: function(animate) {
-      Applet.AppletPopupMenu.prototype.close.call(this, animate);
-   },
-
-   open: function(animate) {
-      //if(this.subMenu)
-      //   this.subMenu.close();
-      if(!this.isOpen) {
-         this.openClean();
-         this.repositionActor(this.sourceActor);
-         this._applyEffectOnOpen();
-      }
-   },
-
-   close: function(animate) {
-      //if(this.subMenu)
-      //   this.subMenu.close();
-      if(this.isOpen) {
-         this._applyEffectOnClose();
-      }
-   },
-
-   _applyEffectOnOpen: function(animate) {
-      switch(this.effectType) {
-         case "none"  :
-            this._effectNoneOpen();
-            break;
-         case "dispel":
-            this._effectDispelOpen();
-            break;
-         case "hideHorizontal"  :
-            this._effectHideHorizontalOpen();
-            break;
-         case "hideVertical"  :
-            this._effectHideVerticalOpen();
-            break;
-         case "scale" :
-            this._effectScaleOpen();
-            break;
-         case "windows":
-            this._effectWindowsOpen();
-            break;
-      }
-   },
-
-   _applyEffectOnClose: function(animate) {
-      switch(this.effectType) {
-         case "none"  :
-            this._effectNoneClose(animate);
-            break;
-         case "dispel":
-            this._effectDispelClose();
-            break;
-         case "hideHorizontal":
-            this._effectHideHorizontalClose();
-            break;
-         case "hideVertical":
-            this._effectHideVerticalClose();
-            break;
-         case "scale" :
-            this._effectScaleClose();
-            break;
-         case "windows":
-            this._effectWindowsClose();
-            break;
-      }
-   },
-
-   _effectNoneOpen: function() {
-   },
-
-   _effectNoneClose: function(animate) {
-      this.closeClean(animate);
-   },
-
-   _effectDispelOpen: function() {
-      Tweener.addTween(this.actor,
-      {  opacity: 0,
-         time: 0,
-         transition: 'easeInSine',
-         onComplete: Lang.bind(this, function() {
-            Tweener.addTween(this.actor,
-            {  opacity: 255,
-               time: this.effectTime,
-               transition: 'easeInSine'
-            })
-         })
-      });
-   },
-
-   _effectDispelClose: function() {
-      Tweener.addTween(this.actor,
-      {  opacity: 0,
-         time: this.effectTime,
-         transition: 'easeInSine',
-         onComplete: Lang.bind(this, function() {
-            Applet.AppletPopupMenu.prototype.close.call(this, false);
-         })
-      });
-   },
-/*
-   _effectGetOutOpen: function() {
-      let [startX, ay] = this.sourceActor.get_transformed_position();
-      let monitor = Main.layoutManager.primaryMonitor;
-      if(startX > monitor.x + monitor.width/2)
-          startX = monitor.x + monitor.width + 3*this.actor.width/2;
-      else
-          startX = 0;
-      Tweener.addTween(this.actor,
-      {
-         x: startX,
-         time: 0,
-        // rotation_angle_x: -90,
-         rotation_angle_y: 180,
-         //rotation_angle_z: 90,
-         transition: 'easeOutQuad',
-         onComplete: Lang.bind(this, function() {
-            Tweener.addTween(this.actor,
-            {
-                x: 0,
-                //rotation_angle_x: 0,
-                rotation_angle_y: 0,
-                //rotation_angle_z: 0,
-                time: this.effectTime
-            })
-         })
-      });
-   },
-
-   _effectGetOutClose: function() {
-      let [startX, ay] = this.sourceActor.get_transformed_position();
-      let monitor = Main.layoutManager.primaryMonitor;
-      if(startX > monitor.x + monitor.width/2)
-          startX = monitor.x + monitor.width + 3*this.actor.width/2;
-      else
-          startX = 0;
-      Tweener.addTween(this.actor,
-      {
-         x: startX,
-         rotation_angle_y: 180,
-         time: this.effectTime,
-         transition: 'easeOutQuad',
-         onComplete: Lang.bind(this, function() {
-            
-            Applet.AppletPopupMenu.prototype.close.call(this, false);
-            Tweener.addTween(this.actor,
-            {
-                x: 0,
-                rotation_angle_y: 0,
-                time: 0
-            })
-         })
-      });
-   },*/
-
-   _effectWindowsOpen: function() {
-     let [startX, ay] = this.sourceActor.get_transformed_position();
-      let monitor = Main.layoutManager.primaryMonitor;
-      if(startX > monitor.x + monitor.width/2)
-          startX = monitor.x + monitor.width + 3*this.actor.width/2;
-      else
-          startX = 0;
-      Tweener.addTween(this.actor,
-      {
-         x: startX,
-         time: 0,
-         rotation_angle_y: 180,
-         transition: 'easeOutQuad',
-         onComplete: Lang.bind(this, function() {
-            Tweener.addTween(this.actor,
-            {
-                x: 0,
-                rotation_angle_y: 0,
-                time: this.effectTime
-            })
-         })
-      });
-   },
-
-   _effectWindowsClose: function() {
-      let [startX, ay] = this.sourceActor.get_transformed_position();
-      let monitor = Main.layoutManager.primaryMonitor;
-      if(startX > monitor.x + monitor.width/2)
-          startX = monitor.x + monitor.width + 3*this.actor.width/2;
-      else
-          startX = 0;
-      Tweener.addTween(this.actor,
-      {
-         x: startX,
-         rotation_angle_y: 180,
-         time: this.effectTime,
-         transition: 'easeOutQuad',
-         onComplete: Lang.bind(this, function() {
-            Applet.AppletPopupMenu.prototype.close.call(this, false);
-            Tweener.addTween(this.actor,
-            {
-                x: 0,
-                rotation_angle_y: 0,
-                time: 0
-            })
-         })
-      });
-   },
-
-  _effectHideHorizontalOpen: function() {
-      let [startX, ay] = this.sourceActor.get_transformed_position();
-      let monitor = Main.layoutManager.primaryMonitor;
-      if(startX > monitor.x + monitor.width/2)
-         startX += this.sourceActor.width;
-      Tweener.addTween(this.actor,
-      {
-         x: startX,
-         scale_x: 0,
-         opacity: 255,
-         time: 0,
-         transition: 'easeOutQuad',
-         onComplete: Lang.bind(this, function() {
-            Tweener.addTween(this.actor,
-            {
-                x: 0,
-                scale_x: 1,
-                opacity: 255,
-                time: this.effectTime
-            })
-         })
-      });
-   },
-
-   _effectHideHorizontalClose: function() {
-      let [startX, ay] = this.sourceActor.get_transformed_position();
-      let monitor = Main.layoutManager.primaryMonitor;
-      if(startX > monitor.x + monitor.width/2)
-         startX += this.sourceActor.width;
-      Tweener.addTween(this.actor,
-      {
-         x: startX,
-         scale_x: 0,
-         opacity: 255,
-         time: this.effectTime,
-         transition: 'easeOutQuad',
-         onComplete: Lang.bind(this, function() {
-            Applet.AppletPopupMenu.prototype.close.call(this, false);
-            Tweener.addTween(this.actor,
-            {
-                x: 0,
-                scale_x: 1,
-                opacity: 255,
-                time: 0
-            })
-         })
-      });
-   },
-
-   _effectHideVerticalOpen: function() {
-      let startY = this.sourceActor.height;
-      if(this._arrowSide == St.Side.BOTTOM) {
-         let monitor = Main.layoutManager.primaryMonitor;
-         startY =  monitor.height - startY;
-      }
-      Tweener.addTween(this.actor,
-      {
-         y: startY,
-         scale_y: 0,
-         opacity: 255,
-         time: 0,
-         transition: 'easeOutQuad',
-         onComplete: Lang.bind(this, function() {
-            Tweener.addTween(this.actor,
-            {
-                y: 0,
-                scale_y: 1,
-                opacity: 255,
-                time: this.effectTime
-            })
-         })
-      });
-   },
-
-   _effectHideVerticalClose: function() {
-      let startY = this.sourceActor.height;
-      if(this._arrowSide == St.Side.BOTTOM) {
-         let monitor = Main.layoutManager.primaryMonitor;
-         startY =  monitor.height - startY;
-      }
-      Tweener.addTween(this.actor,
-      {
-         y: startY,
-         scale_y: 0,
-         opacity: 255,
-         time: this.effectTime,
-         transition: 'easeOutQuad',
-         onComplete: Lang.bind(this, function() {
-            Applet.AppletPopupMenu.prototype.close.call(this, false);
-            Tweener.addTween(this.actor,
-            {
-                y: 0,
-                scale_y: 1,
-                opacity: 255,
-                time: 0
-            })
-         })
-      });
-   },
-
-   _effectScaleOpen: function() {
-      let monitor = Main.layoutManager.primaryMonitor;
-      let [startX, ay] = this.sourceActor.get_transformed_position();
-      let startY = this.sourceActor.height;
-      if(startX > monitor.x + monitor.width/2)
-         startX += this.sourceActor.width;
-      if(this._arrowSide == St.Side.BOTTOM)
-         startY =  monitor.height - startY;
-      Tweener.addTween(this.actor,
-      {
-         x: startX, y: startY,
-         scale_x: 0, scale_y: 0,
-         opacity: 255,
-         time: 0,
-         transition: 'easeOutQuad',
-         onComplete: Lang.bind(this, function() {
-            Tweener.addTween(this.actor,
-            {
-                x: 0, y: 0,
-                scale_x: 1, scale_y: 1,
-                opacity: 255,
-                time: this.effectTime
-            })
-         })
-      });
-   },
-
-   _effectScaleClose: function() {
-      let monitor = Main.layoutManager.primaryMonitor;
-      let [startX, ay] = this.sourceActor.get_transformed_position();
-      let startY = this.sourceActor.height;
-      if(startX > monitor.x + monitor.width/2)
-         startX += this.sourceActor.width;
-      if(this._arrowSide == St.Side.BOTTOM)
-         startY =  monitor.height - startY;
-      Tweener.addTween(this.actor,
-      {
-         x: startX, y: startY,
-         scale_x: 0, scale_y: 0,
-         opacity: 255,
-         time: this.effectTime,
-         transition: 'easeOutQuad',
-         onComplete: Lang.bind(this, function() {
-            Applet.AppletPopupMenu.prototype.close.call(this, false);
-            Tweener.addTween(this.actor,
-            {
-                x: 0, y: 0,
-                scale_x: 1, scale_y: 1,
-                opacity: 255,
-                time: 0
-            })
-         })
-      });
-   },
-
-   destroy: function() {
-      if(this._popupMenu) {
-         this._popupMenu.close();
-         this._menuManager.removeMenu(this._popupMenuu);
-         this._popupMenu.destroy();
-         this._popupMenu = null;
-      }
-      Applet.AppletPopupMenu.prototype.destroy.call(this);
-   }
-};
-
-function ConfigurablePopupMenu(parent, parentMenu, orientation) {
-   this._init(parent, parentMenu, orientation);
-};
-
-ConfigurablePopupMenu.prototype = {
-   __proto__: ConfigurableMenu.prototype,
-
-   _init: function(parent, parentMenu, orientation) {
-      ConfigurableMenu.prototype._init.call(this, parentMenu, orientation);
-      this.parent = parent;
-      this.parentMenu = parentMenu;
-      this.fixScreen = false;
-      if(this.parentMenu instanceof ConfigurableMenu)
-         this.parentMenu.setSubMenu(this);
-      this.actor.add_style_class_name('menu-context-menu');
-   },
-
-   reparentMenu: function(parentMenu, orientation) {
-      //if(!this.fixScreen) {
-         if((parentMenu)&&(parentMenu != this.parentMenu)) {
-            this.setArrowSide(orientation);
-            this.parentMenu = parentMenu;
-            this.sourceActor = this.parentMenu.actor;
-         }
-     // }
-   },
-
-   fixToScreen: function(fixScreen) {
-      try {
-         if(fixScreen) {
-            this._boxPointer.fixToScreen(this.parent.menu.actor, fixScreen);
-         } else {
-            this._boxPointer.fixToScreen(this.parentMenu.actor, fixScreen);
-         }
-         this.fixScreen = fixScreen;
-      } catch(e) {
-         Main.notify("eee", e.message);
-      }
-   },
-
-   fixToCorner: function(fixCorner) {
-     /* try {
-         Main.notify("hola");
-         if(fixScreen) {
-            this._parentMenu = this.parentMenu;
-            this.reparentMenu(this.parent.menu, this._boxPointer._arrowSide);
-            if(this._boxPointer._arrowSide == St.Side.LEFT)
-               Main.notify("left");
-            this._boxPointer.fixToScreen(this.sourceActor, fixScreen);
-         } else {
-            this.parentMenu = this._parentMenu;
-            this.reparentMenu(this.parentMenu, this._boxPointer._arrowSide);
-            this._boxPointer.fixToScreen(this.sourceActor, fixScreen);
-         }
-      } catch(e) {
-         Main.notify("eee", e.message);
-      }*/
-   },
-
-   repositionActor: function(actor) {
-      if((this.sourceActor)&&(this.sourceActor != actor)) {
-         if(this.isOpen)
-            this._boxPointer.trySetPosition(actor, this._arrowAlignment);
-      }
-   },
-
-   open: function(animate) {
-      if((this.parentMenu != this.parent)&&(!this.parentMenu.isOpen))
-         return;
-      //(Dalcde idea)Temporarily change source actor to Main.uiGroup to "trick"
-      // the menu manager to think that right click submenus are part of it.
-      this.parentMenu.sourceActor = Main.uiGroup;
-      Applet.AppletPopupMenu.prototype.open.call(this, animate);
-   },
-
-   close: function(animate) {
-      this.parentMenu.sourceActor = this.parent.actor;
-      Applet.AppletPopupMenu.prototype.close.call(this, animate);
-      if((this.parentMenu.isOpen)&&(this.parent.searchEntry))
-         this.parent.searchEntry.grab_key_focus();
-   }
-};
-
 function MyApplet(metadata, orientation, panel_height, instance_id) {
    this._init(metadata, orientation, panel_height, instance_id);
 }
@@ -1023,7 +338,8 @@ MyApplet.prototype = {
          else
             this.actor.add_style_class_name('menu-applet-panel-bottom-box'); 
 
-         this.menuManager = new PopupMenu.PopupMenuManager(this);
+         //this.menuManager = new PopupMenu.PopupMenuManager(this);
+         this.menuManager = new ConfigurableMenus.ConfigurableMenuManager(this);
          this._updateMenuSection();
 
          this.actor.connect('key-press-event', Lang.bind(this, this._onSourceKeyPress));
@@ -1286,20 +602,32 @@ MyApplet.prototype = {
    _updateIconAndLabel: function() {
       this.menuIconCustom = true;
       try {
-         if((this.menuIcon == global.datadir + '/theme/menu.png')&&
-            (!GLib.file_test(this.menuIcon, GLib.FileTest.EXISTS)))
-            this.menuIcon = global.datadir + '/theme/menu.svg'
+         if((this.menuIcon == global.datadir + "/theme/menu.png")&&
+            (!GLib.file_test(this.menuIcon, GLib.FileTest.EXISTS))) {
+            this.menuIcon = global.datadir + "/theme/menu.svg";
+            if(!GLib.file_test(this.menuIcon, GLib.FileTest.EXISTS)) {
+                this.menuIcon = global.datadir + "/theme/menu-symbolic.svg";
+                if(!GLib.file_test(this.menuIcon, GLib.FileTest.EXISTS))
+                    this.menuIcon = "";
+            }
+         }
 
-         if((this.menuIcon == "") || ((GLib.path_is_absolute(this.menuIcon)) &&
-            (GLib.file_test(this.menuIcon, GLib.FileTest.EXISTS)))) {
-            this.set_applet_icon_path(this.menuIcon);
+         if(GLib.path_is_absolute(this.menuIcon) &&
+            GLib.file_test(this.menuIcon, GLib.FileTest.EXISTS)) {
+            if(this.menuIcon.search("-symbolic") != -1)
+               this.set_applet_icon_symbolic_path(this.menuIcon);
+            else
+                this.set_applet_icon_path(this.menuIcon);
          } else if (Gtk.IconTheme.get_default().has_icon(this.menuIcon)) {
             if(this.menuIcon.search("-symbolic") != -1)
                this.set_applet_icon_symbolic_name(this.menuIcon);
             else
                this.set_applet_icon_name(this.menuIcon);
-         } else if(Gtk.IconTheme.get_default().has_icon("menu"))
+         } else if(Gtk.IconTheme.get_default().has_icon("menu")) {
             this.set_applet_icon_name("menu");
+         } else if(this.menuIcon == "") {
+            this.set_applet_icon_name("");
+         }
       } catch(e) {
          global.logWarning("Could not load icon file \""+this.menuIcon+"\" for menu button");
       }
@@ -3324,7 +2652,8 @@ MyApplet.prototype = {
 
   _openOutScreen: function() {
       this.menu.actor.x = -10000;
-      this.menu.openClean();
+      //this.menu.openClean();
+      this.menu.open();
       if(this.appMenu) {
          this.appMenu.actor.x = -10000;//the menu blinding...
          this.appMenu.open();
@@ -3335,7 +2664,8 @@ MyApplet.prototype = {
          if(this.gnoMenuBox)
             this.gnoMenuBox.setSelected(_("All Applications"));
          Mainloop.idle_add(Lang.bind(this, function() {
-            this.menu.closeClean();
+            //this.menu.closeClean();
+            this.menu.close();
             this.menu.actor.x = 0;
             if(this.appMenu)
                this.appMenu.actor.x = 0;
@@ -3679,7 +3009,8 @@ MyApplet.prototype = {
       }
       if(event.get_button() == 3) {         
          if(this._applet_context_menu._getMenuItems().length > 0) {
-            this._applet_context_menu.reparentMenu(this, this.orientation);
+            this._applet_context_menu.setLauncher(this);
+            this._applet_context_menu.setArrowSide(this.orientation);
             this._applet_context_menu.toggle();	
          }
       }
@@ -3718,7 +3049,9 @@ MyApplet.prototype = {
          this.menuManager.removeMenu(this.menu);
          this.menu.destroy();
       }
-      this.menu = new ConfigurableMenu(this, this.orientation);
+      //this.menu = new ConfigurableMenu(this, this.orientation);
+      this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, this.orientation, true);
+
       this.menu.actor.connect('motion-event', Lang.bind(this, this._onResizeMotionEvent));
       this.menu.actor.connect('button-press-event', Lang.bind(this, this._onMenuButtonPress));
       this.menu.actor.connect('leave-event', Lang.bind(this, this._disableOverResizeIcon));
@@ -3735,8 +3068,11 @@ MyApplet.prototype = {
             this._menuManager.removeMenu(this._applet_context_menu);
             this._applet_context_menu.destroy();
          }
-         this._applet_context_menu = new ConfigurablePopupMenu(this, this.menu, St.Side.LEFT);
-         //this._applet_context_menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, true);
+
+         // Swap applet_context_menu to Configurable Menu Api.
+         this._menuManager = new ConfigurableMenus.ConfigurableMenuManager(this);
+         //this._applet_context_menu = new ConfigurablePopupMenu(this, this.menu, St.Side.LEFT);
+         this._applet_context_menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, true);
          this._menuManager.addMenu(this._applet_context_menu);
 
          let items = this._applet_context_menu._getMenuItems();
@@ -3817,7 +3153,8 @@ MyApplet.prototype = {
                this.onEnterMenuGnome();
                this.appMenuClose();
             }
-            this._applet_context_menu.reparentMenu(this.menu, this.popupOrientation);
+            this._applet_context_menu.setLauncher(this.menu);
+            this._applet_context_menu.setArrowSide(this.popupOrientation);
             this._applet_context_menu.toggle();
          } else if(this._applet_context_menu.isOpen) {
             this._applet_context_menu.close();
@@ -3915,9 +3252,9 @@ MyApplet.prototype = {
    },
 
    _correctPlaceResize: function(actor, mx, my, ax, ay, aw, ah) {
-      let monitor = Main.layoutManager.findMonitorForActor(this.actor);
-      let [cx, cy] = this.actor.get_transformed_position();
-      this.relativeSide = actor._delegate._boxPointer.relativeSide;
+      let monitor = Main.layoutManager.findMonitorForActor(actor);
+      let [cx, cy] = actor.get_transformed_position();
+      this.relativeSide = actor._delegate._boxPointer._relativeSide;
       switch (actor._delegate._arrowSide) {
          case St.Side.TOP:
             if(my > ah - this.deltaMinResize) {
@@ -3956,7 +3293,7 @@ MyApplet.prototype = {
          Mainloop.source_remove(this._timeOutResize);
       }
       this._timeOutResize = 0;
-      if((this.actorResize)&&(this.relativeSide == this.actorResize._delegate._boxPointer.relativeSide)) {
+      if((this.actorResize)&&(this.relativeSide == this.actorResize._delegate._boxPointer._relativeSide)) {
          if(this._updatePosResize())
             this._updateSize();
          this._timeOutResize = Mainloop.timeout_add(300, Lang.bind(this, this._doResize));
@@ -5207,7 +4544,8 @@ MyApplet.prototype = {
          this.menu.actor.connect('enter-event', Lang.bind(this, this.onEnterMenuGnome));
          this.menu.actor.connect('leave-event', Lang.bind(this, this.onLeaveMenuGnome));
 
-         this.appMenu = new ConfigurablePopupMenu(this, this, this.orientation);
+         this.appMenu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, this.orientation, true);
+         //this.appMenu = new ConfigurablePopupMenu(this, this, this.orientation);
          this.appMenu.actor.connect('enter-event', Lang.bind(this, this.onEnterMenuGnome));
          this.appMenu.actor.connect('leave-event', Lang.bind(this, this.onLeaveMenuGnome));
          this.appMenu.showBoxPointer(this.showBoxPointer);
@@ -6689,4 +6027,4 @@ MyApplet.prototype = {
 function main(metadata, orientation, panel_height, instance_id) {  
     let myApplet = new MyApplet(metadata, orientation, panel_height, instance_id);
     return myApplet;      
-}  
+}

@@ -52,251 +52,6 @@ const FactoryEventTypes = {
    'closed'    : "closed",
    'clicked'   : "clicked"
 };
-//ConfigurableMenus
-
-function ConfigurableAppletMenu(parent) {
-   this._init(parent);
-}
-
-ConfigurableAppletMenu.prototype = {
-   _init: function(parent) {
-      this.parent = parent;
-      this.actor = new St.BoxLayout({ vertical: false, reactive: true, track_hover: true });
-      this.actor.connect('key-focus-in', Lang.bind(this, function(actor) {
-         this._categoryChange(this.rootGnomeCat);
-      }));
-      this.actor.connect('key-focus-out', Lang.bind(this, function(actor) {
-         this.activeCategoryActor();
-      }));
-      this.categories = new Array();
-      this.categoriesSignals = new Array();
-      this._takeControl();
-      this.activeActor = null;
-   },
-
-   destroy: function() {
-      this.parent._applet_label.get_parent().remove_actor(this.parent._applet_label);
-      this.parent._applet_icon_box.get_parent().remove_actor(this.parent._applet_icon_box);
-
-      this.parent.actor.add(this.parent._applet_icon_box, { y_align: St.Align.MIDDLE, y_fill: false });
-      this.parent.actor.add(this.parent._applet_label, { y_align: St.Align.MIDDLE, y_fill: false });
-      this.disconnectCategories();
-      this.parent.actor.add_style_class_name('applet-box');
-      if(this.parent.orientation == St.Side.TOP)
-         this.parent.actor.add_style_class_name('menu-applet-panel-top-box');
-      else
-         this.parent.actor.add_style_class_name('menu-applet-panel-bottom-box'); 
-      this.actor.destroy();
-   },
-
-   _takeControl: function() {
-      if(this.parent.orientation == St.Side.TOP)
-         this.parent.actor.set_style_class_name('menu-applet-panel-top-box');
-      else
-         this.parent.actor.set_style_class_name('menu-applet-panel-bottom-box'); 
-      this.parent._applet_label.get_parent().remove_actor(this.parent._applet_label);
-      this.parent._applet_icon_box.get_parent().remove_actor(this.parent._applet_icon_box);
-
-      this.parent.actor.add(this.actor, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
-      this.rootGnomeCat = new St.BoxLayout({ style_class: 'applet-box', reactive: true, track_hover: true });
-      this.rootGnomeCat.add_style_class_name('menu-applet-category-box');
-      this.rootGnomeCat.add(this.parent._applet_icon_box, { y_align: St.Align.MIDDLE, y_fill: false });
-      this.rootGnomeCat.add(this.parent._applet_label, { y_align: St.Align.MIDDLE, y_fill: false });
-      this.actor.add(this.rootGnomeCat, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
-      this.rootGnomeCat.connect('enter-event', Lang.bind(this, this._changeHover, true));
-      this.rootGnomeCat.connect('leave-event', Lang.bind(this, this._changeHover, false));
-   },
-
-   _changeHover: function(actor, event, hover) {
-      if(hover) {
-         if(this.parent._applet_icon)
-            this.parent._applet_icon.add_style_pseudo_class('hover');
-         this.parent._applet_label.add_style_pseudo_class('hover');
-      } else {
-         if(this.parent._applet_icon)
-            this.parent._applet_icon.remove_style_pseudo_class('hover');
-         this.parent._applet_label.remove_style_pseudo_class('hover');
-      }
-   },
-
-   addCategory: function(category) {
-      this.categories.push(category);
-      this.actor.add(category.actor, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
-   },
-
-   connectCategories: function(event, callBackFunc) {
-      this.categoriesSignals[this.rootGnomeCat] = this.rootGnomeCat.connect(event, Lang.bind(this, callBackFunc));
-      for(let i = 0; i < this.categories.length; i++) {
-         this.categoriesSignals[this.categories[i].actor] = this.categories[i].actor.connect(event, Lang.bind(this, callBackFunc));
-      }
-   },
-
-   disconnectCategories: function() {
-     // for(let keyActor in this.categoriesSignals)
-     //     keyActor.disconnect(this.categoriesSignals[keyActor]);
-   },
-
-   setPanelHeight: function(panel_height) {
-      for(let i = 0; i < this.categories.length; i++) {
-         this.categories[i].on_panel_height_changed(panel_height);
-      }
-   },
-
-   getActorForName: function(name) {
-      if(name == "Main")
-         return this.rootGnomeCat;
-      for(let i = 0; i < this.categories.length; i++) {
-         if(this.categories[i].categoryName == name)
-            return this.categories[i].actor;
-      }
-      return null;
-   },
-
-   _categoryChange: function(actor) {
-      this.parent.searchEntry.clutter_text.set_text("");
-      this.parent.onCategorieGnomeChange(actor);
-   },
-
-   activeCategoryActor: function(actor) {
-      this.rootGnomeCat.remove_style_pseudo_class('active');
-      for(let i = 0; i < this.categories.length; i++)
-         this.categories[i].actor.remove_style_pseudo_class('active');
-      if(actor) {
-         actor.add_style_pseudo_class('active');
-         this.activeActor = actor;
-      } else {
-         this.activeActor = null;
-      }
-   },
-
-   getFirstElement: function() {
-      return this.rootGnomeCat;
-   },
-
-   navegateAppletMenu: function(symbol, actor) {
-      let actorChange = this.activeActor;
-      if(!actorChange)
-        actorChange = this.rootGnomeCat;	
-      let resultActor;
-      if(symbol == Clutter.KEY_Right) {
-         let index = this._findActorIndex(actorChange);
-         if(index == this.categories.length - 1)
-            index = -1;
-         else
-            index++;
-         if(index == -1)
-           resultActor = this.rootGnomeCat;
-         else
-           resultActor = this.categories[index].actor;
-      } else if(symbol == Clutter.KEY_Left) {
-         let index = this._findActorIndex(actorChange);
-         if(index == -1)
-            index = this.categories.length - 1;
-         else if(index == 0)
-            index = -1;
-         else
-            index--;
-         if(index == -1)
-           resultActor = this.rootGnomeCat;
-         else
-           resultActor = this.categories[index].actor;
-      } else {
-         return false;
-      }
-      this._categoryChange(resultActor);
-      return true;
-   },
-
-   _findActorIndex: function(actor) {
-      for(let i = 0; i < this.categories.length; i++) {
-         if(this.categories[i].actor == actor)
-            return i;
-      }
-      return -1;
-   }
-};
-
-function ConfigurablePopupSwitchMenuItem() {
-    this._init.apply(this, arguments);
-}
-
-ConfigurablePopupSwitchMenuItem.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
-
-    _init: function(text, imageOn, imageOff, active, params) {
-        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
-
-        this._imageOn = imageOn;
-        this._imageOff = imageOff;
-
-        let table = new St.Table({ homogeneous: false, reactive: true });
-
-        this.label = new St.Label({ text: text });
-        this.label.set_margin_left(6.0);
-
-        this._switch = new PopupMenu.Switch(active);
-
-        if(active)
-           this.icon = new St.Icon({ icon_name: this._imageOn, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });
-        else
-           this.icon = new St.Icon({ icon_name: this._imageOff, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });
-
-        this._statusBin = new St.Bin({ x_align: St.Align.END });
-        this._statusBin.set_margin_left(6.0);
-        this._statusLabel = new St.Label({ text: '', style_class: 'popup-inactive-menu-item' });
-        this._statusBin.child = this._switch.actor;
-
-        table.add(this.icon, {row: 0, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START});
-        table.add(this.label, {row: 0, col: 1, col_span: 1, y_fill: false, y_expand: true, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE});
-        table.add(this._statusBin, {row: 0, col: 2, col_span: 1, x_expand: true, x_align: St.Align.END});
-
-        this.addActor(table, { expand: true, span: 1, align: St.Align.START});
-    },
-
-    setToggleState: function(state) {
-        if(state)
-           this.icon.set_icon_name(this._imageOn);
-        else
-           this.icon.set_icon_name(this._imageOff);
-        this._switch.setToggleState(state);
-    },
-
-    get_state: function() {
-        return this._switch.state;
-    }
-};
-
-// This is only a clone for the dalcde update
-// we used it here to support old cinnamon versions.
-function PopupIconMenuItem() {
-   this._init.apply(this, arguments);
-}
-
-PopupIconMenuItem.prototype = {
-   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
-
-   _init: function(text, iconName, iconType, params) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
-      if(iconType != St.IconType.FULLCOLOR)
-          iconType = St.IconType.SYMBOLIC;
-      this.label = new St.Label({text: text});
-      this._icon = new St.Icon({ style_class: 'popup-menu-icon',
-         icon_name: iconName,
-         icon_type: iconType});
-      this.addActor(this._icon, {span: 0});
-      this.addActor(this.label);
-   },
-
-   setIconSymbolicName: function(iconName) {
-      this._icon.set_icon_name(iconName);
-      this._icon.set_icon_type(St.IconType.SYMBOLIC);
-   },
-
-   setIconName: function(iconName) {
-      this._icon.set_icon_name(iconName);
-      this._icon.set_icon_type(St.IconType.FULLCOLOR);
-   }
-};
 
 /**
  * BoxPointer:
@@ -783,6 +538,7 @@ ConfigurablePointer.prototype = {
       this._shiftX = 0;
       this._shiftY = 0;
       this._screenActor = null;
+      this._relativeSide = St.Side.RIGHT;
       try {
          let [res, selectedColor] = Clutter.Color.from_string("#505050");
          this._selectedColor = selectedColor;
@@ -1229,7 +985,7 @@ ConfigurablePointer.prototype = {
 
          if(this._arrowSide == St.Side.BOTTOM) {
             if(sourceAllocation.x1 < (monitor.x + monitor.width/2)) {
-               //this._relativeSide = St.Side.LEFT;
+               this._relativeSide = St.Side.LEFT;
                cr.moveTo(x2 - maxSpace - borderWidth, y1 - borderWidth);
                cr.lineTo(x2 + borderWidth, y1 + maxSpace + borderWidth);
                cr.lineTo(x2 + borderWidth, y1 - borderWidth);
@@ -1243,7 +999,7 @@ ConfigurablePointer.prototype = {
             }
          } else if(this._arrowSide == St.Side.TOP) {
             if(sourceAllocation.x1 < (monitor.x + monitor.width/2)) {
-               //this._relativeSide = St.Side.LEFT;
+               this._relativeSide = St.Side.LEFT;
                cr.moveTo(x2 + borderWidth, y2 - maxSpace - borderWidth);
                cr.lineTo(x2 - maxSpace - borderWidth, y2 + borderWidth);
                cr.lineTo(x2 + borderWidth, y2 + borderWidth);
@@ -1257,13 +1013,13 @@ ConfigurablePointer.prototype = {
             }
          } else if(this._arrowSide == St.Side.LEFT) {
             if((actorAllocation.y1 + actorAllocation.y2)/2 < (monitor.y + monitor.height/2)) {
-               //this._relativeSide = St.Side.TOP;
+               this._relativeSide = St.Side.TOP;
                cr.moveTo(x2 + borderWidth, y2 - maxSpace - borderWidth);
                cr.lineTo(x2 - maxSpace - borderWidth, y2 + borderWidth);
                cr.lineTo(x2 + borderWidth, y2 + borderWidth);
                cr.lineTo(x2 + borderWidth, y2 - maxSpace - borderWidth);
             } else {
-               //this._relativeSide = St.Side.BOTTOM;
+               this._relativeSide = St.Side.BOTTOM;
                cr.moveTo(x2 - maxSpace - borderWidth, y1 - borderWidth);
                cr.lineTo(x2 + borderWidth, y1 + maxSpace + borderWidth);
                cr.lineTo(x2 + borderWidth, y1 - borderWidth);
@@ -1271,13 +1027,13 @@ ConfigurablePointer.prototype = {
             }
          } else if(this._arrowSide == St.Side.RIGHT) {
             if((actorAllocation.y1 + actorAllocation.y2)/2 < (monitor.y + monitor.height/2)) {
-               //this._relativeSide = St.Side.TOP;
+               this._relativeSide = St.Side.TOP;
                cr.moveTo(x1 - borderWidth, y2 - maxSpace - borderWidth);
                cr.lineTo(x1 + maxSpace + borderWidth, y2 + borderWidth);
                cr.lineTo(x1 - borderWidth, y2 + borderWidth);
                cr.lineTo(x1 - borderWidth, y2 - maxSpace - borderWidth);
             } else {
-               //this._relativeSide = St.Side.BOTTOM;
+               this._relativeSide = St.Side.BOTTOM;
                cr.moveTo(x1 + maxSpace + borderWidth, y1 - borderWidth);
                cr.lineTo(x1 - borderWidth, y1 + maxSpace + borderWidth);
                cr.lineTo(x1 - borderWidth, y1 - borderWidth);
@@ -1486,6 +1242,15 @@ ConfigurableMenuManager.prototype = {
       this._effectType = "none";
       this._effectTime = POPUP_ANIMATION_TIME;
       this._lastMenuClose = null;
+   },
+
+   _findMenu: function(item) {
+      for (let i = 0; i < this._menus.length; i++) {
+         let menudata = this._menus[i];
+         if (item == menudata.menu)
+            return i;
+      }
+      return -1;
    },
 
    addMenu: function(menu, position) {
@@ -1758,7 +1523,7 @@ ConfigurableMenuManager.prototype = {
             this._lastMenuTimeOut = Mainloop.idle_add(Lang.bind(this, function() {
                this._disconnectTimeOut();
                let focus = global.stage.key_focus;
-               if((focus) && (!menu.actor.contains(focus)) && (!menu.sourceActor.contains(focus)))
+               if((focus) && (menu.actor) && (!menu.actor.contains(focus)) && (!menu.sourceActor.contains(focus)))
                   this._onMenuSourceCompleteLeave(menu);
             }));
          }
@@ -3272,7 +3037,7 @@ ConfigurablePopupMenuItem.prototype = {
 
    setIconName: function(name) {
       this._icon.visible = ((this._displayIcon) && (name && name != ""));
-      this._icon.icon_name = iconName;
+      this._icon.icon_name = name;
    },
 
    desaturateItemIcon: function(desaturate) {
@@ -4605,5 +4370,251 @@ MenuFactory.prototype = {
             shellItem.actor.connect('allocate', Lang.bind(this, this._allocateOrnament, shellItem));
          }
       }
+   }
+};
+
+//ConfigurableMenus
+
+function ConfigurableAppletMenu(parent) {
+   this._init(parent);
+}
+
+ConfigurableAppletMenu.prototype = {
+   _init: function(parent) {
+      this.parent = parent;
+      this.actor = new St.BoxLayout({ vertical: false, reactive: true, track_hover: true });
+      this.actor.connect('key-focus-in', Lang.bind(this, function(actor) {
+         this._categoryChange(this.rootGnomeCat);
+      }));
+      this.actor.connect('key-focus-out', Lang.bind(this, function(actor) {
+         this.activeCategoryActor();
+      }));
+      this.categories = new Array();
+      this.categoriesSignals = new Array();
+      this._takeControl();
+      this.activeActor = null;
+   },
+
+   destroy: function() {
+      this.parent._applet_label.get_parent().remove_actor(this.parent._applet_label);
+      this.parent._applet_icon_box.get_parent().remove_actor(this.parent._applet_icon_box);
+
+      this.parent.actor.add(this.parent._applet_icon_box, { y_align: St.Align.MIDDLE, y_fill: false });
+      this.parent.actor.add(this.parent._applet_label, { y_align: St.Align.MIDDLE, y_fill: false });
+      this.disconnectCategories();
+      this.parent.actor.add_style_class_name('applet-box');
+      if(this.parent.orientation == St.Side.TOP)
+         this.parent.actor.add_style_class_name('menu-applet-panel-top-box');
+      else
+         this.parent.actor.add_style_class_name('menu-applet-panel-bottom-box'); 
+      this.actor.destroy();
+   },
+
+   _takeControl: function() {
+      if(this.parent.orientation == St.Side.TOP)
+         this.parent.actor.set_style_class_name('menu-applet-panel-top-box');
+      else
+         this.parent.actor.set_style_class_name('menu-applet-panel-bottom-box'); 
+      this.parent._applet_label.get_parent().remove_actor(this.parent._applet_label);
+      this.parent._applet_icon_box.get_parent().remove_actor(this.parent._applet_icon_box);
+
+      this.parent.actor.add(this.actor, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
+      this.rootGnomeCat = new St.BoxLayout({ style_class: 'applet-box', reactive: true, track_hover: true });
+      this.rootGnomeCat.add_style_class_name('menu-applet-category-box');
+      this.rootGnomeCat.add(this.parent._applet_icon_box, { y_align: St.Align.MIDDLE, y_fill: false });
+      this.rootGnomeCat.add(this.parent._applet_label, { y_align: St.Align.MIDDLE, y_fill: false });
+      this.actor.add(this.rootGnomeCat, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
+      this.rootGnomeCat.connect('enter-event', Lang.bind(this, this._changeHover, true));
+      this.rootGnomeCat.connect('leave-event', Lang.bind(this, this._changeHover, false));
+   },
+
+   _changeHover: function(actor, event, hover) {
+      if(hover) {
+         if(this.parent._applet_icon)
+            this.parent._applet_icon.add_style_pseudo_class('hover');
+         this.parent._applet_label.add_style_pseudo_class('hover');
+      } else {
+         if(this.parent._applet_icon)
+            this.parent._applet_icon.remove_style_pseudo_class('hover');
+         this.parent._applet_label.remove_style_pseudo_class('hover');
+      }
+   },
+
+   addCategory: function(category) {
+      this.categories.push(category);
+      this.actor.add(category.actor, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
+   },
+
+   connectCategories: function(event, callBackFunc) {
+      this.categoriesSignals[this.rootGnomeCat] = this.rootGnomeCat.connect(event, Lang.bind(this, callBackFunc));
+      for(let i = 0; i < this.categories.length; i++) {
+         this.categoriesSignals[this.categories[i].actor] = this.categories[i].actor.connect(event, Lang.bind(this, callBackFunc));
+      }
+   },
+
+   disconnectCategories: function() {
+     // for(let keyActor in this.categoriesSignals)
+     //     keyActor.disconnect(this.categoriesSignals[keyActor]);
+   },
+
+   setPanelHeight: function(panel_height) {
+      for(let i = 0; i < this.categories.length; i++) {
+         this.categories[i].on_panel_height_changed(panel_height);
+      }
+   },
+
+   getActorForName: function(name) {
+      if(name == "Main")
+         return this.rootGnomeCat;
+      for(let i = 0; i < this.categories.length; i++) {
+         if(this.categories[i].categoryName == name)
+            return this.categories[i].actor;
+      }
+      return null;
+   },
+
+   _categoryChange: function(actor) {
+      this.parent.searchEntry.clutter_text.set_text("");
+      this.parent.onCategorieGnomeChange(actor);
+   },
+
+   activeCategoryActor: function(actor) {
+      this.rootGnomeCat.remove_style_pseudo_class('active');
+      for(let i = 0; i < this.categories.length; i++)
+         this.categories[i].actor.remove_style_pseudo_class('active');
+      if(actor) {
+         actor.add_style_pseudo_class('active');
+         this.activeActor = actor;
+      } else {
+         this.activeActor = null;
+      }
+   },
+
+   getFirstElement: function() {
+      return this.rootGnomeCat;
+   },
+
+   navegateAppletMenu: function(symbol, actor) {
+      let actorChange = this.activeActor;
+      if(!actorChange)
+        actorChange = this.rootGnomeCat;	
+      let resultActor;
+      if(symbol == Clutter.KEY_Right) {
+         let index = this._findActorIndex(actorChange);
+         if(index == this.categories.length - 1)
+            index = -1;
+         else
+            index++;
+         if(index == -1)
+           resultActor = this.rootGnomeCat;
+         else
+           resultActor = this.categories[index].actor;
+      } else if(symbol == Clutter.KEY_Left) {
+         let index = this._findActorIndex(actorChange);
+         if(index == -1)
+            index = this.categories.length - 1;
+         else if(index == 0)
+            index = -1;
+         else
+            index--;
+         if(index == -1)
+           resultActor = this.rootGnomeCat;
+         else
+           resultActor = this.categories[index].actor;
+      } else {
+         return false;
+      }
+      this._categoryChange(resultActor);
+      return true;
+   },
+
+   _findActorIndex: function(actor) {
+      for(let i = 0; i < this.categories.length; i++) {
+         if(this.categories[i].actor == actor)
+            return i;
+      }
+      return -1;
+   }
+};
+
+function ConfigurablePopupSwitchMenuItem() {
+    this._init.apply(this, arguments);
+}
+
+ConfigurablePopupSwitchMenuItem.prototype = {
+    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+
+    _init: function(text, imageOn, imageOff, active, params) {
+        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+
+        this._imageOn = imageOn;
+        this._imageOff = imageOff;
+
+        let table = new St.Table({ homogeneous: false, reactive: true });
+
+        this.label = new St.Label({ text: text });
+        this.label.set_margin_left(6.0);
+
+        this._switch = new PopupMenu.Switch(active);
+
+        if(active)
+           this.icon = new St.Icon({ icon_name: this._imageOn, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });
+        else
+           this.icon = new St.Icon({ icon_name: this._imageOff, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });
+
+        this._statusBin = new St.Bin({ x_align: St.Align.END });
+        this._statusBin.set_margin_left(6.0);
+        this._statusLabel = new St.Label({ text: '', style_class: 'popup-inactive-menu-item' });
+        this._statusBin.child = this._switch.actor;
+
+        table.add(this.icon, {row: 0, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START});
+        table.add(this.label, {row: 0, col: 1, col_span: 1, y_fill: false, y_expand: true, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE});
+        table.add(this._statusBin, {row: 0, col: 2, col_span: 1, x_expand: true, x_align: St.Align.END});
+
+        this.addActor(table, { expand: true, span: 1, align: St.Align.START});
+    },
+
+    setToggleState: function(state) {
+        if(state)
+           this.icon.set_icon_name(this._imageOn);
+        else
+           this.icon.set_icon_name(this._imageOff);
+        this._switch.setToggleState(state);
+    },
+
+    get_state: function() {
+        return this._switch.state;
+    }
+};
+
+// This is only a clone for the dalcde update
+// we used it here to support old cinnamon versions.
+function PopupIconMenuItem() {
+   this._init.apply(this, arguments);
+}
+
+PopupIconMenuItem.prototype = {
+   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+
+   _init: function(text, iconName, iconType, params) {
+      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+      if(iconType != St.IconType.FULLCOLOR)
+          iconType = St.IconType.SYMBOLIC;
+      this.label = new St.Label({text: text});
+      this._icon = new St.Icon({ style_class: 'popup-menu-icon',
+         icon_name: iconName,
+         icon_type: iconType});
+      this.addActor(this._icon, {span: 0});
+      this.addActor(this.label);
+   },
+
+   setIconSymbolicName: function(iconName) {
+      this._icon.set_icon_name(iconName);
+      this._icon.set_icon_type(St.IconType.SYMBOLIC);
+   },
+
+   setIconName: function(iconName) {
+      this._icon.set_icon_name(iconName);
+      this._icon.set_icon_type(St.IconType.FULLCOLOR);
    }
 };
