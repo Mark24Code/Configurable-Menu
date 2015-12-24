@@ -23,10 +23,12 @@ const Clutter = imports.gi.Clutter;
 const AccountsService = imports.gi.AccountsService;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
+const Signals = imports.signals;
 const DND = imports.ui.dnd;
 const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
 const AppFavorites = imports.ui.appFavorites;
+const Tweener = imports.ui.tweener;
 const GnomeSession = imports.misc.gnomeSession;
 const ScreenSaver = imports.misc.screenSaver;
 
@@ -340,16 +342,16 @@ FavoritesBoxLine.prototype = {
    }
 };
 
-function FavoritesBoxExtended(parent, vertical, numberLines) {
-   this._init(parent, vertical, numberLines);
+function FavoritesBoxExtended(parent, numberLines, vertical) {
+   this._init(parent, numberLines, vertical);
 }
 
 FavoritesBoxExtended.prototype = {
-   _init: function(parent, vertical, numberLines) {
+   _init: function(parent, numberLines, vertical) {
+      vertical = (vertical == true);
       this.parent = parent;
       this.favRefresh = true;
       this.actor = new St.BoxLayout();
-      this.actor.set_vertical(!vertical);
       //this.actor._delegate = this;
       this.linesDragPlaces = new Array();
       let internalLine;
@@ -359,6 +361,7 @@ FavoritesBoxExtended.prototype = {
          this.actor.add(internalLine.actor, { x_align: St.Align.MIDDLE, y_align: St.Align.START, x_fill: true, y_fill: false, expand: true });
       }
       this.firstElement = null;
+      this.actor.set_vertical(!vertical);
       this.setVertical(vertical);
    },
 
@@ -424,7 +427,7 @@ FavoritesBoxExtended.prototype = {
       }
       let internalLine;
       for(let i = this.linesDragPlaces.length; i < numberLines; i++) {
-         internalLine = new FavoritesBoxLine(this, this.isVertical);
+         internalLine = new FavoritesBoxLine(this, this.isVertical());
          this.linesDragPlaces.push(internalLine);
          this.actor.add(internalLine.actor, { x_align: St.Align.MIDDLE, y_align: St.Align.START, x_fill: true, y_fill: false, expand: true });
       }
@@ -443,11 +446,12 @@ FavoritesBoxExtended.prototype = {
    },
 
    setVertical: function(vertical) {
-      this.isVertical = vertical;
-      this.actor.set_vertical(!vertical);
-      let childrens = this.actor.get_children();
-      for(let i = 0; i < childrens.length; i++) {
-         childrens[i].set_vertical(vertical);
+      if(vertical != this.isVertical()) {
+         this.actor.set_vertical(!vertical);
+         let childrens = this.actor.get_children();
+         for(let i = 0; i < childrens.length; i++) {
+            childrens[i].set_vertical(vertical);
+         }
       }
    },
 
@@ -462,8 +466,8 @@ FavoritesBoxExtended.prototype = {
       return this.firstElement;
    },
 
-   getVertical: function() {
-      return this.isVertical;
+   isVertical: function() {
+      return !this.actor.get_vertical();
    },
 
    getRealSpace: function() {
@@ -576,14 +580,14 @@ FavoritesBoxExtended.prototype = {
             break;
       }
       if(symbol == Clutter.KEY_Left)
-         return (((this.isVertical)&&(posY == 0))||((!this.isVertical)&&(posX == 0)));
+         return (((this.isVertical())&&(posY == 0))||((!this.isVertical())&&(posX == 0)));
       if(symbol == Clutter.KEY_Right)
-         return (((this.isVertical)&&(posY == childrens.length - 1))||((!this.isVertical)&&(posX == childrens[posY].get_children().length - 2)));
+         return (((this.isVertical())&&(posY == childrens.length - 1))||((!this.isVertical())&&(posX == childrens[posY].get_children().length - 2)));
       if(symbol == Clutter.KEY_Down) {
-         return (((this.isVertical)&&(posX  == childrens[posY].get_children().length - 2))||((!this.isVertical)&&(posY == childrens.length - 1)));
+         return (((this.isVertical())&&(posX  == childrens[posY].get_children().length - 2))||((!this.isVertical())&&(posY == childrens.length - 1)));
       }
       if(symbol == Clutter.KEY_Up)
-         return (((this.isVertical)&&(posX == 0))||((!this.isVertical)&&(posY == 0)));
+         return (((this.isVertical())&&(posX == 0))||((!this.isVertical())&&(posY == 0)));
       return false;
    },
 
@@ -603,7 +607,7 @@ FavoritesBoxExtended.prototype = {
          if(posX)
             break;
       }
-      if(this.isVertical) {
+      if(this.isVertical()) {
          if(symbol == Clutter.KEY_Up) {
             if(posX == 0)
                posX = childrens[posY].get_children().length - 2;
@@ -1271,17 +1275,15 @@ ControlBox.prototype = {
    }
 };
 
-function PowerBox(parent, theme, iconSize, hover, selectedAppBox) {
-   this._init(parent, theme, iconSize, hover, selectedAppBox);
+function PowerBox(parent, theme, iconSize) {
+   this._init(parent, theme, iconSize);
 }
 
 PowerBox.prototype = {
-   _init: function(parent, theme, iconSize, hover, selectedAppBox) {
+   _init: function(parent, theme, iconSize) {
       this.parent = parent;
       this.iconSize = iconSize;
       this.signalKeyPowerID = 0;
-      this.selectedAppBox = selectedAppBox;
-      this.hover = hover;
       this.powerSelected = 0;
       this._session = new GnomeSession.SessionManager();
       this._screenSaverProxy = new ScreenSaver.ScreenSaverProxy();
@@ -1309,29 +1311,35 @@ PowerBox.prototype = {
       }));
       this.separatorPower = new SeparatorBox(false, 0);
       //Lock screen "preferences-desktop-screensaver"
-      let button = new MenuItems.SystemButton(this.parent, null, "system-lock-screen", _("Lock screen"), _("Lock the screen"), this.hover, this.selectedAppBox,  this.iconSize, false);
+      let button = new MenuItems.SystemButton(this.parent, null, "system-lock-screen", _("Lock screen"), _("Lock the screen"), this.iconSize, false);
       button.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
       button.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent));
       button.setAction(Lang.bind(this, this._onLockScreenAction));
-
+      button.connect('active-changed', Lang.bind(this, this._onActiveChanged));
       this._powerButtons.push(button);
         
       //Logout button "system-log-out" "system-users" "user-info"
-      button = new MenuItems.SystemButton(this.parent, null, "system-log-out", _("Logout"), _("Leave the session"), this.hover, this.selectedAppBox,  this.iconSize, false);        
+      button = new MenuItems.SystemButton(this.parent, null, "system-log-out", _("Logout"), _("Leave the session"), this.iconSize, false);        
       button.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
       button.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent));
+      button.connect('active-changed', Lang.bind(this, this._onActiveChanged));
       button.setAction(Lang.bind(this, this._onLogoutAction));
-
+      button.connect('active-changed', Lang.bind(this, this._onActiveChanged));
       this._powerButtons.push(button);
 
       //Shutdown button
-      button = new MenuItems.SystemButton(this.parent, null, "system-shutdown", _("Quit"), _("Shutdown the computer"), this.hover, this.selectedAppBox, this.iconSize, false);        
+      button = new MenuItems.SystemButton(this.parent, null, "system-shutdown", _("Quit"), _("Shutdown the computer"), this.iconSize, false);        
       button.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
       button.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent)); 
       button.setAction(Lang.bind(this, this._onShutdownAction));
-
+      button.connect('active-changed', Lang.bind(this, this._onActiveChanged));
       this._powerButtons.push(button);
+
       this.setTheme(theme);
+   },
+
+   _onActiveChanged: function(button, active) {
+      this.emit('active-changed', button, active);
    },
 
    destroy: function(symbolic) {
@@ -1477,7 +1485,8 @@ PowerBox.prototype = {
       this.activeBar = new St.BoxLayout({ vertical: false });
       this.separator = new St.BoxLayout({ vertical: true });
       this.separator.style = "padding-left: "+(this.iconSize)+"px;margin:auto;";
-      this.bttChanger = new ButtonChangerBox(this.parent, "forward", this.iconSize, ["Show Down", "Options"], 0, Lang.bind(this, this._onPowerChange));
+      this.bttChanger = new ButtonChangerBox(this.parent, "forward", this.iconSize, ["Show Down", "Options"], 0);
+      this.bttChanger.registerCallBack(Lang.bind(this, this._onPowerChange));
       this.bttChanger.setTextVisible(false);
       this.activeBar.add(this._powerButtons[2].actor, { x_fill: false, x_align: aling });
       this.activeBar.add(this.bttChanger.actor, { x_fill: true, x_align: aling });
@@ -1697,6 +1706,7 @@ PowerBox.prototype = {
       return true;
    }
 };
+Signals.addSignalMethods(PowerBox.prototype);
 
 function SelectedAppBox(parent, activeDateTime) {
    this._init(parent, activeDateTime);
@@ -1835,14 +1845,14 @@ SelectedAppBox.prototype = {
    }
 };
 
-function ButtonChangerBox(parent, icon, iconSize, labels, selected, callBackOnSelectedChange) {
-   this._init(parent, icon, iconSize, labels, selected, callBackOnSelectedChange);
+function ButtonChangerBox(parent, icon, iconSize, labels, selected) {
+   this._init(parent, icon, iconSize, labels, selected);
 }
 
 ButtonChangerBox.prototype = {
    __proto__: PopupMenu.PopupSubMenuMenuItem.prototype,
 
-   _init: function (parent, icon, iconSize, labels, selected, callBackOnSelectedChange) {
+   _init: function (parent, icon, iconSize, labels, selected) {
       PopupMenu.PopupSubMenuMenuItem.prototype._init.call(this, labels[selected]);
       this.theme = "";
       this.visible = true;
@@ -1852,7 +1862,6 @@ ButtonChangerBox.prototype = {
       this.parent = parent;
       this.labels = labels;
       this.selected = selected;
-      this.callBackOnSelectedChange = callBackOnSelectedChange;
       let parentT = this.label.get_parent();
       if(parentT == this.actor) this.removeActor(this.label);
       if(parentT != null) parentT.remove_actor(this.label);
@@ -1878,6 +1887,10 @@ ButtonChangerBox.prototype = {
       this.box.connect('leave-event', Lang.bind(this, function() {
          this.setActive(false); 
       }));
+   },
+
+   registerCallBack: function(callBackOnSelectedChange) {
+      this.callBackOnSelectedChange = callBackOnSelectedChange;
    },
 
    setIconSize: function(iconSize) {
@@ -1962,12 +1975,12 @@ ButtonChangerBox.prototype = {
    }
 };
 
-function GnoMenuBox(parent, hoverIcon, selectedAppBox, powerPanel, verticalPanel, iconSize, callBackFun) {
-   this._init(parent, hoverIcon, selectedAppBox, powerPanel, verticalPanel, iconSize, callBackFun);
+function GnoMenuBox(parent, hoverIcon, powerPanel, verticalPanel, iconSize, callBackFun) {
+   this._init(parent, hoverIcon, powerPanel, verticalPanel, iconSize, callBackFun);
 }
 
 GnoMenuBox.prototype = {
-   _init: function(parent, hoverIcon, selectedAppBox, powerPanel, verticalPanel, iconSize, callBackFun) {
+   _init: function(parent, hoverIcon, powerPanel, verticalPanel, iconSize, callBackFun) {
       this.actor = new St.BoxLayout({ vertical: verticalPanel, reactive: true, track_hover: true });
       this.hoverBox = new St.BoxLayout({ vertical: false });
       this.powerBox = new St.BoxLayout({ vertical: verticalPanel });
@@ -1982,7 +1995,6 @@ GnoMenuBox.prototype = {
       this._gnoMenuSelected = 0;
       this.parent = parent;
       this.hover = hoverIcon;
-      this.selectedAppBox = selectedAppBox;
       this.powerPanel = powerPanel;
       this.vertical = verticalPanel;
       this.iconSize = iconSize;
@@ -2001,6 +2013,15 @@ GnoMenuBox.prototype = {
       //this._onEnterEvent(this._actionButtons[this._gnoMenuSelected].actor);
    },
 
+   setVertical: function(vertical) {
+      if(vertical != this.actor.get_vertical()) {
+         this.actor.set_vertical(vertical);
+         this.powerBox.set_vertical(vertical);
+         this.itemsBox.set_vertical(vertical);
+         this.scrollActor.setVertical(vertical);
+      }
+   },
+
    destroy: function() {
       this.separatorTop.destroy();
       for(let i = 0; i < this._actionButtons.length; i++) {
@@ -2011,37 +2032,45 @@ GnoMenuBox.prototype = {
    
    _createActionButtons: function() {
       this._actionButtons = new Array();
-      let button = new MenuItems.SystemButton(this.parent, null, "emblem-favorite", _("Favorites"), _("Favorites"), this.hover, this.selectedAppBox, this.iconSize, true);
+      let button = new MenuItems.SystemButton(this.parent, null, "emblem-favorite", _("Favorites"), _("Favorites"), this.iconSize, true);
       //let button = new CategoryButtonExtended(_("Favorites"), this.iconSize, true);
       button.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
       button.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent));
+      button.connect('active-changed', Lang.bind(this, this._onActiveChanged));
       //button.setAction(Lang.bind(this, this._changeSelectedButton));
       this.favorites = button;
       this._actionButtons.push(button);
         
       //Logout button  //preferences-other  //emblem-package
-      button = new SystemButton(this.parent, null, "preferences-other", _("All Applications"), _("All Applications"), this.hover, this.selectedAppBox,  this.iconSize, true);
+      button = new MenuItems.SystemButton(this.parent, null, "preferences-other", _("All Applications"), _("All Applications"), this.iconSize, true);
       button.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
       button.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent));
+      button.connect('active-changed', Lang.bind(this, this._onActiveChanged));
       //button.setAction(Lang.bind(this, this._changeSelectedButton));
       this.appList = button;
       this._actionButtons.push(button);
 
       //Shutdown button
-      button = new SystemButton(this.parent, null, "folder", _("Places"), _("Places"), this.hover, this.selectedAppBox,  this.iconSize, true);
+      button = new MenuItems.SystemButton(this.parent, null, "folder", _("Places"), _("Places"), this.iconSize, true);
       button.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
-      button.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent)); 
+      button.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent));
+      button.connect('active-changed', Lang.bind(this, this._onActiveChanged)); 
       //button.setAction(Lang.bind(this, this._changeSelectedButton));
       this.places = button;
       this._actionButtons.push(button);
 
       //Shutdown button
-      button = new SystemButton(this.parent, null, "folder-recent", _("Recent Files"), _("Recent Files"), this.hover, this.selectedAppBox,  this.iconSize, false);       
+      button = new MenuItems.SystemButton(this.parent, null, "folder-recent", _("Recent Files"), _("Recent Files"), this.iconSize, false);       
       button.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
-      button.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent)); 
+      button.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent));
+      button.connect('active-changed', Lang.bind(this, this._onActiveChanged)); 
       //button.setAction(Lang.bind(this, this._changeSelectedButton));
       this.recents = button;
       this._actionButtons.push(button);
+   },
+
+   _onActiveChanged: function(button, active) {
+      this.emit('active-changed', button, active);
    },
 
    refresh: function() {
@@ -2307,6 +2336,7 @@ GnoMenuBox.prototype = {
       return true;
    }
 };
+Signals.addSignalMethods(GnoMenuBox.prototype);
 
 function AccessibleDropBox(parent, place) {
    this._init(parent, place);

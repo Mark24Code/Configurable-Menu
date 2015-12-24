@@ -27,6 +27,9 @@ const PopupMenu = imports.ui.popupMenu;
 const Main = imports.ui.main;
 const AppFavorites = imports.ui.appFavorites;
 const FileUtils = imports.misc.fileUtils;
+const AppletPath = imports.ui.appletManager.applets['configurableMenu@lestcape'];
+const ConfigurableMenus = AppletPath.configurableMenus;
+//const Signals = imports.signals;
 //MenuItems
 
 const USER_DESKTOP_PATH = FileUtils.getUserDesktopDir();
@@ -2125,19 +2128,17 @@ FavoritesButton.prototype = {
    }
 };
 
-function SystemButton(parent, parentScroll, icon, title, description, hoverIcon, selectedAppBox, iconSize, haveText) {
-   this._init(parent, parentScroll, icon, title, description, hoverIcon, selectedAppBox, iconSize, haveText);
+function SystemButton(parent, parentScroll, icon, title, description, iconSize, haveText) {
+   this._init(parent, parentScroll, icon, title, description, iconSize, haveText);
 }
 
 SystemButton.prototype = {
    __proto__: GenericApplicationButton.prototype,
 
-   _init: function(parent, parentScroll, icon, title, description, hoverIcon, selectedAppBox, iconSize, haveText) {
+   _init: function(parent, parentScroll, icon, title, description, iconSize, haveText) {
       GenericApplicationButton.prototype._init.call(this, parent, parentScroll);
       this.title = title;
       this.description = description;
-      this.hoverIcon = hoverIcon;
-      this.selectedAppBox = selectedAppBox;
       this.actor.destroy();
       this.actor = new St.BoxLayout({ style_class:'menu-category-button', reactive: true, track_hover: true });
       this.iconSize = iconSize;
@@ -2223,25 +2224,25 @@ SystemButton.prototype = {
    },
 
    setActive: function(active) {
-      this.active = active;
-      if(this.active) {
-         this.actor.set_style_class_name('menu-category-button-selected');
-         if(this.theme)
-            this.actor.add_style_class_name('menu-system-button-' + this.theme + '-selected');
-         this.hoverIcon.refresh(this.icon);
-         this.selectedAppBox.setSelectedText(this.title, this.description);
-         this.actor.add_style_pseudo_class('active');
-      }
-      else {
-         this.actor.set_style_class_name('menu-category-button');
-         if(this.theme)
-            this.actor.add_style_class_name('menu-system-button-' + this.theme);
-         this.hoverIcon.refreshFace();
-         this.selectedAppBox.setSelectedText("", "");
-         this.actor.remove_style_pseudo_class('active');
+      if(this.active != active) {
+         this.active = active;
+         if(this.active) {
+            this.actor.set_style_class_name('menu-category-button-selected');
+            if(this.theme)
+               this.actor.add_style_class_name('menu-system-button-' + this.theme + '-selected');
+            this.actor.add_style_pseudo_class('active');
+         }
+         else {
+            this.actor.set_style_class_name('menu-category-button');
+            if(this.theme)
+               this.actor.add_style_class_name('menu-system-button-' + this.theme);
+            this.actor.remove_style_pseudo_class('active');
+         }
+         this.emit('active-changed', active);
       }
    }
 };
+//Signals.addSignalMethods(SystemButton.prototype);
 
 function SearchItem(parent, provider, search_path, icon_path, iconSize, textWidth, appDesc, vertical) {
    this._init(parent, provider, search_path, icon_path, iconSize, textWidth, appDesc, vertical);
@@ -2519,5 +2520,87 @@ DriveMenuItem.prototype = {
          }
       };
       return this.app;
+   }
+};
+
+function ConfigurablePopupSwitchMenuItem() {
+    this._init.apply(this, arguments);
+}
+
+ConfigurablePopupSwitchMenuItem.prototype = {
+    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+
+    _init: function(text, imageOn, imageOff, active, params) {
+        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+
+        this._imageOn = imageOn;
+        this._imageOff = imageOff;
+
+        let table = new St.Table({ homogeneous: false, reactive: true });
+
+        this.label = new St.Label({ text: text });
+        this.label.set_margin_left(6.0);
+
+        this._switch = new PopupMenu.Switch(active);
+
+        if(active)
+           this.icon = new St.Icon({ icon_name: this._imageOn, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });
+        else
+           this.icon = new St.Icon({ icon_name: this._imageOff, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });
+
+        this._statusBin = new St.Bin({ x_align: St.Align.END });
+        this._statusBin.set_margin_left(6.0);
+        this._statusLabel = new St.Label({ text: '', style_class: 'popup-inactive-menu-item' });
+        this._statusBin.child = this._switch.actor;
+
+        table.add(this.icon, {row: 0, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START});
+        table.add(this.label, {row: 0, col: 1, col_span: 1, y_fill: false, y_expand: true, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE});
+        table.add(this._statusBin, {row: 0, col: 2, col_span: 1, x_expand: true, x_align: St.Align.END});
+
+        this.addActor(table, { expand: true, span: 1, align: St.Align.START});
+    },
+
+    setToggleState: function(state) {
+        if(state)
+           this.icon.set_icon_name(this._imageOn);
+        else
+           this.icon.set_icon_name(this._imageOff);
+        this._switch.setToggleState(state);
+    },
+
+    get_state: function() {
+        return this._switch.state;
+    }
+};
+
+// This is only a clone for the dalcde update
+// we used it here to support old cinnamon versions.
+function PopupIconMenuItem() {
+   this._init.apply(this, arguments);
+}
+
+PopupIconMenuItem.prototype = {
+   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+
+   _init: function(text, iconName, iconType, params) {
+      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+      if(iconType != St.IconType.FULLCOLOR)
+          iconType = St.IconType.SYMBOLIC;
+      this.label = new St.Label({text: text});
+      this._icon = new St.Icon({ style_class: 'popup-menu-icon',
+         icon_name: iconName,
+         icon_type: iconType});
+      this.addActor(this._icon, {span: 0});
+      this.addActor(this.label);
+   },
+
+   setIconSymbolicName: function(iconName) {
+      this._icon.set_icon_name(iconName);
+      this._icon.set_icon_type(St.IconType.SYMBOLIC);
+   },
+
+   setIconName: function(iconName) {
+      this._icon.set_icon_name(iconName);
+      this._icon.set_icon_type(St.IconType.FULLCOLOR);
    }
 };

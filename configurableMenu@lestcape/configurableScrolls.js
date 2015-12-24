@@ -30,20 +30,71 @@ ScrollItemsBox.prototype = {
       this.parent = parent;
       this.idSignalAlloc = 0;
       this._timeOutScroll = 0;
+      this._align = align;
       this.panelToScroll = panelToScroll;
-      this.vertical = vertical;
-      this.actor = new St.BoxLayout({ vertical: this.vertical });
-      this.panelWrapper = new St.BoxLayout({ vertical: this.vertical });
-      this.panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: false, x_align: align, y_align: St.Align.START, expand: true });
-
-      this.scroll = this._createScroll(this.vertical);
-      this.scroll.add_actor(this.panelWrapper);
-
+      this.actor = new St.BoxLayout({ vertical: vertical });
+      this._panelWrapper = new St.BoxLayout({ vertical: vertical });
+      if(this.panelToScroll)
+         this._panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: true, x_align: align, y_align: St.Align.START, expand: true });
+      this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
+      this.scroll = this._createScroll(vertical);
+      this.scroll.add_actor(this._panelWrapper);
       this.actor.add(this.scroll, { x_fill: true, y_fill: true, expand: true });
+      this.actor._delegate = this;
    },
 
    destroy: function() {
       this.actor.destroy();
+   },
+
+   isBoxInViewPort: function(ax, ay, aw, ah) {
+      let [sx, sy] = this.actor.get_transformed_position();
+      let [sw, sh] = this.actor.get_transformed_size();
+      return ((ax >= sx)&&(ax <= sx + sw)&&(ay >= sy)&&(ay <= sy + sh));
+   },
+
+   isActorInViewPort: function(actor) {
+      if(actor) {
+         let [ax, ay] = actor.get_transformed_position();
+         let [aw, ah] = actor.get_transformed_size();
+         let [sx, sy] = this.actor.get_transformed_position();
+         let [sw, sh] = this.actor.get_transformed_size();
+         return ((ax >= sx)&&(ax <= sx + sw)&&(ay >= sy)&&(ay <= sy + sh));
+      }
+      return false;
+   },
+
+   setPanelToScroll: function(panelToScroll) {
+      if(this.panelToScroll != panelToScroll) {
+         if(this.panelToScroll && (this.panelToScroll.get_parent() == this._panelWrapper))
+            this._panelWrapper.remove_actor(this.panelToScroll);
+         this.panelToScroll = panelToScroll;
+         this._panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: true, x_align: this._align, y_align: St.Align.START, expand: true });
+         this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
+      }
+   },
+
+   setXAlign: function(align) {
+      if(this._align != align) {
+         this._align = align;
+         if(this.panelToScroll && (this.panelToScroll.get_parent() == this._panelWrapper))
+            this._panelWrapper.remove_actor(this.panelToScroll);
+         this._panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: true, x_align: this._align, y_align: St.Align.START, expand: true });
+         this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
+      }
+   },
+
+   setVertical: function(vertical) {
+      if(vertical != this.actor.get_vertical()) {
+         this.actor.set_vertical(vertical);
+         if(this._panelWrapper && (this._panelWrapper.get_parent() == this.scroll))
+            this.scroll.remove_actor(this._panelWrapper);
+         this._panelWrapper.set_vertical(vertical);
+         this.scroll.destroy();
+         this.scroll = this._createScroll(vertical);
+         this.scroll.add_actor(this._panelWrapper);
+         this.actor.add(this.scroll, { x_fill: true, y_fill: true, expand: true });
+      }
    },
 
    _createScroll: function(vertical) {
@@ -73,18 +124,27 @@ ScrollItemsBox.prototype = {
                           this.parent.menu.passEvents = false;
                        }));
       }
+      scrollBox._delegate = this;
       return scrollBox;
    },
 
    _onAllocationChanged: function(actor, event) {
-      if(this.visible) {
+      if(this.visible && this.panelToScroll) {
          let w = this.panelToScroll.get_allocation_box().x2-this.panelToScroll.get_allocation_box().x1
-         if((!this.vertical)&&(this.actor.get_width() > w - 10)) {
+         if((!this.actor.get_vertical())&&(this.actor.get_width() > w - 10)) {
             this.scroll.get_hscroll_bar().visible = false;
          } else {
             this.scroll.get_hscroll_bar().visible = true;
          }
       }   
+   },
+
+  _onParentChange: function() {
+      if(this._idReparent > 0) {
+         this.panelToScroll.disconnect(this._idReparent);
+         this._idReparent = 0;
+      }
+      this.panelToScroll = null;
    },
 
 //horizontalcode
@@ -153,7 +213,7 @@ ScrollItemsBox.prototype = {
    },
 
    setAutoScrolling: function(autoScroll) {
-      if(this.vertical)
+      if(this.actor.get_vertical())
          this.scroll.set_auto_scrolling(autoScroll);
       else
          this._setHorizontalAutoScroll(this.scroll, autoScroll);
@@ -161,7 +221,7 @@ ScrollItemsBox.prototype = {
 
    setScrollVisible: function(visible) {
       this.visible = visible;
-      if(this.vertical)
+      if(this.actor.get_vertical())
          this.scroll.get_vscroll_bar().visible = visible;
       else {
          if((visible)&&(this.idSignalAlloc == 0))
@@ -177,19 +237,19 @@ ScrollItemsBox.prototype = {
    scrollToActor: function(actor) {
       try {
          if(actor) {
-            if(this.vertical) {
-               var current_scroll_value = this.scroll.get_vscroll_bar().get_adjustment().get_value();
-               var box_height = this.actor.get_allocation_box().y2-this.actor.get_allocation_box().y1;
-               var new_scroll_value = current_scroll_value;
+            if(this.actor.get_vertical()) {
+               let current_scroll_value = this.scroll.get_vscroll_bar().get_adjustment().get_value();
+               let box_height = this.actor.get_allocation_box().y2-this.actor.get_allocation_box().y1;
+               let new_scroll_value = current_scroll_value;
                let hActor = this._getAllocationActor(actor, 0);
                if (current_scroll_value > hActor-10) new_scroll_value = hActor-10;
                if (box_height+current_scroll_value < hActor + actor.get_height()+10) new_scroll_value = hActor + actor.get_height()-box_height+10;
                if (new_scroll_value!=current_scroll_value) this.scroll.get_vscroll_bar().get_adjustment().set_value(new_scroll_value);
                // Main.notify("finish" + new_scroll_value);
             } else {
-               var current_scroll_value = this.scroll.get_hscroll_bar().get_adjustment().get_value();
-               var box_width = this.actor.get_allocation_box().x2-this.actor.get_allocation_box().x1;
-               var new_scroll_value = current_scroll_value;
+               let current_scroll_value = this.scroll.get_hscroll_bar().get_adjustment().get_value();
+               let box_width = this.actor.get_allocation_box().x2-this.actor.get_allocation_box().x1;
+               let new_scroll_value = current_scroll_value;
                if (current_scroll_value > actor.get_allocation_box().x1-10) new_scroll_value = actor.get_allocation_box().x1-10;
                if (box_width+current_scroll_value < actor.get_allocation_box().x2+40) new_scroll_value = actor.get_allocation_box().x2-box_width+40;
                if (new_scroll_value!=current_scroll_value) this.scroll.get_hscroll_bar().get_adjustment().set_value(new_scroll_value);
@@ -212,5 +272,3 @@ ScrollItemsBox.prototype = {
       return 0;//Some error
    }
 };
-
-
