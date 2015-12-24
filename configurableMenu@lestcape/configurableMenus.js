@@ -67,7 +67,7 @@ VisibleChildIterator.prototype = {
    },
 
    reloadVisible: function() {
-   /*   try {
+      try {
          this.visible_children = new Array();
          this.abs_index = new Array();
          this.cat_index = new Array();
@@ -95,7 +95,7 @@ VisibleChildIterator.prototype = {
          this._num_children = this.visible_children.length;
       } catch(e) {
          Main.notify(e.message);
-      }*/
+      }
    },
 
    setNumberView: function(numberView) {
@@ -110,7 +110,7 @@ VisibleChildIterator.prototype = {
    },
 
    isInBorder: function(catIndex, index, rowIndex, scapeKey) {
-    /*  if(scapeKey == Clutter.KEY_Left)
+      if(scapeKey == Clutter.KEY_Left)
          return (index == 0);
       if(scapeKey == Clutter.KEY_Right)
          return (this.container.get_child_at_index(catIndex).get_children().length - 1 == index);
@@ -118,26 +118,26 @@ VisibleChildIterator.prototype = {
          return (rowIndex == 0);
       if(scapeKey == Clutter.KEY_Down)
          return ((this.container.get_child_at_index(catIndex).get_child_at_index(index).get_children().length)/2 == rowIndex + 1);
-      return false;*/
+      return false;
    },
 
    getNextVisible: function(cur_child) {
-   /*   let pos = this.visible_children.indexOf(cur_child);
+      let pos = this.visible_children.indexOf(cur_child);
       if(pos == this._num_children-1)
          return this.visible_children[0];
       else
-         return this.visible_children[this.visible_children.indexOf(cur_child)+1];*/
+         return this.visible_children[this.visible_children.indexOf(cur_child)+1];
    },
 
    getPrevVisible: function(cur_child) {
-   /*   if(this.visible_children.indexOf(cur_child) == 0)
+      if(this.visible_children.indexOf(cur_child) == 0)
          return this.visible_children[this._num_children-1];
       else
-         return this.visible_children[this.visible_children.indexOf(cur_child)-1];*/
+         return this.visible_children[this.visible_children.indexOf(cur_child)-1];
    },
 
    getLeftVisible: function(cur_child) {
-   /*   let rowIndex = cur_child.get_parent().get_children().indexOf(cur_child);
+      let rowIndex = cur_child.get_parent().get_children().indexOf(cur_child);
       let colIndex = cur_child.get_parent().get_parent().get_children().indexOf(cur_child.get_parent());
       if(colIndex == 0) {
          let pos = this._numberView - 1;
@@ -149,11 +149,11 @@ VisibleChildIterator.prototype = {
          return left_item;
       }
       else
-         return cur_child.get_parent().get_parent().get_child_at_index(colIndex - 1).get_child_at_index(rowIndex);*/
+         return cur_child.get_parent().get_parent().get_child_at_index(colIndex - 1).get_child_at_index(rowIndex);
    },
 
    getRightVisible: function(cur_child) {
-   /*   let rowIndex = cur_child.get_parent().get_children().indexOf(cur_child);
+      let rowIndex = cur_child.get_parent().get_children().indexOf(cur_child);
       let colIndex = cur_child.get_parent().get_parent().get_children().indexOf(cur_child.get_parent());
       let right_item = null;
       let childr;
@@ -166,13 +166,13 @@ VisibleChildIterator.prototype = {
          if(!right_item)
             right_item = right_item = cur_child.get_parent().get_parent().get_child_at_index(0).get_child_at_index(rowIndex);
       }
-      return right_item;*/
+      return right_item;
    },
 
    getFirstVisible: function() {
-   /*   if(this.visible_children.length > 0)
+      if(this.visible_children.length > 0)
          return this.visible_children[0];
-      return null;*/
+      return null;
    },
 
    getLastVisible: function() {
@@ -222,83 +222,24 @@ ArrayBoxLayout.prototype = {
        this._columnWidth = columnWidth;
        this.actor = new St.BoxLayout(params);
        this.actor._delegate = this;
-      // this.idSignalAlloc = this.actor.connect('allocation_changed', Lang.bind(this, this._onAllocationChanged));
-   },
-
-   _onAllocationChanged: function() {
-     /* let currNumber = this.getCurrentNumOfColumns();
-      if(this._numberOfcolumns != currNumber) {
-         this._numberOfcolumns = currNumber;
-         this.updateBoxLayout();
-      }*/
    },
 
    getCurrentNumOfColumns: function() {
-   /*   let aviableWidth = this.actor.width - 42;
-      if((aviableWidth > 0)&&(this._columnWidth > 0)) {// + 42
-         let numberOfcolumns = Math.floor(aviableWidth/this._columnWidth);
-         if(numberOfcolumns*this._columnWidth > aviableWidth)
-            numberOfcolumns--;
-         if(numberOfcolumns < 1)
-            numberOfcolumns = 1;
-         return numberOfcolumns;
-      }
-      return this._numberOfcolumns;*/
    },
 
    updateNumOfColumns: function() {
-     /* let currNumber = this.getCurrentNumOfColumns();
-      if(this._numberOfcolumns != currNumber) {
-         this._numberOfcolumns = currNumber;
-         return true;
-      }
-      return false;*/
    },
 
    updateCategories: function() {
-   /*   let internalCat = this.actor.get_children();
-      for(let i = 0; i < internalCat.length; i++) {
-         if(internalCat[i]._delegate instanceof GridBoxLayout) {
-            internalCat[i]._delegate.setNumbersOfColumms(this._numberOfcolumns);
-         }
-      }*/
    },
 
    setColummWidth: function(colummWidth) {
-   /*   if(this._columnWidth != colummWidth) {
-         this._columnWidth = colummWidth;
-         let internalCat = this.actor.get_children();
-         for(let i = 0; i < internalCat.length; i++) {
-            if(internalCat[i]._delegate instanceof GridBoxLayout) {
-               internalCat[i]._delegate.setColummWidth(this._columnWidth);
-            }
-         }
-      }*/
    },
 
    updateBoxLayout: function() {
-    /*  let currNumber = this.getCurrentNumOfColumns();
-      if(this._numberOfcolumns != currNumber) {
-         this._numberOfcolumns = currNumber;
-      }
-      let internalCat = this.actor.get_children();
-      for(let i = 0; i < internalCat.length; i++) {
-         if(internalCat[i]._delegate instanceof GridBoxLayout) {
-            internalCat[i]._delegate.clearView();
-            internalCat[i]._delegate.setNumbersOfColumms(this._numberOfcolumns);
-            internalCat[i]._delegate.updateView();
-         }
-      }
-      return this._numberOfcolumns;*/
    },
 
    clearView: function() {
-     /* let internalCat = this.actor.get_children();
-      for(let i = 0; i < internalCat.length; i++) {
-         if(internalCat[i]._delegate instanceof GridBoxLayout) {
-            internalCat[i]._delegate.clearView();
-         }
-      }*/
    }
 }
 
@@ -354,34 +295,6 @@ GridBoxLayout.prototype = {
       this.actor.add(this._grid, { x_fill: true, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
       this.actor.connect('style-changed', Lang.bind(this, this._onStyleChanged));
       this.actor._delegate = this;
-   },
-
-   getCurrentNumOfColumns: function() {
-      
-   },
-
-   _getCurrentNumOfColumns: function(aviableWidth) {
-      if((aviableWidth > 0)&&(this._columnWidth > 0)) {// + 42
-         let numberOfcolumns = Math.floor(aviableWidth/this._columnWidth);
-         if(numberOfcolumns*this._columnWidth > aviableWidth)
-            numberOfcolumns--;
-         if(numberOfcolumns < 1)
-            numberOfcolumns = 1;
-         return numberOfcolumns;
-      }
-      return this._numberOfcolumns;
-   },
-
-   setColummWidth: function(colummWidth) {
-   },
-
-   setNumbersOfColumms: function(numberOfcolumns) {
-   },
-
-   updateView: function() {
-   },
-
-   clearView: function() {
    },
 
    _keyFocusIn: function(actor) {
@@ -766,800 +679,6 @@ GridBoxLayout.prototype = {
    }
 };
 Signals.addSignalMethods(GridBoxLayout.prototype);
-
-//this.standarAppBox
-/*
-function GridBoxLayout() {
-   this._init.apply(this, arguments);
-}
-
-GridBoxLayout.prototype = {
-   _init: function (columnWidth, params) {
-      //params = Params.parse (params, {
-      //   vertical: false,
-      //   reactive: true,
-      //   activate: true,
-      //   hover: true,
-      //   sensitive: true,
-      //   style_class: null,
-      //   focusOnHover: true
-      //});
-      params = Params.parse (params, {
-         vertical: false,
-         reactive: false,
-         activate: true,
-         hover: false,
-         sensitive: false,
-         style_class: null,
-         focusOnHover: false
-      });
-      this.actor = new Cinnamon.GenericContainer({
-         style_class: 'popup-menu-item',
-         reactive: params.reactive,
-         track_hover: params.reactive,
-         can_focus: params.reactive,
-         accessible_role: Atk.Role.MENU_ITEM
-      });
-      this.actor.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
-      this.actor.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
-      this.actor.connect('allocate', Lang.bind(this, this._allocate));
-      this.actor.connect('style-changed', Lang.bind(this, this._onStyleChanged));
-      this.actor._delegate = this;
-
-      this._children = [];
-      this._columnWidths = null;
-      this._spacing = 0;
-      this.active = false;
-      this._activatable = params.reactive && params.activate;
-      this.sensitive = true;
-      this.focusOnHover = params.focusOnHover;
-
-      this.setSensitive(this._activatable && params.sensitive);
-
-      if (params.style_class)
-         this.actor.add_style_class_name(params.style_class);
-
-      if (this._activatable) {
-         this.actor.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
-         this.actor.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
-      }
-      if (params.reactive && params.hover)
-         this.actor.connect('notify::hover', Lang.bind(this, this._onHoverChanged));
-      if (params.reactive) {
-         this.actor.connect('key-focus-in', Lang.bind(this, this._onKeyFocusIn));
-         this.actor.connect('key-focus-out', Lang.bind(this, this._onKeyFocusOut));
-      }
-      this._columnWidth = columnWidth;
-   },
-
-   getCurrentNumOfColumns: function() {
-      let aviableWidth = this.actor.width - 42;
-      if((aviableWidth > 0)&&(this._columnWidth > 0)) {// + 42
-         let numberOfcolumns = Math.floor(aviableWidth/this._columnWidth);
-         if(numberOfcolumns*this._columnWidth > aviableWidth)
-            numberOfcolumns--;
-         if(numberOfcolumns < 1)
-            numberOfcolumns = 1;
-         return numberOfcolumns;
-      }
-      return this._numberOfcolumns;
-   },
-
-   addMenuItem: function(menuItem) {
-      this.addActor(menuItem.actor);
-   },
-
-   setColummWidth: function(colummWidth) {
-      if(this._columnWidth != colummWidth) {
-         this._columnWidth = colummWidth;
-      }
-   },
-
-   setNumbersOfColumms: function(numberOfcolumns) {
-   },
-
-   updateView: function() {
-   },
-
-   clearView: function() {
-   },
-
-   clear: function() {
-   },
-
-   _onStyleChanged: function (actor) {
-      this._spacing = Math.round(actor.get_theme_node().get_length('spacing'));
-   },
-
-   _onButtonReleaseEvent: function (actor, event) {
-      this.activate(event, false);
-      return true;
-   },
-
-   _onKeyPressEvent: function (actor, event) {
-      let symbol = event.get_key_symbol();
-
-      if (symbol == Clutter.KEY_space || symbol == Clutter.KEY_Return) {
-         this.activate(event);
-         return true;
-      }
-      return false;
-   },
-
-   _onKeyFocusIn: function (actor) {
-      this.setActive(true);
-   },
-
-   _onKeyFocusOut: function (actor) {
-      this.setActive(false);
-   },
-
-   _onHoverChanged: function (actor) {
-      this.setActive(actor.hover);
-   },
-
-   activate: function (event, keepMenu) {
-      this.emit('activate', event, keepMenu);
-   },
-
-   setActive: function (active) {
-      let activeChanged = active != this.active;
-
-      if (activeChanged) {
-         this.active = active;
-         this.actor.change_style_pseudo_class('active', active);
-         if (this.focusOnHover && this.active) this.actor.grab_key_focus();
-
-         this.emit('active-changed', active);
-      }
-   },
-
-   setSensitive: function(sensitive) {
-      if (!this._activatable)
-         return;
-      if (this.sensitive == sensitive)
-         return;
-
-      this.sensitive = sensitive;
-      this.actor.reactive = sensitive;
-      this.actor.can_focus = sensitive;
-
-      this.actor.change_style_pseudo_class('insensitive', !sensitive);
-      this.emit('sensitive-changed', sensitive);
-   },
-
-   destroy: function() {
-      this.actor.destroy();
-      this.emit('destroy');
-   },
-
-   // adds an actor to the menu item; @params can contain %span
-   // (column span; defaults to 1, -1 means "all the remaining width", 0 means "no new column after this actor"),
-   // %expand (defaults to #false), and %align (defaults to
-   // #St.Align.START)
-   addActor: function(child, params) {
-      params = Params.parse(params, { span: 1,
-                                      expand: false,
-                                      align: St.Align.START });
-      params.actor = child;
-      this._children.push(params);
-      this.actor.connect('destroy', Lang.bind(this, function () { this._removeChild(child); }));
-      this.actor.add_actor(child);
-   },
-
-   _removeChild: function(child) {
-      for (let i = 0; i < this._children.length; i++) {
-         if (this._children[i].actor == child) {
-            this._children.splice(i, 1);
-            return;
-         }
-      }
-   },
-
-   removeActor: function(child) {
-      this.actor.remove_actor(child);
-      this._removeChild(child);
-   },
-
-   // This returns column widths in logical order (i.e. from the dot
-   // to the image), not in visual order (left to right)
-   getColumnWidths: function() {
-      let widths = [];
-      for (let i = 0, col = 0; i < this._children.length; i++) {
-         let child = this._children[i];
-         let [min, natural] = child.actor.get_preferred_width(-1);
-
-         if (widths[col])
-            widths[col] += this._spacing + natural;
-         else
-            widths[col] = natural;
-
-         if (child.span > 0) {
-            col++;
-            for (let j = 1; j < child.span; j++)
-               widths[col++] = 0;
-         }
-      }
-      return widths;
-   },
-
-   setColumnWidths: function(widths) {
-      this._columnWidths = widths;
-   },
-
-   getNumOfColumns: function() {
-      //let aviableWidth = this.actor.get_preferred_width(-1) - 42;
-      let parent = this.actor.get_parent();
-      let aviableWidth = 0;
-      //if(parent && parent.width) {
-         //aviableWidth = parent.width - 42;
-      //}
-      //.get_preferred_width(-1) - 42;
-      //if((aviableWidth > 0)&&(this._columnWidth > 0)) {// + 42
-      //   let numberOfcolumns = Math.floor(aviableWidth/this._columnWidth);
-      //   if(numberOfcolumns*this._columnWidth > aviableWidth)
-      //      numberOfcolumns--;
-      //   if(numberOfcolumns < 1)
-      //      numberOfcolumns = 1;
-      //   return numberOfcolumns;
-      //}
-      //return this._numberOfcolumns;
-      return 3;
-   }, 
-
-   _getPreferredWidth: function(actor, forHeight, alloc) {
-      let width = 0;
-      if (this._columnWidths) {
-         for (let i = 0; i < this._columnWidths.length; i++) {
-            if (i > 0)
-               width += this._spacing;
-            width += this._columnWidths[i];
-         }
-      } else {
-         let currNumbCols = this.getNumOfColumns();
-         let rows = Math.floor(this._children.length/currNumbCols);
-         for(let r = 0; r < rows; r++) {
-            let rowWidth = 0;
-            for (let i = 0; i < currNumbCols; i++) {
-               let childPos = r*currNumbCols + i;
-               if(childPos < this._children.length) {
-                  let child = this._children[i];
-                  if (i > 0)
-                     rowWidth += this._spacing;
-                  let [min, natural] = child.actor.get_preferred_width(-1);
-                  rowWidth += natural;
-               }
-            }
-            if(rowWidth > width) {
-               width = rowWidth;
-            }
-         }
-      }
-      alloc.min_size = alloc.natural_size = width;
-   },
-
-   _getPreferredHeight: function(actor, forWidth, alloc) {
-      let height = 0, x = 0, minWidth, childWidth;
-      let currNumbCols = this.getNumOfColumns();
-      let rows = Math.floor(this._children.length/currNumbCols);
-      let colHeight = 0;
-      for (let i = 0; i < currNumbCols; i++) {
-         let rowHeight = 0;
-         for(let r = 0; r < rows; r++) {
-            let childPos = r*currNumbCols + i;
-            if(childPos < this._children.length) {
-               let child = this._children[childPos];
-               if (this._columnWidths) {
-                  if (child.span == -1) {
-                     childWidth = 0;
-                     for (let j = i; j < this._columnWidths.length; j++)
-                        childWidth += this._columnWidths[j];
-                  } else
-                     childWidth = this._columnWidths[i];
-               } else {
-                  if (child.span == -1)
-                     childWidth = forWidth - x;
-                  else
-                     [minWidth, childWidth] = child.actor.get_preferred_width(-1);
-               }
-               x += childWidth;
-
-               let [min, natural] = child.actor.get_preferred_height(childWidth);
-               if (natural > height)
-                  rowHeight = natural;
-               colHeight += rowHeight;
-            }
-         }
-         if(colHeight > height) {
-            height = colHeight;
-         }  
-      }
-      alloc.min_size = alloc.natural_size = height;
-   },
-
-   _allocate: function(actor, box, flags) {
-      let height = box.y2 - box.y1;
-      let direction = this.actor.get_direction();
-
-      let xBorder;
-      if (direction == St.TextDirection.LTR)
-         xBorder = box.x1;
-      else
-         xBorder = box.x2;
-      let x = xBorder;
-      let cols;
-      //clone _columnWidths, if it exists, to be able to modify it without any impact
-      if (this._columnWidths instanceof Array)
-         cols = this._columnWidths.slice(0);
-
-      // if direction is ltr, x is the right edge of the last added
-      // actor, and it's constantly increasing, whereas if rtl, x is
-      // the left edge and it decreases
-      let currNumbCols = this.getNumOfColumns();
-      let rows = Math.floor(this._children.length/currNumbCols);
-      let maxY = box.y1;
-      for(let r = 0; r < rows; r++) {
-         x = xBorder;
-         let lastY = maxY;
-         for (let col = 0; col < currNumbCols; col++) {
-            let childPos = r*currNumbCols + col;
-            if(childPos < this._children.length) {
-               let child = this._children[childPos];
-               let childBox = new Clutter.ActorBox();
-
-               let [minWidth, naturalWidth] = child.actor.get_preferred_width(-1);
-               let availWidth, extraWidth;
-               if (cols) {
-                  if (child.span == -1) {
-                     if (direction == St.TextDirection.LTR)
-                        availWidth = box.x2 - x;
-                     else
-                        availWidth = x - box.x1;
-                  } else if (child.span == 0) {
-                     availWidth = naturalWidth;
-                     cols[col] -= naturalWidth + this._spacing;
-                  } else {
-                     availWidth = 0;
-                     for (let j = 0; j < child.span; j++)
-                        availWidth += cols[col];
-                  }
-                  extraWidth = availWidth - naturalWidth;
-               } else {
-                  if (child.span == -1) {
-                     if (direction == St.TextDirection.LTR)
-                        availWidth = box.x2 - x;
-                     else
-                        availWidth = x - box.x1;
-                  } else {
-                     availWidth = naturalWidth;
-                  }
-                  extraWidth = 0;
-               }
-
-               if (direction == St.TextDirection.LTR) {
-                  if (child.expand) {
-                     childBox.x1 = x;
-                     childBox.x2 = x + availWidth;
-                  } else if (child.align === St.Align.MIDDLE) {
-                     childBox.x1 = x + Math.round(extraWidth / 2);
-                     childBox.x2 = childBox.x1 + naturalWidth;
-                  } else if (child.align === St.Align.END) {
-                     childBox.x2 = x + availWidth;
-                     childBox.x1 = childBox.x2 - naturalWidth;
-                  } else {
-                     childBox.x1 = x;
-                     childBox.x2 = x + naturalWidth;
-                  }
-                
-                  //when somehow the actor is wider than the box, cut it off
-                  if(childBox.x2 > box.x2)
-                     childBox.x2 = box.x2;
-               } else {
-                  if (child.expand) {
-                     childBox.x1 = x - availWidth;
-                     childBox.x2 = x;
-                  } else if (child.align === St.Align.MIDDLE) {
-                     childBox.x1 = x - Math.round(extraWidth / 2);
-                     childBox.x2 = childBox.x1 + naturalWidth;
-                  } else if (child.align === St.Align.END) {
-                     // align to the left
-                     childBox.x1 = x - availWidth;
-                     childBox.x2 = childBox.x1 + naturalWidth;
-                  } else {
-                     // align to the right
-                     childBox.x2 = x;
-                     childBox.x1 = x - naturalWidth;
-                  }
-                
-                  //when somehow the actor is wider than the box, cut it off
-                  if(childBox.x1 < box.x1)
-                     childBox.x1 = box.x1;
-               }
-               let [minHeight, naturalHeight] = child.actor.get_preferred_height(childBox.x2 - childBox.x1);
-               //childBox.y1 = Math.round(lastY + (height - naturalHeight) / 2);
-               childBox.y1 = Math.round(lastY);
-               childBox.y2 = childBox.y1 + naturalHeight;
-               if(maxY < childBox.y2)
-                  maxY = childBox.y2;
-               child.actor.allocate(childBox, flags);
-
-               if (direction == St.TextDirection.LTR)
-                  x += availWidth + this._spacing;
-               else
-                  x -= availWidth + this._spacing;
-            }
-         }
-      }
-   }
-};
-Signals.addSignalMethods(GridBoxLayout.prototype);
-*/
-
-
-/*
-function GridBoxLayout() {
-   this._init.apply(this, arguments);
-}
-
-GridBoxLayout.prototype = {
-
-   _init: function(columnWidth, params) {
-      //this._params = {
-      //   style_class: 'menu-applications-box',
-      //   reactive: false,
-      //   track_hover: false,
-      //   can_focus: false
-      //};
-      //if(params != undefined) {
-      //   this._params = Params.parse(params, this._params);
-      //}
-      this._menuItems = [];
-      //this._gridItems = [];
-      this._numberOfcolumns = 1;
-      this._scrollViewPort = null;
-      this._columnWidth = columnWidth;
-      this.actor = new St.BoxLayout(params);
-      this.actor._delegate = this;
-      this.setNumbersOfColumms(1);
-      this.relayoutRequiered = false;
-      this.idSignalAlloc = this.actor.connect('allocation_changed', Lang.bind(this, this._onAllocationChanged));
-      this.idSignalMapped = this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
-   },
-
-   _onAllocationChanged: function() {
-      this.updateViewBetter();
-      //let currNumber = this.getCurrentNumOfColumns();
-      //if((this._numberOfcolumns != currNumber)||(this.relayoutRequiered)) {
-      //   this._numberOfcolumns = currNumber;
-      //   this.clearView();
-      //   this.setNumbersOfColumms(this._numberOfcolumns);
-      //   this.updateView();
-      //}
-   },
-
-   _onMapped: function() {
-      this._scrollViewPort = null;
-      let actor = this.actor.get_parent();
-      while((actor) && (!(actor instanceof St.ScrollView))) {
-         actor = actor.get_parent();
-      }
-      if(actor && actor._delegate)
-         this._scrollViewPort = actor._delegate;
-   },
-
-   getCurrentNumOfColumns: function() {
-      let aviableWidth = this.actor.width - 42;
-      if((aviableWidth > 0)&&(this._columnWidth > 0)) {// + 42
-         let numberOfcolumns = Math.floor(aviableWidth/this._columnWidth);
-         if(numberOfcolumns*this._columnWidth > aviableWidth)
-            numberOfcolumns--;
-         if(numberOfcolumns < 1)
-            numberOfcolumns = 1;
-         return numberOfcolumns;
-      }
-      return this._numberOfcolumns;
-   },
-
-   addMenuItem: function(menuItem) {
-      menuItem.actor.connect('show', Lang.bind(this, function() {
-         this.relayoutRequiered = true;
-      }));
-      menuItem.actor.connect('hide', Lang.bind(this, function() {
-         this.relayoutRequiered = true;
-      }));
-      this._menuItems.push(menuItem);
-      //let cell = new St.BoxLayout({vertical: true});
-      //cell.add_actor(menuItem.actor);
-      //if(menuItem.menu)
-      //   cell.add_actor(menuItem.menu.actor);
-      //this._gridItems.push(cell);
-      menuItem.actor.connect('destroy', Lang.bind(this, function() {
-         let index = this._menuItems.indexOf(menuItem);
-         if(index != -1)
-            this._menuItems.splice(index, 1);
-            //this._gridItems[index].destroy();
-            //this._gridItems.splice(index, 1);
-      }));
-   },
-
-   setColummWidth: function(colummWidth) {
-      if(this._columnWidth != colummWidth) {
-         this._columnWidth = colummWidth;
-         let appBox = this.actor.get_children();
-         for(let i = 0; i < appBox.length; i++) {
-            appBox[i].set_width(this._columnWidth);
-         }
-      }
-   },
-
-   sortMenuItems: function(pattern, sortType, appsUsage) {
-      visibleAppButtons = this._menuItems; //FIXME: Is better filter the visible actor first?
-      switch(sortType) {
-         case 'name':
-            break;
-         case 'relevance':
-            visibleAppButtons.sort(function(a, b) {
-               let sr = 0;
-               if(a.search) a.search(pattern);
-               if(b.search) b.search(pattern);
-               sr = b.searchScore - a.searchScore;
-               if(sr == 0)
-                  sr = a.name.toLowerCase() > b.name.toLowerCase();
-               return sr;
-            });
-            break;
-         case 'usage-name':
-            visibleAppButtons.sort(Lang.bind(this, function(a, b) {
-               let sr = 0;
-               if(appsUsage) {
-                  let bUsage, aUsage;
-                  if(b.app)
-                     bUsage = appsUsage[b.app.get_id()];
-                  if(a.app)
-                     aUsage = appsUsage[a.app.get_id()];
-                  if(!bUsage) bUsage = 0;
-                  if(!aUsage) aUsage = 0;
-                  sr = bUsage - aUsage;
-               }
-               if(sr == 0) {
-                  let bName, aName;
-                  if(b.app)
-                     bName = b.app.get_name().toLowerCase();
-                  if(a.app)
-                     aName = a.app.get_name().toLowerCase();
-                  if(!bName) bName = "";
-                  if(!aName) aName = "";
-                  sr = aName > bName;
-               }
-               return sr;
-            }));
-            break;
-         case 'usage-relevance':
-            visibleAppButtons.sort(Lang.bind(this, function(a, b) {
-               let sr = 0;
-               if(appsUsage) {
-                  let bUsage, aUsage;
-                  if(b.app)
-                     bUsage = appsUsage[b.app.get_id()];
-                  if(a.app)
-                     aUsage = appsUsage[a.app.get_id()];
-                  if(!bUsage) bUsage = 0;
-                  if(!aUsage) aUsage = 0;
-                  sr = bUsage - aUsage;
-               }
-               if(sr == 0) {
-                  if(a.search) a.search(pattern);
-                  if(b.search) b.search(pattern);
-                  sr = b.searchScore - a.searchScore;
-               }
-               if(sr == 0) {
-                  let bName, aName;
-                  if(b.app)
-                     bName = b.app.get_name().toLowerCase();
-                  if(a.app)
-                     aName = a.app.get_name().toLowerCase();
-                  if(!bName) bName = "";
-                  if(!aName) aName = "";
-                  sr = aName > bName;
-               }
-               return sr;
-            }));
-            break;
-         default:
-            break;
-      }
-   },
-
-   setNumbersOfColumms: function(numberOfcolumns) {
-      let newViewBox;
-      let appBox = this.actor.get_children();
-      for(let i = appBox.length; i < numberOfcolumns; i++) {
-         newViewBox = new St.BoxLayout({ vertical: true, width: this._columnWidth });
-         //newViewBox = new St.BoxLayout({ vertical: true });
-         this.actor.add(newViewBox, { x_fill: false, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
-      }
-      for(let i = numberOfcolumns; i < appBox.length; i++) {
-         this.actor.remove_actor(appBox[i]);
-         appBox[i].destroy();
-      }
-      for(let i = 0; i < appBox.length; i++) {
-         appBox[i].set_width(this._columnWidth);
-      }
-   },
-
-   canAddActorInViewPort: function(actor, col, row) {
-      if(this._scrollViewPort) {
-         let [ax, ay] = actor.get_transformed_position();
-         let [aw, ah] = actor.get_transformed_size();
-         let appBox = this.actor.get_children();
-         if(col < appBox.length) {
-             let colBox = appBox[col];
-             let [bx, by] = colBox.get_transformed_position();
-             return this._scrollViewPort.isBoxInViewPort(bx, by + ah*row, aw, ah);
-         }
-      }
-      return false;
-   },
-
-   _removeItemInPos: function(appBox, x, y) {
-       let viewBox = appBox[x].get_children();
-       if(viewBox[2*y]) {
-          appBox[x].remove_actor(viewBox[2*y]);
-          if(viewBox[2*y+1]) {
-             appBox[x].remove_actor(viewBox[2*y+1]);
-             return viewBox[2*y]._delegate;
-          }
-       }
-       return null;
-   },
-
-   _addItemInPos: function(appBox, menuItem, x, y) {
-       let viewBox = appBox[x].get_children();
-       let beforeItem = viewBox[2*y];
-       if(beforeItem)
-          appBox[x].insert_before(menuItem.actor, beforeItem);
-       else
-          appBox[x].add_actor(menuItem.actor);
-       if(menuItem.menu) {
-          if(beforeItem)
-             appBox[x].insert_before(menuItem.menu.actor, beforeItem);
-          else
-             appBox[x].add_actor(menuItem.menu.actor);
-       } else {//Remplace menu actor by a hide false actor.
-          falseActor = new St.BoxLayout();
-          falseActor.hide();
-          if(beforeItem)
-             appBox[x].insert_before(falseActor, beforeItem);
-          else
-             appBox[x].add_actor(falseActor);
-       }
-   },
-
-   updateViewBetter: function() {
-      let currNumber = this.getCurrentNumOfColumns();
-      if(this._numberOfcolumns != currNumber) {
-         let currValue, falseActor;
-         if(this._numberOfcolumns > currNumber) {
-            let appBox = this.actor.get_children();
-            for(let i = currNumber; i < this._numberOfcolumns; i += 1) {
-               let viewBox = appBox[i].get_children();
-               for(let j = 0; j < viewBox.length; j++) {
-                  appBox[i].remove_actor(viewBox[j]);
-                  appBox[currNumber - 1].add_actor(viewBox[j]);
-               }
-            }
-            this._numberOfcolumns = currNumber;
-            this.setNumbersOfColumms(currNumber);
-         } else {
-            this.setNumbersOfColumms(currNumber);
-            let appBox = this.actor.get_children();
-            let numItems = this._visibleItems.length;
-            if(numItems > 0) {
-               let numPerCol = Math.floor(numItems/currNumber);
-               //Main.notify("cols " + numItems + " " + currNumber + " " + numPerCol);
-               let space = 0;
-               for(let j = 0; j < numPerCol; j += 1) {//sixsax
-                  let items = [];
-                  log("cols1 " + numItems + " " + currNumber + " " + numPerCol);
-                  if(space == this._numberOfcolumns - 1)
-                     space = 0;
-                  let diff = currNumber - this._numberOfcolumns + space;
-
-                  for(let i = 0; i < diff; i += 1) {
-                     let item = this._removeItemInPos(appBox, i, j+1);
-                     if(item)
-                        this._addItemInPos(appBox, item, i + this._numberOfcolumns - space, j);
-                  }
-                  log("cols2 " + numItems + " " + currNumber + " " + numPerCol);
-                  for(let i = diff; i < currNumber; i += 1) {
-                     let item = this._removeItemInPos(appBox, i, j+1);
-                     if(item)
-                        this._addItemInPos(appBox, item, i-(diff) , j+1);
-                  }
-                  log("cols4 " + numItems + " " + currNumber + " " + numPerCol);
-               }
-               this._numberOfcolumns = currNumber;
-               space += 1;
-            }
-            //this.setNumbersOfColumms(currNumber);
-            //let appBox = this.actor.get_children();
-            //let numItems = this._visibleItems.length;
-            //if(numItems > 0) {
-            //   let numPerCol = 2*Math.floor(numItems/currNumber);
-            //   let diff = (numPerCol*currNumber - 2*numItems);
-               //Main.notify("cols " + numItems + " " + currNumber + " " + numPerCol);
-            //   let moved = [];
-            //   for(let i = 0; i < this._numberOfcolumns; i += 1) {
-            //      let viewBox = appBox[i].get_children();                    
-            //      for(let j = numPerCol; j < viewBox.length; j++) {
-            //         appBox[i].remove_actor(viewBox[j]);
-            //         moved.push(viewBox[j]);
-            //      }
-            //   }
-            //   for(let i = this._numberOfcolumns; i < currNumber; i += 1) {
-            //      let viewBox = appBox[i];
-            //      for(let j = 0; j < numPerCol; j++) {
-            //         viewBox.add_actor(moved[j]);
-            //      }
-            //   }
-            //   this._numberOfcolumns = currNumber;
-            //}
-         }
-      }
-      this.relayoutRequiered = false;
-   },
-
-   updateView: function() {
-      let currValue, falseActor;
-      let viewBox = this.actor.get_children();
-      this._visibleItems = [];
-      for(let i = 0; i < this._menuItems.length; i ++) {
-         if(this._menuItems[i].actor.visible) {
-            this._visibleItems.push(this._menuItems[i]);
-         }
-      }
-      for(let i = 0; i < this._visibleItems.length; i += viewBox.length) {
-         currValue = i;
-         for(let j = 0; j < viewBox.length; j++) {
-            if(currValue < this._visibleItems.length) {
-               if(this._visibleItems[currValue].actor.visible) {
-                  //viewBox[j].add_actor(this._gridItems[currValue]);
-                  viewBox[j].add_actor(this._visibleItems[currValue].actor);
-                  if(this._visibleItems[currValue].menu)
-                     viewBox[j].add_actor(this._visibleItems[currValue].menu.actor);
-                  else {//Remplace menu actor by a hide false actor.
-                     falseActor = new St.BoxLayout();
-                     falseActor.hide();
-                     viewBox[j].add_actor(falseActor);
-                  }
-               }
-            }
-            currValue++;
-         }
-      }
-      this.relayoutRequiered = false;
-   },
-
-   clearView: function() {
-      this.actor.visible = false;
-      let viewBox = this.actor.get_children();
-      let appItem;
-      for(let i = 0; i < viewBox.length; i++) {
-         appItem = viewBox[i].get_children();
-         for(let j = 0; j < appItem.length; j++) {
-         //for(let j = appItem.length - 1; j >= 0 ; j--) {
-            viewBox[i].remove_actor(appItem[j]);
-         }
-         if(i > 0)
-            viewBox[i].set_width(-1);
-      }
-      this.actor.visible = true;
-   },
-
-   clear: function() {
-       this.actor.destroy_all_children();
-   }
-};*/
 
 /**
  * BoxPointer:
@@ -2920,20 +2039,21 @@ ConfigurableMenuManager.prototype = {
    _onMenuOpenState: function(menu, open) {
       if(!this._isFloating(menu))
          return;
+      let focus = global.stage.key_focus;
       if(open) {
          if(this._activeMenu && this._activeMenu.isChildMenu(menu)) {
             this._menuStack.push(this._activeMenu);
-         } else {
+         } else if(!focus || !menu.actor.contains(focus)) {
             menu.actor.grab_key_focus();
          }
-         menu.sourceActor.grab_key_focus();
+         //menu.sourceActor.grab_key_focus();
          this._activeMenu = menu;
       } else if(this._menuStack.length > 0) {
          this._lastMenuClose = menu;
          this._activeMenu = this._menuStack.pop();
       }
       // Check what the focus was before calling pushModal/popModal
-      let focus = global.stage.key_focus;
+      focus = global.stage.key_focus;
       let hadFocus = focus && this._activeMenuContains(focus);
 
       if(open) {
@@ -2943,10 +2063,10 @@ ConfigurableMenuManager.prototype = {
             this._grab();
          }
          // FIXME: this is buggy and open the menu and closed it several times.
-         //if(hadFocus)
-         //   focus.grab_key_focus();
-         //else
-         //   menu.actor.grab_key_focus();
+         if(hadFocus)
+            focus.grab_key_focus();
+         else
+            menu.actor.grab_key_focus();
       } else if(menu == this._activeMenu) {
          if(this.grabbed)
             this._ungrab();
@@ -3177,6 +2297,7 @@ ConfigurableMenu.prototype = {
          this._scroll._delegate = this;
          this._scroll.hide();
          this._scroll.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
+         this._scroll.connect('notify::mapped', Lang.bind(this, this._onMapped));
 
          // StScrollbar plays dirty tricks with events, calling
          // clutter_set_motion_events_enabled (FALSE) during the scroll; this
@@ -3204,6 +2325,7 @@ ConfigurableMenu.prototype = {
          this._boxPointer.actor.add_style_class_name('popup-menu');
          this._boxPointer.actor.hide();
          this._boxPointer.actor.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
+         this._boxPointer.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
          Main.uiGroup.add_actor(this._boxPointer.actor);
          global.focus_manager.add_group(this._boxPointer.actor);
 
@@ -3232,6 +2354,10 @@ ConfigurableMenu.prototype = {
       } catch(e) {
          Main.notify("ErrorMenuCreation", e.message);
       }
+   },
+
+   _onMapped: function(controlingSize) {
+      this._setChildsArrowSide();
    },
 
    setControlingSize: function(controlingSize) {
@@ -3516,103 +2642,7 @@ ConfigurableMenu.prototype = {
       }
       return false;
    },
-/*
-   _updateSize: function() {
-      if((this.mainBox)&&(this.displayed)) {
-         let oldColumn = this.iconViewCount;
-         let monitor = Main.layoutManager.findMonitorForActor(this.actor);
-         if(this.fullScreen) {
-            let panelTop = this._processPanelSize(false);
-            let panelButton = this._processPanelSize(true);
-            //Main.notify("panelTop:" + panelTop + " panelButton:" + panelButton);
-            let themeNode = this.menu.getCurrentMenuThemeNode();
-            let difference = this.menu.actor.get_height() - this.mainBox.get_height();
-            if(difference < 0) {
-               this.mainBox.set_height(monitor.height - panelButton - panelTop - 40);
-               this.menu.actor.set_width(this.width);
-            }
-            difference = this.menu.actor.get_height() - this.mainBox.get_height();
-            let bordersY = 0;
-            if(themeNode)
-               bordersY = themeNode.get_length('border-bottom') + themeNode.get_length('border-top') + themeNode.get_length('-boxpointer-gap');
-            if(!this.appMenu)
-               this.menu.actor.set_width(monitor.width);
-            this.mainBox.set_height(monitor.height - panelButton - panelTop + bordersY - difference);
-            this._updateView();
-         } else if(this.automaticSize) {
-            this.menu.actor.set_width(-1);
-            this.mainBox.set_height(-1);
-            this._clearView();
-            if((this.bttChanger)||(this.gnoMenuBox)) {
-               this.height = this.mainBox.get_height();
-               this.mainBox.set_height(this.height);
-            } else {
-               this.height = this.mainBox.get_height();
-               this.mainBox.set_height(this.height);
-            }
-            this._updateView();
-            this.width = this.menu.actor.get_width();
-            this.menu.actor.set_width(this.width);
-         } else {
-            let difference = this.menu.actor.get_height() - this.mainBox.get_height();
-            let maxHeigth = monitor.height - this._processPanelSize(true) - this._processPanelSize(false) - difference;
-            if(this.height > this.mainBox.get_height()) {
-               if(this.height > maxHeigth)
-                  this.height = maxHeigth;
-               this.mainBox.set_height(this.height);
-            } else {
-               if(this.height > this.minimalHeight) {
-                  this.mainBox.set_height(this.height);
-                  let minHeight = this._minimalHeight();
-                  if(this.height < minHeight) {
-                     this.height = minHeight;
-                     this.mainBox.set_height(this.height);
-                  }
-                  this.minimalHeight = minHeight;
-               } else {
-                  this.height = this.minimalHeight;
-                  this.mainBox.set_height(this.height);
-               }
-            }
-            if(this.width > monitor.width) {
-               this.width = monitor.width;
-               this.menu.actor.set_width(this.width);
-               this._updateView();
-            }
-            else if(this.width > this.menu.actor.get_width()) {
-               if(this.width > monitor.width)
-                  this.width = monitor.width;
-               this.menu.actor.set_width(this.width);
-               this._updateView();
-            } else if(this.width > this.minimalWidth) {
-               this._clearView();
-               this.menu.actor.set_width(this.width);
-               let minWidth = this._minimalWidth();
-               if(this.width < minWidth) {
-                  this.width = minWidth;
-                  this.menu.actor.set_width(this.width);
-               }
-               this._updateView();
-               //this.minimalWidth = minWidth;
-            }
-         }
-         this._updateSubMenuSize();
-         if(oldColumn != this.iconViewCount) {
-            let prev = this._previousTreeSelectedActor;
-            this._clearAllSelections(false);
-            this._previousTreeItemIndex = null;
-            this._previousSelectedActor = null;
-            this._selectedItemIndex = null;
-            this._activeContainer = null;
-            this._activeActor = null;
-            this._previousTreeSelectedActor = this._allAppsCategoryButton.actor;
-            this._previousTreeSelectedActor.set_style_class_name('menu-category-button-selected');
-            this._previousTreeSelectedActor.add_style_class_name('menu-category-button-selected-' + this.theme);
-            this._previousTreeSelectedActor._delegate.emit('enter-event');
-         }
-      }
-   },
-*/
+
    addMenuItem: function(menuItem, position) {
       this._setShowItemIcon(menuItem);
       this._setDesaturateItemIcon(menuItem);
@@ -4075,10 +3105,6 @@ ConfigurableMenu.prototype = {
       let needsScrollbar = this._needsScrollbar();
       this._scroll.vscrollbar_policy =
             needsScrollbar ? Gtk.PolicyType.AUTOMATIC : Gtk.PolicyType.NEVER;
-
-      // We don't need this right now and also we need to find
-      // the monitor on Crome, so, request on idle.
-      Mainloop.idle_add(Lang.bind(this, this._setChildsArrowSide));
       this.emit('open-state-changed', true);
    },
 
@@ -5054,6 +4080,7 @@ ConfigurableMenuApplet.prototype = {
          this.actor = this._appletBox;
          this.actor.add(this.box);
          this.actor.hide();
+         this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
       }
       this._menuManager.addMenu(this);
 
@@ -5062,6 +4089,10 @@ ConfigurableMenuApplet.prototype = {
          this._appletBox.connect('enter-event', Lang.bind(this, this._onEnterEvent));
          this._appletBox.connect('leave-event', Lang.bind(this, this._onLeaveEvent));
       }
+   },
+
+   _onMapped: function() {
+      this._setChildsArrowSide();
    },
 
    _onEnterEvent: function() {
@@ -5126,7 +4157,6 @@ ConfigurableMenuApplet.prototype = {
             ConfigurableMenu.prototype.open.call(this, false);
       } else if(!this.isOpen) {
          this.actor.show();
-         this._setChildsArrowSide();
          this.isOpen = true;
          this.emit('open-state-changed', true);
       }

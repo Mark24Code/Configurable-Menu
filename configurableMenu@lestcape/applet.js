@@ -1201,7 +1201,7 @@ MyApplet.prototype = {
 
         if((global.display.get_is_overlay_key)&&(global.display.get_is_overlay_key(keyCode, modifierState))) {
            if(this.menu.isOpen) {
-              this._disconnectSearch();
+              //this._disconnectSearch();
               this.menu.close();
               return true;
            }
@@ -1828,43 +1828,9 @@ MyApplet.prototype = {
    },
 
    _updateView: function() {
-      //this.menu.setSize(this.width, this.height);
-      //this.arrayBoxLayout.setColummWidth(this._applicationsBoxWidth);
-      //this.iconViewCount = this.arrayBoxLayout.updateBoxLayout();
-      //this.appBoxIter.setNumberView(this.iconViewCount);
-      /*try {
-         this.pkg.updateView();
-         this.standarAppGrid.updateView(this.visibleAppButtons);
-         if(this.visibleSearchButtons) {
-            this.searchAppGrid.updateView(this.visibleSearchButtons);
-         }
-      } catch(e) {
-        Main.notify("Error10", e.message);
-      }*/
    },
 
    _clearView: function() {
-     /* if(this.enablePackageSearch)
-          this.pkg.clearView();
-      let appBox = this.standarAppGrid.actor.get_children();
-      let appItem;
-      for(let i = 0; i < appBox.length; i++) {
-         appItem = appBox[i].get_children();
-         for(let j = 0; j < appItem.length; j++) {
-            appBox[i].remove_actor(appItem[j]);
-         }
-         if(i > 0)
-            appBox[i].set_width(-1);
-      }
-      appBox = this.searchAppGrid.actor.get_children();
-      for(let i = 0; i < appBox.length; i++) {
-         appItem = appBox[i].get_children();
-         for(let j = 0; j < appItem.length; j++) {
-            appBox[i].remove_actor(appItem[j]);
-         }
-         if(i > 0)
-            appBox[i].set_width(-1);
-      }*/
    },
 
    _updateVFade: function() { 
@@ -2567,7 +2533,6 @@ MyApplet.prototype = {
       this._setAppIconDirection();
       this._updateAppSize();
       this._refreshFavs();
-      this._updateView();
       this._select_category(null, this._allAppsCategoryButton);
       this._alignSubMenu();
       this._appletHoverFixed();
@@ -2717,7 +2682,6 @@ MyApplet.prototype = {
          if(this.appletMenu)
             this.onCategorieGnomeChange(this.appletMenu.getActorForName("Main"));
       }
-
       this._updateSize();
    },
 
@@ -2728,149 +2692,29 @@ MyApplet.prototype = {
       } else if(this.automaticSize) {
           this.menu.actor.set_width(-1);
           this.menu.actor.set_height(-1);
+          //this.menu.setSize(-1, -1);
       } else {
           this.menu.setSize(this.width, this.height);
           //this.menu.actor.set_width(this.width);
           //this.menu.actor.set_height(this.height);
       }
-
-      /*if((this.mainBox)&&(this.displayed)) {
-         let oldColumn = this.iconViewCount;
-         let monitor = Main.layoutManager.findMonitorForActor(this.actor);
-         if(this.fullScreen) {
-            let panelTop = this._processPanelSize(false);
-            let panelButton = this._processPanelSize(true);
-            //Main.notify("panelTop:" + panelTop + " panelButton:" + panelButton);
-            let themeNode = this.menu.getCurrentMenuThemeNode();
-            let difference = this.menu.actor.get_height() - this.mainBox.get_height();
-            if(difference < 0) {
-               this.mainBox.set_height(monitor.height - panelButton - panelTop - 40);
-               this.menu.actor.set_width(this.width);
-            }
-            difference = this.menu.actor.get_height() - this.mainBox.get_height();
-            let bordersY = 0;
-            if(themeNode)
-               bordersY = themeNode.get_length('border-bottom') + themeNode.get_length('border-top') + themeNode.get_length('-boxpointer-gap');
-            if(!this.appMenu)
-               this.menu.actor.set_width(monitor.width);
-            this.mainBox.set_height(monitor.height - panelButton - panelTop + bordersY - difference);
-            this._updateView();
-         } else if(this.automaticSize) {
-            this.menu.actor.set_width(-1);
-            this.mainBox.set_height(-1);
-            this._clearView();
-            if((this.bttChanger)||(this.gnoMenuBox)) {
-               this.height = this.mainBox.get_height();
-               this.mainBox.set_height(this.height);
-            } else {
-               this.height = this.mainBox.get_height();
-               this.mainBox.set_height(this.height);
-            }
-            this._updateView();
-            this.width = this.menu.actor.get_width();
-            this.menu.actor.set_width(this.width);
-         } else {
-            let difference = this.menu.actor.get_height() - this.mainBox.get_height();
-            let maxHeigth = monitor.height - this._processPanelSize(true) - this._processPanelSize(false) - difference;
-            if(this.height > this.mainBox.get_height()) {
-               if(this.height > maxHeigth)
-                  this.height = maxHeigth;
-               this.mainBox.set_height(this.height);
-            } else {
-               if(this.height > this.minimalHeight) {
-                  this.mainBox.set_height(this.height);
-                  let minHeight = this._minimalHeight();
-                  if(this.height < minHeight) {
-                     this.height = minHeight;
-                     this.mainBox.set_height(this.height);
-                  }
-                  this.minimalHeight = minHeight;
-               } else {
-                  this.height = this.minimalHeight;
-                  this.mainBox.set_height(this.height);
-               }
-            }
-            if(this.width > monitor.width) {
-               this.width = monitor.width;
-               this.menu.actor.set_width(this.width);
-               this._updateView();
-            }
-            else if(this.width > this.menu.actor.get_width()) {
-               if(this.width > monitor.width)
-                  this.width = monitor.width;
-               this.menu.actor.set_width(this.width);
-               this._updateView();
-            } else if(this.width > this.minimalWidth) {
-               this._clearView();
-               this.menu.actor.set_width(this.width);
-               let minWidth = this._minimalWidth();
-               if(this.width < minWidth) {
-                  this.width = minWidth;
-                  this.menu.actor.set_width(this.width);
-               }
-               this._updateView();
-               //this.minimalWidth = minWidth;
-            }
-         }
-         this._updateSubMenuSize();
-         if(oldColumn != this.iconViewCount) {
-            let prev = this._previousTreeSelectedActor;
-            this._clearAllSelections(false);
-            this._previousTreeItemIndex = null;
-            this._previousSelectedActor = null;
-            this._selectedItemIndex = null;
-            this._activeContainer = null;
-            this._activeActor = null;
-            this._previousTreeSelectedActor = this._allAppsCategoryButton.actor;
-            this._previousTreeSelectedActor.set_style_class_name('menu-category-button-selected');
-            this._previousTreeSelectedActor.add_style_class_name('menu-category-button-selected-' + this.theme);
-            this._previousTreeSelectedActor._delegate.emit('enter-event');
-         }
-      }*/
    },
 
    _updateSubMenuSize: function() {
-     /* if((this.appMenu)&&(this.mainBox)&&(this.displayed)) {
-         let monitor = Main.layoutManager.findMonitorForActor(this.actor);
+      if((this.appMenu)&&(this.displayed)) {
          if(this.fullScreen) {
-            let themeNode = this.menu.getCurrentMenuThemeNode();
-            let panelTop = this._processPanelSize(false);
-            let panelButton = this._processPanelSize(true);
-            let bordersY = themeNode.get_length('border-bottom') + themeNode.get_length('border-top') + themeNode.get_length('-boxpointer-gap');
-            //this.menu.actor.set_width(-1);
-            Mainloop.idle_add(Lang.bind(this, function() {
-               let minWidth = this._minimalWidth();
-               this.menu.actor.set_width(minWidth);
-               this.appMenu.actor.set_width(monitor.width - minWidth - 3*themeNode.get_length('-arrow-border-width'));
-               this.appMenu.actor.set_height(monitor.height - panelButton - panelTop + bordersY);
-            }));
-         }
-         else if(this.automaticSize) {
+            let monitor = Main.layoutManager.findMonitorForActor(this.actor);
+            this.appMenu.setSize(monitor.width, monitor.height);
+         } else if(this.automaticSize) {
             this.appMenu.actor.set_width(-1);
             this.appMenu.actor.set_height(-1);
+            //this.appMenu.setSize(-1, -1);
+         } else {
+            this.menu.setSize(this.width, this.height);
+            //this.appMenu.actor.set_width(this.width);
+            //this.appMenu.actor.set_height(this.height);
          }
-         else {
-            let panelTop = this._processPanelSize(false);
-            let panelButton = this._processPanelSize(true);
-            if(this.subMenuHeight > monitor.height - panelTop - panelButton)
-               this.subMenuHeight = monitor.height - panelTop - panelButton;
-            this.appMenu.actor.set_width(this.subMenuWidth);
-            this.appMenu.actor.set_height(this.subMenuHeight);
-            Mainloop.idle_add(Lang.bind(this, function() {//checking correct width and revert if it's needed.
-               let minWidth = this.operativePanel.width + 10;
-               let minHeight = this._minimalHeight();
-               if(this.subMenuWidth < minWidth) {
-                  this.subMenuWidth = minWidth - 2;
-                  this.appMenu.actor.set_width(this.subMenuWidth);
-               }
-               if(this.subMenuHeight < minHeight) {
-                  this.subMenuHeight = minHeight;
-                  this.appMenu.actor.set_height(this.subMenuHeight);
-                  this._updateView();
-               }
-            }));
-         }
-      }*/
+      }
    },
 
    _alignSubMenu: function() {
@@ -2884,29 +2728,11 @@ MyApplet.prototype = {
       return actor.get_allocation_box().x2-actor.get_allocation_box().x1;
    },
 
-   allocationHeight: function(actor) {
-      return actor.get_allocation_box().y2-actor.get_allocation_box().y1;
-   },
-
-   _minimalHeight: function() {
-      //  this.endHorizontalBox.get_height() + this.endHorizontalBox.get_height() + 10;
-      let scrollBoxHeight = this.topBoxSwaper.get_height() + this.bottomBoxSwaper.get_height() + 10;
-      if(!this.categoriesBox.get_vertical())
-         scrollBoxHeight += this.categoriesBox.get_height();
-      if(!this.favBoxWrapper.get_vertical())
-         scrollBoxHeight += this.favBoxWrapper.get_height();
-      if(this.gnoMenuBox)
-         scrollBoxHeight += this.powerBox.actor.get_height() + 40;
-      if(scrollBoxHeight + 20 < 280)
-         scrollBoxHeight = 280;
-      return scrollBoxHeight + 20;
-   },
-
    _minimalWidth: function() {
       let diff = 24;
       let textVisible = this.selectedAppBox.actor.visible;
       this.selectedAppBox.actor.visible = false;
-      let width = 0;//this.extendedBox.get_allocation_box().x2 - this.extendedBox.get_allocation_box().x1;
+      let width = 0;
       if(this.appMenu) {
          let [minWidth, minHeight, natWidth, natHeight] = this.standardBox.get_preferred_size();
          width = minWidth;
@@ -2947,7 +2773,7 @@ MyApplet.prototype = {
    _menuEventClicked: function(actor, event) {
       if(event.get_button() == 1) {
          if(this.menu.isOpen) {
-            this._disconnectSearch();
+            //this._disconnectSearch();
          }
          this.on_applet_clicked(event)
          if(this._applet_context_menu.isOpen) {
@@ -2965,11 +2791,7 @@ MyApplet.prototype = {
    },
 
    on_applet_clicked: function(event) {
-      // let t = new Date().getTime();
-      //global.stage.set_key_focus(this.searchEntry);
       this.menu.toggle_with_options(false);
-      // let f = new Date().getTime();
-      // log("time is: " + (f - t).toString());
    },
 
    _onSourceKeyPress: function(actor, event) {
@@ -3119,14 +2941,14 @@ MyApplet.prototype = {
          this._setVisibleArrowCat();
       }
    },
-
+/*
    _disconnectSearch: function() {
       this.menuIsOpening = true;
       if(this.idSignalTextChange > 0)
          this.searchEntryText.disconnect(this.idSignalTextChange);
       this.idSignalTextChange = 0;
    },
-
+*/
    //This fixed buggs Cjs-CRITICAL **: Attempting to call back into JSAPI
    _destroyMenuComponents: function() {
       if(this.searchAppSeparator)
@@ -3150,7 +2972,7 @@ MyApplet.prototype = {
 
       if(this.menu.isOpen)
          this.menu.closeClean();
-      this._disconnectSearch();
+      //this._disconnectSearch();
       this.menu.removeAll();
    },
 
@@ -3161,7 +2983,7 @@ MyApplet.prototype = {
    },
 
    _releaseComponents: function() {
-      this._disconnectSearch();
+      //this._disconnectSearch();
       if(this.menu.isOpen)
          this.menu.closeClean();
       if(this.searchAppSeparator)
@@ -3373,14 +3195,15 @@ MyApplet.prototype = {
          this.searchActive = false;
          this.searchEntryText = this.searchEntry.clutter_text;
          this.searchEntryText.connect('key-press-event', Lang.bind(this, this._onMenuKeyPress));
-         this.idSignalTextChange = 0;
+         /*this.idSignalTextChange = 0;
          this.searchEntryText.connect('key-focus-in', Lang.bind(this, function(actor) {
             if(this.idSignalTextChange == 0)
                this.idSignalTextChange = this.searchEntryText.connect('text-changed', Lang.bind(this, this._onSearchTextChanged));
          }));
          this.searchEntryText.connect('key-focus-out', Lang.bind(this, function(actor) {
-            this._disconnectSearch();
-         }));
+            //this._disconnectSearch();
+         }));*/
+         this.idSignalTextChange = this.searchEntryText.connect('text-changed', Lang.bind(this, this._onSearchTextChanged));
          this.searchName.style = "font-size: " + 10 + "pt";
          this.panelAppsName.style = "font-size: " + 10 + "pt";
 
@@ -4648,7 +4471,7 @@ MyApplet.prototype = {
       this.searchActive = false;
       this._clearAllSelections(true);
       this._setCategoriesButtonActive(true);
-      global.stage.set_key_focus(this.searchEntry);
+      //global.stage.set_key_focus(this.searchEntry);
    },
 
    _clearPrevAppSelection: function(actor) {
@@ -4944,7 +4767,6 @@ MyApplet.prototype = {
       if(search) {
           this.standarAppGrid.sortMenuItems(search, this.searchSorted, this.appsUsage);
       }
-      this._updateView();
    },
 
    _onSearchTextChanged: function(se, prop) {
@@ -5646,10 +5468,9 @@ MyApplet.prototype = {
             this._favoritesButtons[i].actor.show();
          }
          this.standarHeight = this.standarAppGrid.actor.get_height();
-         let box = this.applicationsScrollBox.actor.get_allocation_box();
          if(this._applicationsButtons.length > 0) {
             let maxHeight = this._applicationsButtons[0].actor.get_height();
-            let maxApp = Math.floor(this.iconViewCount*(box.y2 - box.y1)/maxHeight);
+            let maxApp = Math.floor(this.iconViewCount*(this.applicationsScrollBox.actor.height)/maxHeight);
             this.initButtonLoad = Math.min(this._applicationsButtons.length, maxApp + 1);
             for(let i = 0; i < this.initButtonLoad; i++) {
                this._applicationsButtons[i].actor.show();
@@ -5668,12 +5489,10 @@ MyApplet.prototype = {
    },
 
    _preserveClear: function() {
-      let box = this.applicationsScrollBox.actor.get_allocation_box();
       if(this._applicationsButtons.length > 0) {
          let maxHeight = this._applicationsButtons[0].actor.get_height();
-         let maxApp = Math.floor(this.iconViewCount*(box.y2 - box.y1)/maxHeight);
-         this.initButtonLoad = Math.min(this._applicationsButtons.length, maxApp + 20);
-         this.standarHeight = this.standarAppGrid.actor.get_height();
+         let maxApp = Math.floor(this.iconViewCount*(this.applicationsScrollBox.actor.height)/maxHeight);
+         this.initButtonLoad = Math.min(this._applicationsButtons.length, maxApp + 1);
          for(let i = 0; i < this.initButtonLoad; i++) {
             this._applicationsButtons[i].actor.show();
          }
@@ -5694,11 +5513,8 @@ MyApplet.prototype = {
 
    _onOpenStateChanged: function(menu, open) {
       if(open) {
-         if(this.displayed) {
-            Mainloop.idle_add(Lang.bind(this, this._initial_cat_selection, this.initButtonLoad));
-         }
          this.menuIsOpening = true;
-         this._initialDisplay();
+         //this._initialDisplay();
          global.stage.set_key_focus(this.searchEntry);
          this.actor.add_style_pseudo_class('active');
          this._selectedItemIndex = null;
@@ -5709,18 +5525,18 @@ MyApplet.prototype = {
          this._previousTreeSelectedActor = this._allAppsCategoryButton.actor;
          this._allAppsCategoryButton.setArrowVisible(true);
          this.repositionGnomeCategory();
-         //this.standarAppGrid.actor.set_height(this.standarHeight);
-         this.menuManager._onMenuOpenState(menu, open);
 
          Mainloop.idle_add(Lang.bind(this, function() {
             this.selectedAppBox.setDateTimeVisible(this.showTimeDate);
-            global.stage.set_key_focus(this.searchEntry);
-            //this.standarAppGrid.actor.set_height(-1);
+            if(this.displayed) {
+               this._initial_cat_selection(this.initButtonLoad);
+               //Mainloop.idle_add(Lang.bind(this, this._initial_cat_selection, this.initButtonLoad));
+            }
          }));
       }
       else {
          this.actor.remove_style_pseudo_class('active');
-         this._disconnectSearch();
+         //this._disconnectSearch();
          this._select_category(null, this._allAppsCategoryButton);
          this.appMenuClose();
          if(this.bttChanger) 
@@ -5752,11 +5568,9 @@ MyApplet.prototype = {
             this._activeGnomeMenu();
             this.categoriesScrollBox.scrollToActor(this._allAppsCategoryButton.actor);
             this.destroyVectorBox();
-            this.menuManager._onMenuOpenState(menu, open);
             this._restartAutoscroll();
          }));
       }
-      return true;
    }
 };
 
