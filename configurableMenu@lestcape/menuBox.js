@@ -1135,17 +1135,17 @@ ControlBox.prototype = {
       if(resizeActive) {
          this.bttResize.add_style_pseudo_class('open');
          this.bttResize.get_children()[0].set_icon_name('changes-prevent');
-         this.parent.menu.setResizeArea(this.parent.deltaMinResize);
+         this.parent.menu.setControlingSize(true);
          if(this.parent.appMenu) {
-            this.parent.appMenu.setResizeArea(this.parent.deltaMinResize);
+            this.parent.appMenu.setControlingSize(true);
          }
       }
       else {
          this.bttResize.remove_style_pseudo_class('open');
          this.bttResize.get_children()[0].set_icon_name('changes-allow');
-         this.parent.menu.setResizeArea(0);
+         this.parent.menu.setControlingSize(false);
          if(this.parent.appMenu) {
-            this.parent.appMenu.setResizeArea(0);
+            this.parent.appMenu.setControlingSize(false);
          }
       }
       this.parent.allowResize.setToggleState(resizeActive);
@@ -2000,7 +2000,6 @@ GnoMenuBox.prototype = {
       this.iconSize = iconSize;
       this.iconsVisible = true;
       this.callBackFun = callBackFun;
-      this.takePower(true);
       this._createActionButtons();
       this._insertButtons(St.Align.MIDDLE);
       this.actor.connect('key-focus-in', Lang.bind(this, function(actor, event) {
@@ -2575,7 +2574,6 @@ AccessibleBox.prototype = {
       this.takingHover = false;
       this.takeHover(true);
       this.takeControl(true);
-      this.takePower(true);
 
       this.refreshAccessibleItems();
 

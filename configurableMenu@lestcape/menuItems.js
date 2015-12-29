@@ -14,6 +14,11 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+const Signals = imports.signals;
+const Params = imports.misc.params;
+const Atk = imports.gi.Atk;
+const Tweener = imports.ui.tweener;
+
 const St = imports.gi.St;
 const Pango = imports.gi.Pango;
 const Clutter = imports.gi.Clutter;
@@ -29,6 +34,7 @@ const AppFavorites = imports.ui.appFavorites;
 const FileUtils = imports.misc.fileUtils;
 const AppletPath = imports.ui.appletManager.applets['configurableMenu@lestcape'];
 const ConfigurableMenus = AppletPath.configurableMenus;
+
 //const Signals = imports.signals;
 //MenuItems
 
@@ -39,10 +45,10 @@ function ApplicationContextMenuItem(appButton, action, label, icon, id) {
 }
 
 ApplicationContextMenuItem.prototype = {
-   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
    _init: function (appButton, action, label, icon, id) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, {focusOnHover: false});
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {focusOnHover: false});
       this._appButton = appButton;
       this._action = action;
       if(id)
@@ -231,10 +237,10 @@ function PackageItem(parent, pkg, packageName, gIconInstaller, iconSize, textWid
 }
 
 PackageItem.prototype = {
-   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
    _init: function(parent, pkg, packageName, gIconInstaller, iconSize, textWidth, appDesc, vertical, appWidth) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this);
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this);
       this.actor.set_style_class_name('menu-application-button');
       this.iconSize = iconSize;
       this.parent = parent;
@@ -521,10 +527,10 @@ function CategoryButton(app, iconSize, iconVisible) {
 }
 
 CategoryButton.prototype = {
-   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
    _init: function(category, iconSize, iconVisible) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, {hover: false});
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false});
       this.category = category;
       this.iconSize = iconSize;
       this.arrowIcon = new St.Icon({icon_name: '', icon_type: St.IconType.SYMBOLIC,
@@ -685,15 +691,16 @@ RecentCategoryButton.prototype = {
    }
 };
 
+
 function GenericApplicationButton(parent, parentScroll, app, withMenu, searchTexts) {
    this._init(parent, parentScroll, app, withMenu, searchTexts);
 }
 
 GenericApplicationButton.prototype = {
-   __proto__: PopupMenu.PopupSubMenuMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype,
     
    _init: function(parent, parentScroll, app, withMenu, searchTexts) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, { hover: false });
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, { hover: false });
       this.app = app;
       this.parent = parent;
       this.parentScroll = parentScroll;
@@ -702,6 +709,7 @@ GenericApplicationButton.prototype = {
          searchTexts = [app.get_name(), app.get_description(), app.get_id()];
       if(this.withMenu) {
          this.menu = new PopupMenu.PopupSubMenu(this.actor);
+         //this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
          this.menu.actor.set_style_class_name('menu-context-menu');
          this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
       }
@@ -736,9 +744,10 @@ GenericApplicationButton.prototype = {
    },
 
    destroy: function() {
+      //ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype.destroy.call(this);
       if(this.menu)
          this.menu.destroy();
-      PopupMenu.PopupBaseMenuItem.prototype.destroy.call(this);
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype.destroy.call(this);
    },
 
    highlight: function() {
@@ -788,7 +797,7 @@ GenericApplicationButton.prototype = {
             }
          }
       }
-      this.parent._disableResize();
+      //this.parent._disableResize();
       return true;
    },
     
@@ -916,7 +925,7 @@ GenericApplicationButton.prototype = {
       //   this.toggleMenu();
       //   return true;
       //}
-      return PopupMenu.PopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
+      return ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
    }
 };
 
@@ -1114,7 +1123,7 @@ PlaceButtonAccessible.prototype = {
             this.toggleMenu();
          }
       }
-      this.parent._disableResize();
+      //this.parent._disableResize();
       return true;
    },
 
@@ -1380,7 +1389,7 @@ PlaceButton.prototype = {
             this.toggleMenu();
          }
       }
-      this.parent._disableResize();
+      //this.parent._disableResize();
       return true;
    },
 };
@@ -1390,10 +1399,11 @@ function RecentButton(parent, parentScroll, file, vertical, iconSize, appWidth, 
 }
 
 RecentButton.prototype = {
-   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype,
 
    _init: function(parent, parentScroll, file, vertical, iconSize, appWidth, appDesc) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, {hover: false});
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false});
+
       this.iconSize = iconSize;
       this.file = file;
       this.parent = parent;
@@ -1441,7 +1451,7 @@ RecentButton.prototype = {
       //   this.toggleMenu();
       //   return true;
       //}
-      return PopupMenu.PopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
+      return ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
    },
 
    closeMenu: function() {
@@ -1557,7 +1567,7 @@ RecentButton.prototype = {
                   }
                   this.parent._updateSubMenuSize();
                } else {
-                  this.widthC = this.parent.menu.actor.get_width();
+                  //this.widthC = this.parent.menu.actor.get_width();
                   this.toggleMenu();
                   this.parent._updateSize();
                }
@@ -1567,7 +1577,7 @@ RecentButton.prototype = {
             }
          }
       }
-      this.parent._disableResize();
+      //this.parent._disableResize();
       return true;
    },
 
@@ -1633,10 +1643,10 @@ function RecentClearButton(parent, vertical, iconSize, appWidth, appDesc) {
 }
 
 RecentClearButton.prototype = {
-   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
    _init: function(parent, vertical, iconSize, appWidth, appDesc) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, {hover: false});
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false});
       this.iconSize = iconSize;
       this.parent = parent;
       this.actor.set_style_class_name('menu-application-button');
@@ -1742,7 +1752,7 @@ TransientButton.prototype = {
       this.pathOrCommand = pathOrCommand;
 
       this.parent = parent;
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, {hover: false});
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false});
 
       let iconBox = new St.Bin();
       this.file = Gio.file_new_for_path(this.pathOrCommand);
@@ -2249,10 +2259,10 @@ function SearchItem(parent, provider, search_path, icon_path, iconSize, textWidt
 }
 
 SearchItem.prototype = {
-   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
    _init: function(parent, provider, path, icon_path, iconSize, textWidth, appDesc, vertical) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this);
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this);
       this.actor.set_style_class_name('menu-application-button');
       this.iconSize = iconSize;
       this.parent = parent;
@@ -2392,10 +2402,10 @@ function DriveMenuItem(parent, selectedAppBox, hover, place, iconSize, iconVisib
 }
 
 DriveMenuItem.prototype = {
-   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
    _init: function(parent, selectedAppBox, hover, place, iconSize, iconVisible) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, {hover: false, sensitive: false, focusOnHover: false});
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false, sensitive: false, focusOnHover: false});
       this.place = place;
       this.iconSize = iconSize;
       this.parent = parent;
@@ -2475,7 +2485,7 @@ DriveMenuItem.prototype = {
          this.place.launch({ timestamp: event.get_time() });
       else
          this.place.launch();
-      PopupMenu.PopupBaseMenuItem.prototype.activate.call(this, event);
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype.activate.call(this, event);
       this.parent.menu.close();
    },
 
@@ -2528,10 +2538,10 @@ function ConfigurablePopupSwitchMenuItem() {
 }
 
 ConfigurablePopupSwitchMenuItem.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+    __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
     _init: function(text, imageOn, imageOff, active, params) {
-        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+        ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, params);
 
         this._imageOn = imageOn;
         this._imageOff = imageOff;
@@ -2580,10 +2590,10 @@ function PopupIconMenuItem() {
 }
 
 PopupIconMenuItem.prototype = {
-   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
    _init: function(text, iconName, iconType, params) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, params);
       if(iconType != St.IconType.FULLCOLOR)
           iconType = St.IconType.SYMBOLIC;
       this.label = new St.Label({text: text});

@@ -30,13 +30,15 @@ ScrollItemsBox.prototype = {
       this.parent = parent;
       this.idSignalAlloc = 0;
       this._timeOutScroll = 0;
+      this._idReparent = 0;
       this._align = align;
       this.panelToScroll = panelToScroll;
       this.actor = new St.BoxLayout({ vertical: vertical });
       this._panelWrapper = new St.BoxLayout({ vertical: vertical });
-      if(this.panelToScroll)
+      if(this.panelToScroll) {
          this._panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: true, x_align: align, y_align: St.Align.START, expand: true });
-      this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
+         this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
+      }
       this.scroll = this._createScroll(vertical);
       this.scroll.add_actor(this._panelWrapper);
       this.actor.add(this.scroll, { x_fill: true, y_fill: true, expand: true });
@@ -66,8 +68,14 @@ ScrollItemsBox.prototype = {
 
    setPanelToScroll: function(panelToScroll) {
       if(this.panelToScroll != panelToScroll) {
-         if(this.panelToScroll && (this.panelToScroll.get_parent() == this._panelWrapper))
-            this._panelWrapper.remove_actor(this.panelToScroll);
+         if(this.panelToScroll) {
+            if(this.panelToScroll.get_parent() == this._panelWrapper) 
+               this._panelWrapper.remove_actor(this.panelToScroll);
+            if(this._idReparent != 0) {
+               this.panelToScroll.disconnect(this._idReparent);
+               this._idReparent = 0;
+            }
+         }
          this.panelToScroll = panelToScroll;
          this._panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: true, x_align: this._align, y_align: St.Align.START, expand: true });
          this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
@@ -77,8 +85,15 @@ ScrollItemsBox.prototype = {
    setXAlign: function(align) {
       if(this._align != align) {
          this._align = align;
-         if(this.panelToScroll && (this.panelToScroll.get_parent() == this._panelWrapper))
-            this._panelWrapper.remove_actor(this.panelToScroll);
+         if(this.panelToScroll) {
+            let parent = this.panelToScroll.get_parent();
+            if(parent) 
+               parent.remove_actor(parent);
+            if(this._idReparent != 0) {
+               this.panelToScroll.disconnect(this._idReparent);
+               this._idReparent = 0;
+            }
+         }
          this._panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: true, x_align: this._align, y_align: St.Align.START, expand: true });
          this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
       }

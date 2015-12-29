@@ -210,476 +210,6 @@ VisibleChildIterator.prototype = {
    }
 };
 
-//this.applicationsBox
-function ArrayBoxLayout() {
-    this._init.apply(this, arguments);
-}
-
-ArrayBoxLayout.prototype = {
-
-   _init: function(columnWidth, params) {
-       this._numberOfcolumns = 1;
-       this._columnWidth = columnWidth;
-       this.actor = new St.BoxLayout(params);
-       this.actor._delegate = this;
-   },
-
-   getCurrentNumOfColumns: function() {
-   },
-
-   updateNumOfColumns: function() {
-   },
-
-   updateCategories: function() {
-   },
-
-   setColummWidth: function(colummWidth) {
-   },
-
-   updateBoxLayout: function() {
-   },
-
-   clearView: function() {
-   }
-}
-
-function GridBoxLayout() {
-   this._init.apply(this, arguments);
-}
-
-GridBoxLayout.prototype = {
-
-   _init: function(columnWidth, params) {
-      params = Params.parse(params, {
-         vertical: false,
-         rowLimit: null,
-         columnLimit: null,
-         minRows: 1,
-         minColumns: 1,
-         maxItemWidth: -1,
-         maxItemHeight: -1,
-         itemSpacing: 0,
-         fillParent: true,
-         xAlign: St.Align.START,
-         padWithSpacing: false
-      });
-      this._rowLimit = params.rowLimit;
-      this._colLimit = params.columnLimit;
-      this._minRows = params.minRows;
-      this._minColumns = params.minColumns;
-      this._xAlign = params.xAlign;
-      this._fillParent = params.fillParent;
-      this._padWithSpacing = params.padWithSpacing;
-      this._maxItemWidth = params.maxItemWidth;
-      this._maxItemHeight = params.maxItemHeight;
-      this._spacing = params.itemSpacing;
-      this._maxActorWidth = 0;
-      this._maxActorHeight = 0;
-
-      this.topPadding = 0;
-      this.bottomPadding = 0;
-      this.rightPadding = 0;
-      this.leftPadding = 0;
-      this._items = [];
-
-      this._grid = new Cinnamon.GenericContainer();
-      this._grid.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
-      this._grid.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
-      this._grid.connect('allocate', Lang.bind(this, this._allocate));
-      this._grid.connect('actor-added', Lang.bind(this, this._childAdded));
-      this._grid.connect('actor-removed', Lang.bind(this, this._childRemoved));
-      this.actor = new St.BoxLayout({ 
-         style_class: 'popup-menu-item',
-         vertical: true 
-      });
-      this.actor.add(this._grid, { x_fill: true, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
-      this.actor.connect('style-changed', Lang.bind(this, this._onStyleChanged));
-      this.actor._delegate = this;
-   },
-
-   _keyFocusIn: function(actor) {
-      this.emit('key-focus-in', actor);
-   },
-
-   _childAdded: function(grid, child) {
-      child._iconGridKeyFocusInId = child.connect('key-focus-in', Lang.bind(this, this._keyFocusIn));
-   },
-
-   _childRemoved: function(grid, child) {
-      child.disconnect(child._iconGridKeyFocusInId);
-   },
-
-   _getVisibleChildren: function() {
-      let children = this._grid.get_children();
-      children = children.filter(function(actor) {
-         return actor.visible;
-      });
-      return children;
-   },
-
-   _getActorViewPort: function() {
-      let actor = this.actor.get_parent();
-      while((actor) && (!(actor instanceof St.ScrollView))) {
-         actor = actor.get_parent();
-      }
-      if(actor && actor._delegate)
-         return actor._delegate;
-      return null;
-   },
-
-   _updateActorMaxSize: function(visibleChildren) {
-      visibleChildren.forEach(function(actor) {
-         if(this._maxActorWidth < actor.width)
-            this._maxActorWidth = actor.width;
-         if(this._maxActorHeight < actor.height)
-            this._maxActorHeight = actor.height;
-      }, this);
-   },
-
-   _getPreferredWidth: function(grid, forHeight, alloc) {
-      if (this._fillParent) {
-         // Ignore all size requests of children and request a size of 0;
-         // later we'll allocate as many children as fit the parent
-         alloc.min_size = this._getItemWidth() + this.leftPadding + this.rightPadding - 20;
-         alloc.natural_size = alloc.min_size;
-         return;
-      }
-
-      let nChildren = this._grid.get_n_children();
-      let nColumns = this._colLimit ? Math.min(this._colLimit, nChildren) : nChildren;
-      let totalSpacing = Math.max(0, nColumns - 1) * this._getSpacing();
-      // Kind of a lie, but not really an issue right now.  If
-      // we wanted to support some sort of hidden/overflow that would
-      // need higher level design
-      alloc.min_size = this._getItemWidth() + this.leftPadding + this.rightPadding;
-      alloc.natural_size = nColumns * this._getItemWidth() + totalSpacing + this.leftPadding + this.rightPadding;
-   },
-
-   _getPreferredHeight: function(grid, forWidth, alloc) {
-      //if (this._fillParent)
-         // Ignore all size requests of children and request a size of 0;
-         // later we'll allocate as many children as fit the parent
-      //   return;
-      let height = this._getPreferredAllocationHeight(forWidth);
-      alloc.min_size = height;
-      alloc.natural_size = height;
-   },
-
-   _getPreferredAllocationHeight: function(forWidth) {
-      let children = this._getVisibleChildren();
-      this._updateActorMaxSize(children);
-      let nColumns;
-      if (forWidth < 0)
-         nColumns = children.length;
-      else
-         [nColumns, ] = this._computeColumnLayout(forWidth);
-
-      let nRows;
-      if (nColumns > 0)
-         nRows = Math.ceil(children.length / nColumns);
-      else
-         nRows = 0;
-      if (this._rowLimit)
-         nRows = Math.min(nRows, this._rowLimit);
-      let totalSpacing = Math.max(0, nRows - 1) * this._getSpacing();
-      let height = nRows * this._getItemHeight() + totalSpacing + this.topPadding + this.bottomPadding;
-      return height;
-   },
-
-   _allocate: function(grid, box, flags) {
-      if (this._fillParent) {
-         // Reset the passed in box to fill the parent
-         let parentBox = this.actor.get_parent().allocation;
-         let gridBox = this.actor.get_theme_node().get_content_box(parentBox);
-         box = this._grid.get_theme_node().get_content_box(gridBox);
-      }
-
-      let children = this._getVisibleChildren();
-      this._updateActorMaxSize(children);
-      let availWidth = box.x2 - box.x1;
-      let availHeight = box.y2 - box.y1;
-      let spacing = this._getSpacing();
-      let [nColumns, usedWidth] = this._computeColumnLayout(availWidth);
-
-      let leftEmptySpace;
-      switch(this._xAlign) {
-         case St.Align.START:
-            leftEmptySpace = 0;
-            break;
-         case St.Align.MIDDLE:
-            leftEmptySpace = Math.floor((availWidth - usedWidth) / 2);
-            break;
-         case St.Align.END:
-            leftEmptySpace = availWidth - usedWidth;
-      }
-
-      let x = box.x1 + leftEmptySpace + this.leftPadding;
-      let y = box.y1 + this.topPadding;
-      let columnIndex = 0;
-      let rowIndex = 0;
-      let [viewPortSize, viewPortPosition] = this._getViewPortSize();
-      for (let i = 0; i < children.length; i++) {
-         let childBox = this._calculateChildBox(children[i], x, y, box);
-
-         if ((this._rowLimit && rowIndex >= this._rowLimit) ||
-            (this._fillParent && childBox.y2 > availHeight - this.bottomPadding) ||
-            (viewPortSize && childBox.y2 > viewPortSize + viewPortPosition)) {
-            this._grid.set_skip_paint(children[i], true);
-         } else {
-            children[i].allocate(childBox, flags);
-            this._grid.set_skip_paint(children[i], false);
-         }
-
-         this._rowLimit = 0;
-         columnIndex++;
-         if (columnIndex == nColumns) {
-            columnIndex = 0;
-            rowIndex++;
-         }
-
-         if (columnIndex == 0) {
-            y += this._getItemHeight() + spacing;
-            x = box.x1 + leftEmptySpace + this.leftPadding;
-         } else {
-            x += this._getItemWidth() + spacing;
-         }
-      }
-   },
-
-   _getViewPortSize: function(availWidth) {
-      return [null, null];
-      if (!this.viewPort) {
-         this.viewPort = this._getActorViewPort();
-         if(this.viewPort) {
-            let viewPortAllocation = this.viewPort.actor.allocation;
-            let vscroll = this.viewPort.scroll.get_vscroll_bar();
-            let position = vscroll.get_adjustment().get_value();
-         /*if(!this._scrollStartId) {
-            this._scrollStartId = vscroll.connect('scroll-start', Lang.bind(this, function() {
-               this._isInScroll = true;
-               this._allocateMore();
-            }));
-            this._scrollStopId = vscroll.connect('scroll-stop', Lang.bind(this, function() {
-               this._isInScroll = false;
-            }));
-         }*/
-            return [viewPortAllocation.y2 - viewPortAllocation.y1, position];
-         }
-      }
-      return [null, null];
-   },
-
-   _allocateMore: function() {
-      if(this._isInScroll) {
-         this._grid.queue_relayout();
-         Mainloop.timeout_add(50, Lang.bind(this, this._allocateMore));
-      }
-   },
-
-   _updateSpace: function(availWidth) {
-      /*let estimateHeight = this._getPreferredAllocationHeight(availWidth);
-      Main.notify("" + viewPortHeight);
-      let portSize = 20;
-      this._spaceActor.height = this._getPreferredAllocationHeight(availWidth) - portSize*50;
-      return portSize;*/
-      let spaceBox = new Clutter.ActorBox();
-      x = box.x1 + leftEmptySpace + this.leftPadding;
-      let spaceBox = this._calculateSpaceBox(this._spaceActor, x, y, box);
-      this._spaceActor.allocate(spaceBox, flags);
-      this._grid.set_skip_paint(this._spaceActor, false);
-      //Main.notify("" + spaceBox.y2 + "-" + spaceBox.y1 + "-" + spaceBox.x2 + "-" + spaceBox.x1);
-   },
-
-   _calculateSpaceBox: function(child, x, y, box) {
-      // Center the item in its allocation horizontally
-      let [,, natWidth, natHeight] = child.get_preferred_size();
-      let childBox = new Clutter.ActorBox();
-      if (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL)
-         childBox.x1 = Math.floor(box.x2 - (x + natWidth));
-      else
-         childBox.x1 = Math.floor(x);
-      childBox.y1 = Math.floor(y);
-      childBox.x2 = childBox.x1 + natWidth;
-      childBox.y2 = childBox.y1 + natHeight;
-      return childBox;
-   },
-
-
-   _getAllocatedChildSizeAndSpacing: function(child) {
-      let [,, natWidth, natHeight] = child.get_preferred_size();
-      let width = Math.min(this._getItemWidth(), natWidth);
-      let xSpacing = Math.max(0, width - natWidth) / 2;
-      let height = Math.min(this._getItemHeight(), natHeight);
-      let ySpacing = Math.max(0, height - natHeight) / 2;
-      return [width, height, xSpacing, ySpacing];
-   },
-
-   _calculateChildBox: function(child, x, y, box) {
-      // Center the item in its allocation horizontally
-      let [width, height, childXSpacing, childYSpacing] =
-          this._getAllocatedChildSizeAndSpacing(child);
-
-      let childBox = new Clutter.ActorBox();
-      if (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL) {
-         let _x = box.x2 - (x + width);
-         childBox.x1 = Math.floor(_x - childXSpacing);
-      } else {
-         childBox.x1 = Math.floor(x + childXSpacing);
-      }
-      childBox.y1 = Math.floor(y + childYSpacing);
-      childBox.x2 = childBox.x1 + width;
-      childBox.y2 = childBox.y1 + height;
-      return childBox;
-   },
-
-   columnsForWidth: function(rowWidth) {
-      return this._computeColumnLayout(rowWidth)[0];
-   },
-
-   getRowLimit: function() {
-      return this._rowLimit;
-   },
-
-   _computeColumnLayout: function (forWidth) {
-      let nColumns = 0;
-      let usedWidth = this.leftPadding + this.rightPadding;
-      let spacing = this._getSpacing();
-
-      while ((this._colLimit == null || nColumns < this._colLimit) &&
-             (usedWidth + this._getItemWidth() <= forWidth)) {
-         usedWidth += this._getItemWidth() + spacing;
-         nColumns += 1;
-      }
-
-      if (nColumns > 0)
-         usedWidth -= spacing;
-
-      return [nColumns, usedWidth];
-   },
-
-   _onStyleChanged: function() {
-      /*let themeNode = this.actor.get_theme_node();
-      this._spacing = themeNode.get_length('spacing');*/
-      // this._grid.queue_relayout();
-   },
-
-   nRows: function(forWidth) {
-      let children = this._getVisibleChildren();
-      let nColumns = (forWidth < 0) ? children.length : this._computeColumnLayout(forWidth)[0];
-      let nRows = (nColumns > 0) ? Math.ceil(children.length / nColumns) : 0;
-      if (this._rowLimit)
-         nRows = Math.min(nRows, this._rowLimit);
-      return nRows;
-   },
-
-   rowsForHeight: function(forHeight) {
-      return Math.floor((forHeight - (this.topPadding + this.bottomPadding) + this._getSpacing()) / (this._getItemHeight() + this._getSpacing()));
-   },
-
-   usedHeightForNRows: function(nRows) {
-      return (this._getItemHeight() + this._getSpacing()) * nRows - this._getSpacing() + this.topPadding + this.bottomPadding;
-   },
-
-   usedWidth: function(forWidth) {
-      return this.usedWidthForNColumns(this.columnsForWidth(forWidth));
-   },
-
-   usedWidthForNColumns: function(columns) {
-      let usedWidth = columns  * (this._getItemWidth() + this._getSpacing());
-      usedWidth -= this._getSpacing();
-      return usedWidth + this.leftPadding + this.rightPadding;
-   },
-
-   removeAll: function() {
-      this._items = [];
-      this._grid.remove_all_children();
-   },
-
-   destroyAll: function() {
-      this._items = [];
-      this._grid.destroy_all_children();
-   },
-
-   destroy: function() {
-      this.actor.destroy();
-   },
-
-   addMenuItem: function(menuItem, index) {
-      //if (!item.icon instanceof BaseIcon)
-      //    throw new Error('Only items with a BaseIcon icon property can be added to IconGrid');
-      this._items.push(menuItem);
-      if (index !== undefined)
-         this._grid.insert_child_at_index(menuItem.actor, index);
-      else
-         this._grid.add_actor(menuItem.actor);
-      if(this._maxActorWidth < menuItem.actor.width) {
-         this._maxActorWidth = menuItem.actor.width;
-      }
-   },
-
-   removeItem: function(item) {
-      this._grid.remove_child(item.actor);
-   },
-
-   getItemAtIndex: function(index) {
-      return this._grid.get_child_at_index(index);
-   },
-
-   visibleItemsCount: function() {
-      return this._grid.get_n_children() - this._grid.get_n_skip_paint();
-   },
-
-   setSpacing: function(spacing) {
-      this._fixedSpacing = spacing;
-   },
-
-   _getSpacing: function() {
-      return this._fixedSpacing ? this._fixedSpacing : this._spacing;
-   },
-
-   _getItemWidth: function() {
-      return (this._maxItemWidth > 0) ? Math.max(this._maxItemWidth, this._maxActorWidth) : this._maxActorWidth;
-   },
-
-   _getItemHeight: function() {
-      return (this._maxItemHeight > 0) ? Math.max(this._maxItemHeight, this._maxActorHeight) : this._maxActorHeight;
-   },
-
-   _updateSpacingForSize: function(availWidth, availHeight) {
-      let maxEmptyVArea = availHeight - this._minRows * this._getItemHeight();
-      let maxEmptyHArea = availWidth - this._minColumns * this._getItemWidth();
-      let maxHSpacing, maxVSpacing;
-
-      if (this._padWithSpacing) {
-         // minRows + 1 because we want to put spacing before the first row, so it is like we have one more row
-         // to divide the empty space
-         maxVSpacing = Math.floor(maxEmptyVArea / (this._minRows +1));
-         maxHSpacing = Math.floor(maxEmptyHArea / (this._minColumns +1));
-      } else {
-         if (this._minRows <=  1)
-            maxVSpacing = maxEmptyVArea;
-         else
-            maxVSpacing = Math.floor(maxEmptyVArea / (this._minRows - 1));
-
-         if (this._minColumns <=  1)
-            maxHSpacing = maxEmptyHArea;
-         else
-            maxHSpacing = Math.floor(maxEmptyHArea / (this._minColumns - 1));
-      }
-
-      let maxSpacing = Math.min(maxHSpacing, maxVSpacing);
-      // Limit spacing to the item size
-      maxSpacing = Math.min(maxSpacing, Math.min(this._getItemHeight(), this._getItemWidth()));
-      // The minimum spacing, regardless of whether it satisfies the row/columng minima,
-      // is the spacing we get from CSS.
-      let spacing = Math.max(this._spacing, maxSpacing);
-      this.setSpacing(spacing);
-      if (this._padWithSpacing)
-         this.topPadding = this.rightPadding = this.bottomPadding = this.leftPadding = spacing;
-   }
-};
-Signals.addSignalMethods(GridBoxLayout.prototype);
-
 /**
  * BoxPointer:
  * @side: side to draw the arrow on
@@ -1197,13 +727,13 @@ ConfigurablePointer.prototype = {
       this._border.queue_repaint();
    },
 
+   getCurrentMenuThemeNode: function() {
+      return this.themeNode;
+   },
+
    setResizeArea: function(resizeSize) {
       this._resizeSize = resizeSize;
       this._border.queue_repaint();
-   },
-
-   getCurrentMenuThemeNode: function() {
-      return this.themeNode;
    },
 
    setResizeAreaColor: function(resizeColor) {
@@ -1845,6 +1375,696 @@ VectorBoxBlocker.prototype = {
 };
 
 /**
+ * CheckButton
+ *
+ * Just a class to show a Check button.
+ */
+
+function CheckButton() {
+    this._init.apply(this, arguments);
+}
+
+CheckButton.prototype = {
+    _init: function(state, params) {
+        this._params = { style_class: 'check-box',
+                         button_mask: St.ButtonMask.ONE,
+                         toggle_mode: true,
+                         can_focus: true,
+                         x_fill: true,
+                         y_fill: true,
+                         y_align: St.Align.MIDDLE };
+
+        if(params != undefined) {
+            this._params = Params.parse(params, this._params);
+        }
+
+        this.actor = new St.Button(this._params);
+        this.actor._delegate = this;
+        this.actor.checked = state;
+        // FIXME: The current size is big and the container only is useful,
+        // because the current theme. Can be fixed the theme also?
+        this._container = new St.Bin();
+        this.actor.add_style_class_name('popup-menu-icon'); 
+        this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
+        this.actor.set_child(this._container);
+    },
+
+    _onTheme: function() {
+        this.actor.set_scale(1, 1);
+    },
+
+    _onMapped: function() {
+        let size = this.actor.get_theme_node().get_length('icon-size');
+        let scale = size/this.actor.width;
+        this.actor.set_scale(scale, scale);
+    },
+
+
+    setToggleState: function(state) {
+        this.actor.checked = state;
+    },
+
+    toggle: function() {
+        this.setToggleState(!this.actor.checked);
+    },
+
+    destroy: function() {
+        this.actor.destroy();
+    }
+};
+
+/**
+ * RadioBox
+ *
+ * Just a class to show a radio button.
+ */
+function RadioBox(state) {
+    this._init(state);
+}
+
+RadioBox.prototype = {
+    _init: function(state) {
+        this.actor = new St.Button({ style_class: 'radiobutton',
+                                     button_mask: St.ButtonMask.ONE,
+                                     toggle_mode: true,
+                                     can_focus: true,
+                                     x_fill: true,
+                                     y_fill: true,
+                                     y_align: St.Align.MIDDLE });
+
+        this.actor._delegate = this;
+        this.actor.checked = state;
+        this._container = new St.Bin();
+        this.actor.add_style_class_name('popup-menu-icon'); 
+        this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
+        this.actor.set_child(this._container);
+    },
+
+    _onMapped: function() {
+        let size = this.actor.get_theme_node().get_length('icon-size');
+        //Main.notify("size>" + size +" width>"+ this.actor.width)
+        let scale = size/this.actor.width;
+        this.actor.set_scale(scale, scale);;
+    },
+
+    setToggleState: function(state) {
+        this.actor.checked = state;
+    },
+
+    toggle: function() {
+        this.setToggleState(!this.actor.checked);
+    },
+
+    destroy: function() {
+        this.actor.destroy();
+    }
+};
+
+/**
+ * Switch
+ *
+ * Just a class to show a switch.
+ */
+function Switch() {
+   this._init.apply(this, arguments);
+}
+
+Switch.prototype = {
+   _init: function(state) {
+      this.actor = new St.Bin({ style_class: 'toggle-switch'});
+      if(this.actor.set_accessible_role)
+         this.actor.set_accessible_role(Atk.Role.CHECK_BOX);
+      // Translators: this MUST be either "toggle-switch-us"
+      // (for toggle switches containing the English words
+      // "ON" and "OFF") or "toggle-switch-intl" (for toggle
+      // switches containing "O" and "|"). Other values will
+      // simply result in invisible toggle switches.
+      this.actor.add_style_class_name("toggle-switch-intl");
+      this.actor._delegate = this;
+      this.setToggleState(state);
+   },
+
+   setToggleState: function(state) {
+      if(state) this.actor.add_style_pseudo_class('checked');
+      else this.actor.remove_style_pseudo_class('checked');
+      this.state = state;
+   },
+
+   toggle: function() {
+      this.setToggleState(!this.state);
+   }
+};
+
+function ConfigurablePopupBaseMenuItem(params) {
+   this._init(params);
+}
+
+ConfigurablePopupBaseMenuItem.prototype = {
+   __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+
+   _init: function (params) {
+      params = Params.parse (params, { 
+         reactive: true,
+         activate: true,
+         hover: true,
+         sensitive: true,
+         style_class: null,
+         focusOnHover: true,
+      });
+      this.actor = new St.BoxLayout({
+         style_class: 'popup-menu-item',
+         reactive: params.reactive,
+         track_hover: params.reactive,
+         can_focus: params.reactive
+      });
+      if(this.actor.set_accessible_role)
+         this.actor.set_accessible_role(Atk.Role.MENU_ITEM);
+      this.actor.connect('style-changed', Lang.bind(this, this._onStyleChanged));
+      this.actor._delegate = this;
+
+      this._children = [];
+      this._columnWidths = null;
+      this._spacing = 0;
+      this.active = false;
+      this._activatable = params.reactive && params.activate;
+      this.sensitive = true;
+      this.focusOnHover = params.focusOnHover;
+      this._desaturateIcon = false;
+
+      this.setSensitive(this._activatable && params.sensitive);
+
+      if(params.style_class)
+         this.actor.add_style_class_name(params.style_class);
+
+      if(this._activatable) {
+         this.actor.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
+         this.actor.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
+      }
+      if(params.reactive && params.hover)
+         this.actor.connect('notify::hover', Lang.bind(this, this._onHoverChanged));
+      if(params.reactive) {
+         this.actor.connect('key-focus-in', Lang.bind(this, this._onKeyFocusIn));
+         this.actor.connect('key-focus-out', Lang.bind(this, this._onKeyFocusOut));
+      }
+   },
+
+   _onStyleChanged: function (actor) {
+      this._spacing = Math.round(actor.get_theme_node().get_length('spacing'));
+   },
+
+   _onButtonReleaseEvent: function (actor, event) {
+      this.activate(event, false);
+      return true;
+   },
+
+   _onKeyPressEvent: function (actor, event) {
+      let symbol = event.get_key_symbol();
+
+      if (symbol == Clutter.KEY_space || symbol == Clutter.KEY_Return) {
+         this.activate(event);
+         return true;
+      }
+      return false;
+   },
+
+   _onKeyFocusIn: function (actor) {
+      this.setActive(true);
+   },
+
+   _onKeyFocusOut: function (actor) {
+      this.setActive(false);
+   },
+
+   _onHoverChanged: function (actor) {
+      this.setActive(actor.hover);
+   },
+
+   activate: function (event, keepMenu) {
+      this.emit('activate', event, keepMenu);
+   },
+
+   setActive: function (active) {
+      let activeChanged = active != this.active;
+
+      if (activeChanged) {
+         this.active = active;
+         this.actor.change_style_pseudo_class('active', active);
+         if (this.focusOnHover && this.active) this.actor.grab_key_focus();
+
+         this.emit('active-changed', active);
+      }
+   },
+
+   setSensitive: function(sensitive) {
+      if (!this._activatable)
+         return;
+      if (this.sensitive == sensitive)
+         return;
+
+      this.sensitive = sensitive;
+      this.actor.reactive = sensitive;
+      this.actor.can_focus = sensitive;
+
+      this.actor.change_style_pseudo_class('insensitive', !sensitive);
+      this.emit('sensitive-changed', sensitive);
+   },
+
+   destroy: function() {
+      this.actor.destroy();
+      this.emit('destroy');
+   },
+
+   // adds an actor to the menu item; @params can contain %span
+   // (column span; defaults to 1, -1 means "all the remaining width", 0 means "no new column after this actor"),
+   // %expand (defaults to #false), and %align (defaults to
+   // #St.Align.START)
+   addActor: function(child, params) {
+      params = Params.parse(params, { span: 1,
+                                      expand: false,
+                                      align: St.Align.START });
+      params.actor = child;
+      this._children.push(params);
+      this.actor.connect('destroy', Lang.bind(this, function () { this._removeChild(child); }));
+      //this.actor.add_actor(child);
+      this.actor.add(child);
+   },
+
+   _removeChild: function(child) {
+      for (let i = 0; i < this._children.length; i++) {
+         if (this._children[i].actor == child) {
+            this._children.splice(i, 1);
+            return;
+         }
+      }
+   },
+
+   removeActor: function(child) {
+      this.actor.remove_actor(child);
+      this._removeChild(child);
+   },
+
+   getColumnWidths: function() {
+      let widths = [];
+      /* for (let i = 0, col = 0; i < this._children.length; i++) {
+         let child = this._children[i];
+         let [min, natural] = child.actor.get_preferred_width(-1);
+
+         if (widths[col])
+            widths[col] += this._spacing + natural;
+         else
+            widths[col] = natural;
+
+         if (child.span > 0) {
+            col++;
+            for (let j = 1; j < child.span; j++)
+               widths[col++] = 0;
+         }
+      }*/
+      return widths;
+   },
+
+   setColumnWidths: function(widths) {
+      // this._columnWidths = widths;
+   },
+
+   setShowDot: function(show) {
+   },
+
+   _onRepaintDot: function(area) {
+   },
+
+   _getPreferredWidth: function(actor, forHeight, alloc) {
+   },
+
+   _getPreferredHeight: function(actor, forWidth, alloc) {
+   },
+
+   _allocate: function(actor, box, flags) {
+   }
+};
+Signals.addSignalMethods(ConfigurablePopupBaseMenuItem.prototype);
+
+function ConfigurableBasicPopupMenuItem() {
+   this._init.apply(this, arguments);
+}
+
+ConfigurableBasicPopupMenuItem.prototype = {
+   __proto__: PopupMenu.PopupMenuItem.prototype,
+
+   _init: function (text, params) {
+      ConfigurablePopupBaseMenuItem.prototype._init.call(this, params);
+
+      this.label = new St.Label({ text: text });
+      this.actor.label_actor = this.label;
+      this.actor.add(this.label, { y_align: St.Align.MIDDLE, y_fill:false, expand: true });
+   }
+};
+
+/**
+ * ConfigurablePopupMenuItem
+ *
+ * A class to swap the cinnamon standar PopupMenuItem
+ * to support a normal St actors.
+ */
+function ConfigurablePopupMenuItem() {
+    this._init.apply(this, arguments);
+}
+
+ConfigurablePopupMenuItem.prototype = {
+   __proto__: ConfigurableBasicPopupMenuItem.prototype,
+
+   _init: function(text, params) {
+      ConfigurableBasicPopupMenuItem.prototype._init.call(this, text, params);
+      this._icon = new St.Icon({ style_class: 'popup-menu-icon' });
+      this._icon.hide();
+      this.actor.insert_before(this._icon, this.label);
+      this._displayIcon = false;
+   },
+
+   haveIcon: function() {
+      return ((this._icon.icon_name && this._icon.icon_name != "") || (this._icon.gicon));
+   },
+
+   setShowItemIcon: function(show) {
+      this._displayIcon = show;
+      this._icon.visible = (this._displayIcon)&&(this.haveIcon());
+   },
+
+   setIconName: function(name) {
+      this._icon.visible = ((this._displayIcon) && (name && name != ""));
+      this._icon.icon_name = name;
+   },
+
+   desaturateItemIcon: function(desaturate) {
+      if(this._desaturateIcon != desaturate) {
+         this._desaturateIcon = desaturate;
+         if(desaturate)
+            this._icon.add_effect_with_name("desaturate", new Clutter.DesaturateEffect());
+         else
+            this._icon.remove_effect_by_name("desaturate");
+      }
+   },
+
+   setGIcon: function(gicon) {
+      this._icon.visible = ((this._displayIcon) && (gicon != null));
+      this._icon.gicon = gicon;
+   },
+
+   destroy: function() {
+      if(this.actor) {
+         ConfigurableBasicPopupMenuItem.prototype.destroy.call(this);
+         this.actor = null;
+      }
+   }
+};
+
+/**
+ * ConfigurableApplicationMenuItem
+ *
+ * A class to extend the cinnamon standar PopupMenuItem
+ * to support ornaments and automatically close the submenus.
+ */
+function ConfigurableApplicationMenuItem() {
+   this._init.apply(this, arguments);
+}
+
+ConfigurableApplicationMenuItem.prototype = {
+   __proto__: ConfigurablePopupMenuItem.prototype,
+
+   _init: function(text) {
+      ConfigurablePopupMenuItem.prototype._init.call(this, text);
+      this.actor._delegate = this;
+
+      this._accel = new St.Label();
+      this._ornament = new St.Bin();
+      this.actor.add(this._accel,    { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
+      this.actor.add(this._ornament, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
+   },
+
+   setAccel: function(accel) {
+      this._accel.set_text(accel);
+   },
+
+   setOrnament: function(ornamentType, state) {
+      switch (ornamentType) {
+      case OrnamentType.CHECK:
+         if((this._ornament.child)&&(!(this._ornament.child._delegate instanceof CheckButton))) {
+             this._ornament.child.destroy();
+             this._ornament.child = null;
+         }
+         if(!this._ornament.child) {
+             let checkOrn = new CheckButton(state);
+             this._ornament.child = checkOrn.actor;
+         } else {
+             this._ornament.child._delegate.setToggleState(state);
+         }
+         break;
+      case OrnamentType.DOT:
+         if((this._ornament.child)&&(!(this._ornament.child._delegate instanceof RadioBox))) {
+             this._ornament.child.destroy();
+             this._ornament.child = null;
+         }
+         if(!this._ornament.child) {
+             let radioOrn = new RadioBox(state);
+             this._ornament.child = radioOrn.actor;
+         } else {
+             this._ornament.child._delegate.setToggleState(state);
+         }
+         break;
+      }
+   },
+
+   destroy: function() {
+      if(this.actor) {
+         ConfigurablePopupMenuItem.prototype.destroy.call(this);
+         this.actor = null;
+      }
+   }
+};
+
+/**
+ * ConfigurablePopupSubMenuMenuItem
+ *
+ * A class to extend the cinnamon standar PopupSubMenuMenuItem
+ * but this class will controlled how the submenu will be displayed.
+ * we want to have a foating submenu and automatically closing it
+ * with a timer or when other brother submenu item was selected.
+ */
+function ConfigurablePopupSubMenuMenuItem() {
+   this._init.apply(this, arguments);
+}
+
+ConfigurablePopupSubMenuMenuItem.prototype = {
+   __proto__: PopupMenu.PopupSubMenuMenuItem.prototype,
+
+   _init: function(text, hide_expander, params) {
+      ConfigurablePopupMenuItem.prototype._init.call(this, text, params);
+      this.actor._delegate = this;
+      this.actor.add_style_class_name('popup-submenu-menu-item');
+      this._arrowSide = St.Side.LEFT;
+      this._hide_expander = (hide_expander == true);
+
+      this._triangle = new St.Icon({ icon_name: "media-playback-start",
+                                     icon_type: St.IconType.SYMBOLIC,
+                                     style_class: 'popup-menu-icon' });
+      this._triangle.rotation_center_z_gravity = Clutter.Gravity.CENTER;
+      if(this._hide_expander)
+         this._triangle.hide();
+
+      this.actor.add(this._triangle, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
+      this._accel = "";
+      this._vectorBlocker = null;
+
+      this.menu = new ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
+      this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
+      this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
+   },
+
+   _createArrowIcon: function(side) {
+      let iconName;
+      switch (side) {
+         case St.Side.TOP:
+            iconName = 'pan-up';
+            break;
+         case St.Side.RIGHT:
+            iconName = 'pan-end';
+            break;
+         case St.Side.BOTTOM:
+            iconName = 'pan-down';
+            break;
+         case St.Side.LEFT:
+            iconName = 'pan-start';
+            break;
+      }
+      let arrow = new St.Icon({
+         style_class: 'popup-menu-arrow',
+         icon_name: iconName,
+         icon_type: St.IconType.SYMBOLIC,
+         y_expand: true,
+         y_align: Clutter.ActorAlign.CENTER,
+         important: true
+      });
+      return arrow;
+   },
+
+   setAccel: function(accel) {
+      this._accel = accel;
+   },
+
+   haveIcon: function() {
+      return (this._icon && ((this._icon.icon_name && this._icon.icon_name != "") || (this._icon.gicon)));
+   },
+
+   setShowItemIcon: function(show) {
+      if(this._displayIcon != show) {
+         this._displayIcon = show;
+         if(this._icon)
+            this._icon.visible = (this._displayIcon)&&(this.haveIcon());
+      }
+   },
+
+   desaturateItemIcon: function(desaturate) {
+      if(this._desaturateIcon != desaturate) {
+         this._desaturateIcon = desaturate;
+         if(this._icon) {
+            if(desaturate)
+               this._icon.add_effect_with_name("desaturate", new Clutter.DesaturateEffect());
+            else
+               this._icon.remove_effect_by_name("desaturate");
+         }
+      }
+   },
+
+   setIconName: function(name) {
+      if(this._icon) {
+         this._icon.visible = ((this._displayIcon) && (name && name != ""));
+         this._icon.icon_name = name;
+      }
+   },
+
+   setGIcon: function(gicon) {
+      if(this._icon) {
+         this._icon.visible = ((this._displayIcon) && (gicon != null));
+         this._icon.gicon = gicon;
+      }
+   },
+
+   setArrowSide: function(side) {
+      if(this._arrowSide != side) {
+         if(this.menu._floating) {
+            switch (side) {
+               case St.Side.TOP:
+               case St.Side.BOTTOM:
+               case St.Side.LEFT:
+                  if(this._triangle) {
+                     if(this._triangle.rotation_angle_z != 0)
+                        this._triangle.rotation_angle_z = 0;
+                     if(this._arrowSide == St.Side.RIGHT) {
+                        this.actor.remove_actor(this._triangle);
+                        this.actor.add(this._triangle, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
+                     }
+                  }
+                  break;
+               case St.Side.RIGHT:
+                  if(this._triangle) {
+                     if(this._triangle.rotation_angle_z != 180)
+                        this._triangle.rotation_angle_z = 180;
+                     if(this._arrowSide != St.Side.RIGHT) {
+                        this.actor.remove_actor(this._triangle);
+                        let childs = this.actor.get_children();
+                        if(childs.length > 0) {
+                           this.actor.insert_before(this._triangle, childs[childs.length-1]);
+                        } else {
+                           this.actor.add(this._triangle);
+                        }
+                     }
+                  }
+                  break;
+            }
+            this._arrowSide = side;
+         }
+      }
+   },
+
+   setVectorBox: function(vectorBlocker) {
+      if(this._vectorBlocker != vectorBlocker) {
+         this._vectorBlocker = vectorBlocker;
+      }
+   },
+
+   _onHoverChanged: function (actor) {
+      this.setActive(actor.hover);
+      if((this._vectorBlocker)&&(actor.hover)) {
+         this._vectorBlocker.executeInActors(this.actor, this.menu.actor);
+      }
+   },
+
+   _onMapped: function() {
+      if(this.menu._updateTopMenu)
+         this.menu._updateTopMenu();
+   },
+
+   _subMenuOpenStateChanged: function(menu, open) {
+      if(open) {
+         this.actor.add_style_pseudo_class('open');
+         if((!this._hide_expander)&&(!this.menu._floating)) {
+             let rotationAngle = 90;
+             if(this.actor.get_direction() == St.TextDirection.RTL)
+                rotationAngle = 270;
+             this._triangle.rotation_angle_z = rotationAngle;
+         }
+      } else {
+         this.actor.remove_style_pseudo_class('open');
+         if(!this.menu._floating)
+            this._triangle.rotation_angle_z = 0;
+      }
+   },
+
+   _getClutterOrientation: function() {
+       if(this._arrowSide == St.Side.RIGHT)
+           return [Clutter.KEY_Left, Clutter.KEY_Right];
+       return [Clutter.KEY_Right, Clutter.KEY_Left];
+   },
+
+   _onKeyPressEvent: function(actor, event) {
+      let [openKey, closeKey] = this._getClutterOrientation();
+      let symbol = event.get_key_symbol();
+      if(symbol == openKey) {
+         this.menu.open(true);
+         this.menu.actor.navigate_focus(null, Gtk.DirectionType.DOWN, true);
+         return true;
+      } else if(symbol == closeKey && this.menu.isOpen) {
+         this.menu.close();
+         return true;
+      }
+      return ConfigurablePopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
+   },
+
+   activate: function(event) {
+      this.menu.open(true);
+   },
+
+   _onButtonReleaseEvent: function (actor, event) {
+      if(event.get_button() == 1) {
+         if((!this.menu.isOpen)&&(this.menu._floating)) {
+            this.menu.repositionActor(this.actor);
+         }
+         this.menu.toggle(true);
+         return true;
+      }
+      return false;
+   },
+
+   destroy: function() {
+      if(this.actor) {
+         this.menu.destroy();
+         ConfigurablePopupBaseMenuItem.prototype.destroy.call(this);
+         this.actor = null;
+      }
+   }
+};
+
+/**
  * ConfigurableMenuManager
  *
  * The class that allow control the configurable menu API.
@@ -2351,6 +2571,10 @@ ConfigurableMenu.prototype = {
          this._pressId = 0;
          this._releaseId = 0;
          this._leaveId = 0;
+         this._releaseId = 0;
+         this._leaveId = 0;
+         this.requestedWidth = -1;
+         this.requestedHeight = -1;
       } catch(e) {
          Main.notify("ErrorMenuCreation", e.message);
       }
@@ -2358,12 +2582,15 @@ ConfigurableMenu.prototype = {
 
    _onMapped: function(controlingSize) {
       this._setChildsArrowSide();
+      if(this.requestedWidth != -1 || this.requestedHeight != -1)
+         this.setSize(this.requestedWidth, this.requestedHeight);
    },
 
    setControlingSize: function(controlingSize) {
       if(this._controlingSize != controlingSize) {
          this._controlingSize = controlingSize;
          if(this._controlingSize) {
+            this._boxPointer.setResizeArea(this._deltaMinResize);
             if(this._motionId == 0)
                this._motionId = this.actor.connect('motion-event', Lang.bind(this, this._onMotionEvent));
             if(this._pressId == 0)
@@ -2373,6 +2600,7 @@ ConfigurableMenu.prototype = {
             if(this._leaveId == 0)
                this._leaveId = this.actor.connect('leave-event', Lang.bind(this, this._disableOverResizeIcon));
          } else {
+            this._boxPointer.setResizeArea(0);
             if(this._motionId != 0) {
                this.actor.disconnect(this._motionId);
                this._motionId = 0;
@@ -2393,30 +2621,50 @@ ConfigurableMenu.prototype = {
       }
    },
 
+   setResizeArea: function(resizeSize) {
+      if(resizeSize != this._deltaMinResize) {
+         this._deltaMinResize = resizeSize;
+         this._boxPointer.setResizeArea(resizeSize);
+      }
+   },
+
+   setResizeAreaColor: function(resizeColor) {
+      this._boxPointer.setResizeAreaColor(resizeColor);
+   },
+
    setSize: function(width, height) {
-      let monitor = Main.layoutManager.findMonitorForActor(this.actor);
-      let panelTop = this._processPanelSize(false);
-      let panelButton = this._processPanelSize(true);
-      //let bordersY = themeNode.get_length('border-bottom') + themeNode.get_length('border-top') + themeNode.get_length('-boxpointer-gap');
-      //let maxHeigth = monitor.height - panelButton - panelTop + bordersY - difference;
-      let maxHeigth = monitor.height - panelButton - panelTop;
-      if(height > maxHeigth)
-         height = maxHeigth;
-      if(width > monitor.width)
-         width = monitor.width;
-      this.actor.set_width(width);
-      this.actor.set_height(height);
-      // We need to force the actor allocation, 
-      // because we want to know if the new size satify our restriction.
-      this.actor.allocate_preferred_size(Clutter.AllocationFlags.ALLOCATION_NONE);
-      let minWidth = this._getMinimalwidth();
-      if(width < minWidth  + 22)
-         this.actor.set_width(minWidth  + 22);
+      if(this.actor.mapped) {
+         let monitor = Main.layoutManager.findMonitorForActor(this.actor);
+         let panelTop = this._processPanelSize(false);
+         let panelButton = this._processPanelSize(true);
+         //let bordersY = themeNode.get_length('border-bottom') + themeNode.get_length('border-top') + themeNode.get_length('-boxpointer-gap');
+         //let maxHeight = monitor.height - panelButton - panelTop + bordersY - difference;
+         let maxHeight = monitor.height - panelButton - panelTop;
+         if(height > maxHeight)
+            height = maxHeight;
+         if(width > monitor.width)
+            width = monitor.width;
+         if(height > 0 && height < 100)
+            height = 100;
+         this.actor.set_width(width);
+         this.actor.set_height(height);
+         // We need to force the actor allocation, 
+         // because we want to know if the new size satify our restriction.
+         this.actor.allocate_preferred_size(Clutter.AllocationFlags.ALLOCATION_NONE);
+         let [minWidth, ] = this.box.get_preferred_width(-1);
+         if((width > 0) && (width < minWidth)) {
+            width = minWidth;
+            this.actor.set_width(width);
+         }
+      }
+      this.requestedWidth = width;
+      this.requestedHeight = height;
    },
 
    isInResizeMode: function() {
       return this._isInResizeMode;
    },
+
    _processNewPanelSize: function(bottomPosition) {
       if(Main.panelManager) {
          let [x, y] =this.launcher.actor.get_transformed_position();
@@ -2493,7 +2741,7 @@ ConfigurableMenu.prototype = {
    },
 
    _onMenuButtonRelease: function(actor, event) {
-       this._disableResize();
+      this._disableResize();
    },
 
    _onMotionEvent: function(actor, event) {
@@ -2519,16 +2767,6 @@ ConfigurableMenu.prototype = {
             }
          }
       }
-   },
-
-   _getMinimalwidth: function() {
-      let children = this.actor.get_children();
-      let width = 0;
-      for(let i = 0; i < children.length; i++) {
-         let [minWidth, natWidth] = children[i].get_preferred_width(this.actor.height);
-         width += natWidth;
-      }
-      return width;
    },
 
    _getRequestSize: function() {
@@ -3043,14 +3281,6 @@ ConfigurableMenu.prototype = {
       this._boxPointer.fixToScreen(this.launcher.actor, fixCorner);
    },
 
-   setResizeArea: function(resizeSize) {
-      this._boxPointer.setResizeArea(resizeSize);
-   },
-
-   setResizeAreaColor: function(resizeColor) {
-      this._boxPointer.setResizeAreaColor(resizeColor);
-   },
-
    repositionActor: function(actor) {
       if((this.launcher.actor)&&(this.launcher.actor != actor)) {
          this._boxPointer.trySetPosition(actor, this._arrowAlignment);
@@ -3449,321 +3679,6 @@ ConfigurableMenu.prototype = {
 };
 
 /**
- * CheckButton
- *
- * Just a class to show a Check button.
- */
-
-function CheckButton() {
-    this._init.apply(this, arguments);
-}
-
-CheckButton.prototype = {
-    _init: function(state, params) {
-        this._params = { style_class: 'check-box',
-                         button_mask: St.ButtonMask.ONE,
-                         toggle_mode: true,
-                         can_focus: true,
-                         x_fill: true,
-                         y_fill: true,
-                         y_align: St.Align.MIDDLE };
-
-        if(params != undefined) {
-            this._params = Params.parse(params, this._params);
-        }
-
-        this.actor = new St.Button(this._params);
-        this.actor._delegate = this;
-        this.actor.checked = state;
-        // FIXME: The current size is big and the container only is useful,
-        // because the current theme. Can be fixed the theme also?
-        this._container = new St.Bin();
-        this.actor.add_style_class_name('popup-menu-icon'); 
-        this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
-        this.actor.set_child(this._container);
-    },
-
-    _onTheme: function() {
-        this.actor.set_scale(1, 1);
-    },
-
-    _onMapped: function() {
-        let size = this.actor.get_theme_node().get_length('icon-size');
-        let scale = size/this.actor.width;
-        this.actor.set_scale(scale, scale);
-    },
-
-
-    setToggleState: function(state) {
-        this.actor.checked = state;
-    },
-
-    toggle: function() {
-        this.setToggleState(!this.actor.checked);
-    },
-
-    destroy: function() {
-        this.actor.destroy();
-    }
-};
-
-/**
- * RadioBox
- *
- * Just a class to show a radio button.
- */
-function RadioBox(state) {
-    this._init(state);
-}
-
-RadioBox.prototype = {
-    _init: function(state) {
-        this.actor = new St.Button({ style_class: 'radiobutton',
-                                     button_mask: St.ButtonMask.ONE,
-                                     toggle_mode: true,
-                                     can_focus: true,
-                                     x_fill: true,
-                                     y_fill: true,
-                                     y_align: St.Align.MIDDLE });
-
-        this.actor._delegate = this;
-        this.actor.checked = state;
-        this._container = new St.Bin();
-        this.actor.add_style_class_name('popup-menu-icon'); 
-        this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
-        this.actor.set_child(this._container);
-    },
-
-    _onMapped: function() {
-        let size = this.actor.get_theme_node().get_length('icon-size');
-        //Main.notify("size>" + size +" width>"+ this.actor.width)
-        let scale = size/this.actor.width;
-        this.actor.set_scale(scale, scale);;
-    },
-
-    setToggleState: function(state) {
-        this.actor.checked = state;
-    },
-
-    toggle: function() {
-        this.setToggleState(!this.actor.checked);
-    },
-
-    destroy: function() {
-        this.actor.destroy();
-    }
-};
-
-/**
- * Switch
- *
- * Just a class to show a switch.
- */
-function Switch() {
-   this._init.apply(this, arguments);
-}
-
-Switch.prototype = {
-   _init: function(state) {
-      this.actor = new St.Bin({ style_class: 'toggle-switch'});
-      if(this.actor.set_accessible_role)
-         this.actor.set_accessible_role(Atk.Role.CHECK_BOX);
-      // Translators: this MUST be either "toggle-switch-us"
-      // (for toggle switches containing the English words
-      // "ON" and "OFF") or "toggle-switch-intl" (for toggle
-      // switches containing "O" and "|"). Other values will
-      // simply result in invisible toggle switches.
-      this.actor.add_style_class_name("toggle-switch-intl");
-      this.actor._delegate = this;
-      this.setToggleState(state);
-   },
-
-   setToggleState: function(state) {
-      if(state) this.actor.add_style_pseudo_class('checked');
-      else this.actor.remove_style_pseudo_class('checked');
-      this.state = state;
-   },
-
-   toggle: function() {
-      this.setToggleState(!this.state);
-   }
-};
-
-/**
- * ConfigurablePopupSubMenuMenuItem
- *
- * A class to extend the cinnamon standar PopupSubMenuMenuItem
- * but this class will controlled how the submenu will be displayed.
- * we want to have a foating submenu and automatically closing it
- * with a timer or when other brother submenu item was selected.
- */
-function ConfigurablePopupSubMenuMenuItem() {
-   this._init.apply(this, arguments);
-}
-
-ConfigurablePopupSubMenuMenuItem.prototype = {
-   __proto__: PopupMenu.PopupSubMenuMenuItem.prototype,
-
-   _init: function(text, hide_expander) {
-      ConfigurablePopupMenuItem.prototype._init.call(this, text);
-      this.actor._delegate = this;
-      this.actor.add_style_class_name('popup-submenu-menu-item');
-      this._arrowSide = St.Side.LEFT;
-      this._hide_expander = hide_expander;
-
-      this._triangle = new St.Icon({ icon_name: "media-playback-start",
-                                     icon_type: St.IconType.SYMBOLIC,
-                                     style_class: 'popup-menu-icon' });
-      this._triangle.rotation_center_z_gravity = Clutter.Gravity.CENTER;
-      if(this._hide_expander)
-         this._triangle.hide();
-
-      this.actor.add(this._triangle, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
-      this._accel = "";
-      this._vectorBlocker = null;
-
-      this.menu = new ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
-      this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
-      this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
-   },
-
-   setAccel: function(accel) {
-      //Main.notify("accel: " + accel);
-      this._accel = accel;
-   },
-
-   haveIcon: function() {
-      return ((this._icon.icon_name && this._icon.icon_name != "") || (this._icon.gicon));
-   },
-
-   setShowItemIcon: function(show) {
-      this._displayIcon = show;
-      this._icon.visible = (this._displayIcon)&&(this.haveIcon());
-   },
-
-   desaturateItemIcon: function(desaturate) {
-      if(this._desaturateIcon != desaturate) {
-         this._desaturateIcon = desaturate;
-         if(desaturate)
-            this._icon.add_effect_with_name("desaturate", new Clutter.DesaturateEffect());
-         else
-            this._icon.remove_effect_by_name("desaturate");
-      }
-   },
-
-   setIconName: function(name) {
-      this._icon.visible = ((this._displayIcon) && (name && name != ""));
-      this._icon.icon_name = name;
-   },
-
-   setGIcon: function(gicon) {
-      this._icon.visible = ((this._displayIcon) && (gicon != null));
-      this._icon.gicon = gicon;
-   },
-
-   setArrowSide: function(side) {
-      if(this._arrowSide != side) {
-         if(this.menu._floating) {
-            switch (side) {
-               case St.Side.TOP:
-               case St.Side.BOTTOM:
-               case St.Side.LEFT:
-                  if(this._triangle.rotation_angle_z != 0)
-                     this._triangle.rotation_angle_z = 0;
-                  if(this._arrowSide == St.Side.RIGHT) {
-                     this.actor.remove_actor(this._triangle);
-                     this.actor.add(this._triangle, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
-                  }
-                  break;
-               case St.Side.RIGHT:
-                  if(this._triangle.rotation_angle_z != 180)
-                     this._triangle.rotation_angle_z = 180;
-                  if(this._arrowSide != St.Side.RIGHT) {
-                     this.actor.remove_actor(this._triangle);
-                     //this.actor.insert_before(this._triangle, this.label);
-                     this.actor.insert_before(this._triangle, this._icon);
-                  }
-                  break;
-            }
-            this._arrowSide = side;
-         }
-      }
-   },
-
-   setVectorBox: function(vectorBlocker) {
-      if(this._vectorBlocker != vectorBlocker) {
-         this._vectorBlocker = vectorBlocker;
-      }
-   },
-
-   _onKeyPressEvent: function(actor, event) {
-      let [openKey, closeKey] = this._getClutterOrientation();
-      let symbol = event.get_key_symbol();
-      if(symbol == openKey) {
-         this.menu.open(true);
-         this.menu.actor.navigate_focus(null, Gtk.DirectionType.DOWN, true);
-         return true;
-      } else if(symbol == closeKey && this.menu.isOpen) {
-         this.menu.close();
-         return true;
-      }
-      return PopupMenu.PopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
-   },
-
-   _getClutterOrientation: function() {
-       if(this._arrowSide == St.Side.RIGHT)
-           return [Clutter.KEY_Left, Clutter.KEY_Right];
-       return [Clutter.KEY_Right, Clutter.KEY_Left];
-   },
-
-   _subMenuOpenStateChanged: function(menu, open) {
-      if(open) {
-         this.actor.add_style_pseudo_class('open');
-         if((!this._hide_expander)&&(!this.menu._floating)) {
-             let rotationAngle = 90;
-             if(this.actor.get_direction() == St.TextDirection.RTL)
-                rotationAngle = 270;
-             this._triangle.rotation_angle_z = rotationAngle;
-         }
-      } else {
-         this.actor.remove_style_pseudo_class('open');
-         if(!this.menu._floating)
-            this._triangle.rotation_angle_z = 0;
-      }
-   },
-
-   _onHoverChanged: function (actor) {
-      this.setActive(actor.hover);
-      if((this._vectorBlocker)&&(actor.hover)) {
-         this._vectorBlocker.executeInActors(this.actor, this.menu.actor);
-      }
-   },
-
-   _onMapped: function() {
-      this.menu._updateTopMenu();
-   },
-
-   _onButtonReleaseEvent: function (actor, event) {
-      if(event.get_button() == 1) {
-         if((!this.menu.isOpen)&&(this.menu._floating)) {
-            this.menu.repositionActor(this.actor);
-         }
-         this.menu.toggle(true);
-         return true;
-      }
-      return false;
-   },
-
-   destroy: function() {
-      if(this.actor) {
-         this.menu.destroy();
-         PopupMenu.PopupBaseMenuItem.prototype.destroy.call(this);
-         this.actor = null;
-      }
-   }
-};
-
-/**
  * ConfigurablePopupMenuSection
  *
  * A class to extend the cinnamon standar PopupMenuSection
@@ -3880,173 +3795,576 @@ ConfigurablePopupMenuSection.prototype = {
    }
 };
 
-/**
- * ConfigurablePopupMenuItem
- *
- * A class to swap the cinnamon standar PopupMenuItem
- * to support a normal St actors.
- */
-function ConfigurablePopupMenuItem() {
+//this.applicationsBox
+function ArrayBoxLayout() {
     this._init.apply(this, arguments);
 }
 
-ConfigurablePopupMenuItem.prototype = {
-   __proto__: PopupMenu.PopupMenuItem.prototype,
+ArrayBoxLayout.prototype = {
 
-   _init: function(text, params) {
-      //PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
-      params = Params.parse (params, { reactive: true,
-                                       activate: true,
-                                       hover: true,
-                                       sensitive: true,
-                                       style_class: null,
-                                       focusOnHover: true,
-                                     });
-      this.actor = new St.BoxLayout({ style_class: 'popup-menu-item',
-                                      reactive: params.reactive,
-                                      track_hover: params.reactive,
-                                      can_focus: params.reactive
-                                   });
-      if(this.actor.set_accessible_role)
-         this.actor.set_accessible_role(Atk.Role.MENU_ITEM);
-      this.actor.connect('style-changed', Lang.bind(this, this._onStyleChanged));
-      this.actor._delegate = this;
-
-      this._children = [];
-      this._dot = null;
-      this._columnWidths = null;
-      this._spacing = 0;
-      this.active = false;
-      this._activatable = params.reactive && params.activate;
-      this.sensitive = true;
-      this.focusOnHover = params.focusOnHover;
-      this._displayIcon = false;
-      this._desaturateIcon = false;
-
-      this.setSensitive(this._activatable && params.sensitive);
-
-      if(params.style_class)
-         this.actor.add_style_class_name(params.style_class);
-
-      if(this._activatable) {
-         this.actor.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
-         this.actor.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
-      }
-      if(params.reactive && params.hover)
-         this.actor.connect('notify::hover', Lang.bind(this, this._onHoverChanged));
-      if(params.reactive) {
-         this.actor.connect('key-focus-in', Lang.bind(this, this._onKeyFocusIn));
-         this.actor.connect('key-focus-out', Lang.bind(this, this._onKeyFocusOut));
-      }
-
-      this.label = new St.Label({ text: text });
-      this.actor.label_actor = this.label;
-      this._icon = new St.Icon({ style_class: 'popup-menu-icon' });
-      this._icon.hide();
-      this.actor.add(this._icon);
-      this.actor.add(this.label, { y_align: St.Align.MIDDLE, y_fill:false, expand: true });
+   _init: function(columnWidth, params) {
+       this._numberOfcolumns = 1;
+       this._columnWidth = columnWidth;
+       this.actor = new St.BoxLayout(params);
+       this.actor._delegate = this;
    },
 
-   haveIcon: function() {
-      return ((this._icon.icon_name && this._icon.icon_name != "") || (this._icon.gicon));
+   getCurrentNumOfColumns: function() {
    },
 
-   setShowItemIcon: function(show) {
-      this._displayIcon = show;
-      this._icon.visible = (this._displayIcon)&&(this.haveIcon());
+   updateNumOfColumns: function() {
    },
 
-   setIconName: function(name) {
-      this._icon.visible = ((this._displayIcon) && (name && name != ""));
-      this._icon.icon_name = name;
+   updateCategories: function() {
    },
 
-   desaturateItemIcon: function(desaturate) {
-      if(this._desaturateIcon != desaturate) {
-         this._desaturateIcon = desaturate;
-         if(desaturate)
-            this._icon.add_effect_with_name("desaturate", new Clutter.DesaturateEffect());
-         else
-            this._icon.remove_effect_by_name("desaturate");
-      }
+   setColummWidth: function(colummWidth) {
    },
 
-   setGIcon: function(gicon) {
-      this._icon.visible = ((this._displayIcon) && (gicon != null));
-      this._icon.gicon = gicon;
+   updateBoxLayout: function() {
    },
 
-   destroy: function() {
-      if(this.actor) {
-         PopupMenu.PopupMenuItem.prototype.destroy.call(this);
-         this.actor = null;
-      }
+   clearView: function() {
    }
 };
 
 /**
- * ConfigurableApplicationMenuItem
+ * ConfigurableGridSection
  *
- * A class to extend the cinnamon standar PopupMenuItem
- * to support ornaments and automatically close the submenus.
+ * A class to allow a Grid of menu items.
  */
-function ConfigurableApplicationMenuItem() {
+function ConfigurableGridSection() {
    this._init.apply(this, arguments);
 }
 
-ConfigurableApplicationMenuItem.prototype = {
-   __proto__: ConfigurablePopupMenuItem.prototype,
+ConfigurableGridSection.prototype = {
+   __proto__: ConfigurablePopupMenuSection.prototype,
 
-   _init: function(text) {
-      ConfigurablePopupMenuItem.prototype._init.call(this, text);
+   _init: function(params) {
+      ConfigurablePopupMenuSection.prototype._init.call(this);
+      params = Params.parse(params, {
+         style_class: null,
+         vertical: true,
+         rowLimit: null,
+         columnLimit: null,
+         minRows: 1,
+         minColumns: 1,
+         maxItemWidth: -1,
+         maxItemHeight: -1,
+         itemSpacing: 0,
+         fillParent: true,
+         xAlign: St.Align.START
+      });
+      this._rowLimit = params.rowLimit;
+      this._colLimit = params.columnLimit;
+      this._minRows = params.minRows;
+      this._minColumns = params.minColumns;
+      this._xAlign = params.xAlign;
+      this._fillParent = params.fillParent;
+      this._maxItemWidth = params.maxItemWidth;
+      this._maxItemHeight = params.maxItemHeight;
+      this._spacing = params.itemSpacing;
+      this._maxActorWidth = 0;
+      this._maxActorHeight = 0;
+      this._nColumns = 0;
+      //this.activate = false;
+      this._itemsActors = [];
+      this._visibleItems = [];
+      this._visibleItemsChange = false;
+
+      this.box = new Cinnamon.GenericContainer();
+      if(!this.box.insert_before) {
+         this.box.insert_before = Lang.bind(this, function(actor, beforeActor) {
+            let childs = this.box.get_children();
+            let position = childs.indexOf(beforeActor);
+            if(position != -1)
+               this.box.insert_child_at_index(actor, position);
+         });
+      }
+      if(!this.box.add) {
+         this.box.add = Lang.bind(this, function(actor, params) {
+            this.box.add_actor(actor);
+         });
+      }
+      this.box.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
+      this.box.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
+      this.box.connect('allocate', Lang.bind(this, this._allocate));
+      this.actor.set_style_class_name(params.style_class);
+      this.actor.set_vertical(params.vertical);
+      this.actor.add(this.box, { x_fill: true, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
+      this.actor.connect('style-changed', Lang.bind(this, this._onStyleChanged));
+      this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
       this.actor._delegate = this;
-
-      this._accel = new St.Label();
-      this._ornament = new St.Bin();
-      this.actor.add(this._accel,    { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
-      this.actor.add(this._ornament, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
+      this.counter = 0;
+      //this.actor.visible = false;
    },
 
-   setAccel: function(accel) {
-      this._accel.set_text(accel);
+   _onMapped: function(actor, event) {
+      this.viewPort = this._getActorViewPort();
+      let children = this._getVisibleChildren();
+      this._maxActorWidth = 0;
+      this._maxActorHeight = 0;
+      this._updateActorMaxWidth(children);
+      this._updateActorMaxHeight(children);
    },
 
-   setOrnament: function(ornamentType, state) {
-      switch (ornamentType) {
-      case OrnamentType.CHECK:
-         if((this._ornament.child)&&(!(this._ornament.child._delegate instanceof CheckButton))) {
-             this._ornament.child.destroy();
-             this._ornament.child = null;
+   sortMenuItems: function(search, searchSorted, appsUsage) {
+   },
+
+   addMenuItem: function(menuItem, position) {
+      ConfigurablePopupMenuSection.prototype.addMenuItem.call(this, menuItem, position);
+      if(this._maxActorWidth < menuItem.actor.width)
+         this._maxActorWidth = menuItem.actor.width;
+      if(this._maxActorHeight < menuItem.actor.height)
+         this._maxActorHeight = menuItem.actor.height;
+      if(menuItem.menu) {
+         if(menuItem.actor.visible) {
+            this._visibleItems.push(menuItem.actor);
+            this._visibleItemsChange = true;
          }
-         if(!this._ornament.child) {
-             let checkOrn = new CheckButton(state);
-             this._ornament.child = checkOrn.actor;
-         } else {
-             this._ornament.child._delegate.setToggleState(state);
-         }
-         break;
-      case OrnamentType.DOT:
-         if((this._ornament.child)&&(!(this._ornament.child._delegate instanceof RadioBox))) {
-             this._ornament.child.destroy();
-             this._ornament.child = null;
-         }
-         if(!this._ornament.child) {
-             let radioOrn = new RadioBox(state);
-             this._ornament.child = radioOrn.actor;
-         } else {
-             this._ornament.child._delegate.setToggleState(state);
-         }
-         break;
+         this._itemsActors.push(menuItem.actor);
+         menuItem.actor.connect('show', Lang.bind(this, function(actor, event) {
+            this._visibleItemsChange = true;
+            let index = 0;
+            for(let pos in this._itemsActors) {
+               if(this._itemsActors[pos] == actor)
+                  break;
+               if(this._itemsActors[pos] == this._visibleItems[index])
+                  index++;
+            }
+            this._visibleItems.splice(index, 0, actor);
+         }));
+         menuItem.actor.connect('hide', Lang.bind(this, function(actor, event) {
+            let index = this._visibleItems.indexOf(actor);
+            this._visibleItems.splice(index, 1);
+         }));
+         //Main.notify("" + menuItem.menu.actor + " " + menuItem.menu.actor.get_parent());
       }
    },
 
-   destroy: function() {
-      if(this.actor) {
-         ConfigurablePopupMenuItem.prototype.destroy.call(this);
-         this.actor = null;
+   _connectItemSignals: function(menuItem) {
+        menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function (menuItem, active) {
+            if (active && this._activeMenuItem != menuItem) {
+                if (this._activeMenuItem)
+                    this._activeMenuItem.setActive(false);
+                this._activeMenuItem = menuItem;
+                this.emit('active-changed', menuItem);
+            } else if (!active && this._activeMenuItem == menuItem) {
+                this._activeMenuItem = null;
+                this.emit('active-changed', null);
+            }
+        }));
+        menuItem._sensitiveChangeId = menuItem.connect('sensitive-changed', Lang.bind(this, function(menuItem, sensitive) {
+            if (!sensitive && this._activeMenuItem == menuItem) {
+                if (!this.actor.navigate_focus(menuItem.actor,
+                                               Gtk.DirectionType.TAB_FORWARD,
+                                               true))
+                    this.actor.grab_key_focus();
+            } else if (sensitive && this._activeMenuItem == null) {
+                if (global.stage.get_key_focus() == this.actor)
+                    menuItem.actor.grab_key_focus();
+            }
+        }));
+        menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function (menuItem, event, keepMenu) {
+            this.emit('activate', menuItem, keepMenu);
+            if (!keepMenu){
+                this.close(true);
+            }
+        }));
+        menuItem.connect('destroy', Lang.bind(this, function(emitter) {
+            this.removeItem(menuItem);
+            menuItem.disconnect(menuItem._activateId);
+            menuItem.disconnect(menuItem._activeChangeId);
+            menuItem.disconnect(menuItem._sensitiveChangeId);
+            if (menuItem.menu) {
+                menuItem.menu.disconnect(menuItem._subMenuActivateId);
+                menuItem.menu.disconnect(menuItem._subMenuActiveChangeId);
+                this.disconnect(menuItem._closingId);
+            }
+            if (menuItem == this._activeMenuItem)
+                this._activeMenuItem = null;
+            this.length--;
+        }));
+    },
+
+   // Override: We don't want add generic types of actors.
+   addActor: function(actor) {
+      if(actor._delegate)
+         this.addMenuItem(actor._delegate);
+   },
+
+   // Override: We need to do a relayout when a popup menu is diaplayed
+   _connectSubMenuSignals: function(object, menu) {
+      ConfigurablePopupMenuSection.prototype._connectSubMenuSignals.call(this, object, menu);
+      object._subMenuOpenId = menu.connect('open-state-changed', Lang.bind(this, function(submenu, open) {
+         if(open)
+            this._openedSubMenu = submenu;
+         else
+            this._openedSubMenu = null;
+         this.box.queue_relayout();
+      }));
+   },
+
+   _getVisibleChildren: function() {
+      /*if(this._visibleItemsChange) {
+         //let children = this.box.get_children();
+         let children = this._itemsActors;
+         children = children.filter(function(actor) {
+            return (actor.visible && actor._delegate && !(actor._delegate instanceof PopupMenu.PopupSubMenu));
+         });
+         this._visibleItemsChange = false;
+         this._visibleItems = children;
+         return this._visibleItems;
+      }*/
+      return this._visibleItems;
+   },
+
+   _getActorViewPort: function() {
+      let actor = this.actor.get_parent();
+      while((actor) && (!(actor instanceof St.ScrollView))) {
+         actor = actor.get_parent();
       }
-   }
+      if(actor && actor._delegate)
+         return actor._delegate;
+      return null;
+   },
+
+   _updateActorMaxWidth: function(visibleChildren) {
+      visibleChildren.forEach(function(actor) {
+         if(this._maxActorWidth < actor.width)
+            this._maxActorWidth = actor.width;
+      }, this);
+   },
+
+   _updateActorMaxHeight: function(visibleChildren) {
+      visibleChildren.forEach(function(actor) {
+         if(this._maxActorHeight < actor.height)
+            this._maxActorHeight = actor.height;
+      }, this);
+   },
+
+   _getElementAtPos: function(visibleChildren, nColumns, x, y) {
+      //let nRows = Math.ceil(visibleChildren.length/nColumns);
+      let realPos = nColumns*y + x;
+      if(realPos > 0 && realPos < visibleChildren.length) {
+         return visibleChildren[realPos];
+      }
+      return null;
+   },
+
+   _getPreferredWidth: function(grid, forHeight, alloc) {
+      if(this._visibleItemsChange) {
+         let children = this._getVisibleChildren();
+         this._maxActorWidth = 0;
+         this._updateActorMaxWidth(children);
+      }
+      if (this._fillParent) {
+         // Ignore all size requests of children and request a size of 0;
+         // later we'll allocate as many children as fit the parent
+         alloc.min_size = this._getItemWidth();
+         alloc.natural_size = alloc.min_size;
+         return;
+      }
+
+      let nChildren = this.box.get_n_children();
+      let nColumns = this._colLimit ? Math.min(this._colLimit, nChildren) : nChildren;
+      let totalSpacing = Math.max(0, nColumns - 1) * this.getSpacing();
+      // Kind of a lie, but not really an issue right now.  If
+      // we wanted to support some sort of hidden/overflow that would
+      // need higher level design
+      alloc.min_size = this._getItemWidth();
+      alloc.natural_size = nColumns * this._getItemWidth() + totalSpacing;
+   },
+
+   _getPreferredHeight: function(grid, forWidth, alloc) {
+      if (this._fillParent) {
+         // Ignore all size requests of children and request a size of 0;
+         // later we'll allocate as many children as fit the parent
+         //return;
+      }
+      let children = this._getVisibleChildren();
+      let nColumns = children.length;
+      if (forWidth >= 0)
+         [nColumns, ] = this._computeColumnLayout(forWidth);
+      if(this._nColumns != nColumns)
+         this._visibleItemsChange = true;
+      let height = this._getPreferredAllocationHeight(nColumns, children);
+      alloc.min_size = height;
+      alloc.natural_size = height;
+   },
+
+   _getPreferredAllocationHeight: function(nColumns, children) {
+      let nRows = 0;
+      if (nColumns > 0)
+         nRows = Math.ceil(children.length / nColumns);
+      if (this._rowLimit)
+         nRows = Math.min(nRows, this._rowLimit);
+      let totalSpacing = Math.max(0, nRows - 1) * this.getSpacing();
+      let height = nRows * this._getItemHeight() + totalSpacing;
+      if(this._openedSubMenu)
+         height += this._openedSubMenu.actor.height;
+      return height;
+   },
+
+   _allocate: function(grid, box, flags) {
+      if(!this.actor.mapped || !this._visibleItemsChange)
+         return;
+      this._visibleItemsChange = false;
+      if (this._fillParent) {
+         // Reset the passed in box to fill the parent
+         let parentBox = this.actor.get_parent().allocation;
+         let gridBox = this.actor.get_theme_node().get_content_box(parentBox);
+         box = this.box.get_theme_node().get_content_box(gridBox);
+      }
+      if(this.counter < 3)
+         this.counter += 1;
+      //else
+      //   Main.notify("allocate");
+
+      let children = this._getVisibleChildren();
+
+      //this._updateActorMaxWidth(children);
+      //this._updateActorMaxHeight(children);
+      let availWidth = box.x2 - box.x1;
+      let availHeight = box.y2 - box.y1;
+      let spacing = this.getSpacing();
+      let [nColumns, usedWidth] = this._computeColumnLayout(availWidth);
+      this._nColumns = nColumns;
+
+      let leftEmptySpace;
+      switch(this._xAlign) {
+         case St.Align.START:
+            leftEmptySpace = 0;
+            break;
+         case St.Align.MIDDLE:
+            leftEmptySpace = Math.floor((availWidth - usedWidth) / 2);
+            break;
+         case St.Align.END:
+            leftEmptySpace = availWidth - usedWidth;
+      }
+
+      let x = box.x1 + leftEmptySpace;
+      let y = box.y1;
+      let columnIndex = 0;
+      let rowIndex = 0;
+      let [viewPortSize, viewPortPosition] = this._getViewPortSize();
+
+      let colsHeight = [];
+      for (let i = 0; i < nColumns; i++) {
+         colsHeight.push(0);
+      }
+
+      let maxWidth = 0;
+      let maxHeight = 0;
+      for (let i = 0; i < children.length; i++) {
+         let childBox = this._calculateChildBox(children[i], x, colsHeight[columnIndex], box);
+         if ((this._rowLimit && rowIndex >= this._rowLimit) ||
+            (this._fillParent && childBox.y2 > availHeight) ||
+            (viewPortSize && childBox.y2 > viewPortSize + viewPortPosition)) {
+            this.box.set_skip_paint(children[i], true);
+         } else {
+            children[i].allocate(childBox, flags);
+            this.box.set_skip_paint(children[i], false);
+            let boxHeight = childBox.y2 - childBox.y1;
+            let boxWidth = childBox.x2 - childBox.x1;
+            if(boxHeight > maxHeight)
+               maxHeight = boxHeight;
+            if(boxWidth > maxWidth)
+               maxWidth = boxWidth;
+            colsHeight[columnIndex] += (childBox.y2 - childBox.y1) + spacing;
+            if(children[i]._delegate && children[i]._delegate.menu && children[i]._delegate.menu.isOpen) {
+                let childMenu = children[i]._delegate.menu.actor;
+                let childMenuBox = this._calculateChildBox(childMenu, x, colsHeight[columnIndex], box);
+                childMenu.allocate(childMenuBox, flags);
+                this.box.set_skip_paint(childMenu, false);
+                colsHeight[columnIndex] += (childMenuBox.y2 - childMenuBox.y1);
+            }
+         }
+         //this._rowLimit = 0;
+         columnIndex++;
+         if (columnIndex == nColumns) {
+            columnIndex = 0;
+            rowIndex++;
+         }
+         if (columnIndex == 0) {
+            //y += (childBox.y2 - childBox.y1) + spacing;
+            x = box.x1 + leftEmptySpace;
+         } else {
+            x += this._getItemWidth() + spacing;
+         }
+      }
+      this._maxActorWidth = maxWidth;
+      this._maxActorHeight = maxHeight;
+   },
+
+   _getViewPortSize: function(availWidth) {
+      return [null, null];
+      if(this.viewPort) {
+         let viewPortAllocation = this.viewPort.actor.allocation;
+         let vscroll = this.viewPort.scroll.get_vscroll_bar();
+         let position = vscroll.get_adjustment().get_value();
+         /*if(!this._scrollStartId) {
+            this._scrollStartId = vscroll.connect('scroll-start', Lang.bind(this, function() {
+               this._isInScroll = true;
+               this._allocateMore();
+            }));
+            this._scrollStopId = vscroll.connect('scroll-stop', Lang.bind(this, function() {
+               this._isInScroll = false;
+            }));
+         }*/
+         return [viewPortAllocation.y2 - viewPortAllocation.y1, position];
+      }
+      return [null, null];
+   },
+
+   _allocateMore: function() {
+      if(this._isInScroll) {
+         this.box.queue_relayout();
+         Mainloop.timeout_add(50, Lang.bind(this, this._allocateMore));
+      }
+   },
+
+   _updateSpace: function(availWidth) {
+      /*let estimateHeight = this._getPreferredAllocationHeight(availWidth);
+      Main.notify("" + viewPortHeight);
+      let portSize = 20;
+      this._spaceActor.height = this._getPreferredAllocationHeight(availWidth) - portSize*50;
+      return portSize;*/
+      let spaceBox = new Clutter.ActorBox();
+      x = box.x1 + leftEmptySpace;
+      let spaceBox = this._calculateSpaceBox(this._spaceActor, x, y, box);
+      this._spaceActor.allocate(spaceBox, flags);
+      this.box.set_skip_paint(this._spaceActor, false);
+      //Main.notify("" + spaceBox.y2 + "-" + spaceBox.y1 + "-" + spaceBox.x2 + "-" + spaceBox.x1);
+   },
+
+   _calculateSpaceBox: function(child, x, y, box) {
+      // Center the item in its allocation horizontally
+      let [,, natWidth, natHeight] = child.get_preferred_size();
+      let childBox = new Clutter.ActorBox();
+      if (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL)
+         childBox.x1 = Math.floor(box.x2 - (x + natWidth));
+      else
+         childBox.x1 = Math.floor(x);
+      childBox.y1 = Math.floor(y);
+      childBox.x2 = childBox.x1 + natWidth;
+      childBox.y2 = childBox.y1 + natHeight;
+      return childBox;
+   },
+
+   _getAllocatedChildSizeAndSpacing: function(child) {
+      let [,, natWidth, natHeight] = child.get_preferred_size();
+      let width = natWidth//Math.max(this._getItemWidth(), natWidth);
+      let xSpacing = Math.max(0, width - natWidth) / 2;
+      let height = Math.max(this._getItemHeight(), natHeight);
+      let ySpacing = Math.max(0, height - natHeight) / 2;
+      return [width, height, xSpacing, ySpacing];
+   },
+
+   _calculateChildBox: function(child, x, y, box) {
+      // Center the item in its allocation horizontally
+      let [width, height, childXSpacing, childYSpacing] =
+          this._getAllocatedChildSizeAndSpacing(child);
+
+      let childBox = new Clutter.ActorBox();
+      if (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL) {
+         let _x = box.x2 - (x + width);
+         childBox.x1 = Math.floor(_x - childXSpacing);
+      } else {
+         childBox.x1 = Math.floor(x + childXSpacing);
+      }
+      childBox.y1 = Math.floor(y + childYSpacing);
+      childBox.x2 = childBox.x1 + width;
+      childBox.y2 = childBox.y1 + height;
+      return childBox;
+   },
+
+   _computeColumnLayout: function (forWidth) {
+      let nColumns = 0;
+      let usedWidth = 0;
+      let spacing = this.getSpacing();
+
+      while ((this._colLimit == null || nColumns < this._colLimit) &&
+             (usedWidth + this._getItemWidth() <= forWidth)) {
+         usedWidth += this._getItemWidth() + spacing;
+         nColumns += 1;
+      }
+
+      if (nColumns > 0)
+         usedWidth -= spacing;
+
+      return [nColumns, usedWidth];
+   },
+
+   _onStyleChanged: function() {
+      this.box.queue_relayout();
+   },
+
+   destroyAll: function() {
+      this.box.destroy_all_children();
+      this._itemsActors = [];
+      this._visibleItems = [];
+   },
+
+   removeItem: function(item) {
+      this.box.remove_child(item.actor);
+      let index = this._itemsActors.indexOf(item.actor);
+      if(index != -1) {
+         this._itemsActors.splice(index, 1);
+         this._visibleItemsChange = true;
+      }
+      index = this._visibleItems.indexOf(item.actor);
+      if(index != -1)
+         this._visibleItems.splice(index, 1);
+      if(item.menu)
+         this.box.remove_child(item.menu.actor);
+   },
+
+   setSpacing: function(spacing) {
+      this._fixedSpacing = spacing;
+   },
+
+   getNumberOfColumns: function() {
+      return this._nColumns;
+   },
+
+   getSpacing: function() {
+      return this._fixedSpacing ? this._fixedSpacing : this._spacing;
+   },
+
+   _getItemWidth: function() {
+      return (this._maxItemWidth > 0) ? Math.max(this._maxItemWidth, this._maxActorWidth) : this._maxActorWidth;
+   },
+
+   _getItemHeight: function() {
+      return (this._maxItemHeight > 0) ? Math.max(this._maxItemHeight, this._maxActorHeight) : this._maxActorHeight;
+   },
+/*
+   _updateSpacingForSize: function(availWidth, availHeight) {
+      let maxEmptyVArea = availHeight - this._minRows * this._getItemHeight();
+      let maxEmptyHArea = availWidth - this._minColumns * this._getItemWidth();
+      let maxHSpacing, maxVSpacing;
+
+      if (this._minRows <=  1)
+         maxVSpacing = maxEmptyVArea;
+      else
+         maxVSpacing = Math.floor(maxEmptyVArea / (this._minRows - 1));
+
+      if (this._minColumns <=  1)
+         maxHSpacing = maxEmptyHArea;
+      else
+         maxHSpacing = Math.floor(maxEmptyHArea / (this._minColumns - 1));
+
+      let maxSpacing = Math.min(maxHSpacing, maxVSpacing);
+      // Limit spacing to the item size
+      maxSpacing = Math.min(maxSpacing, Math.min(this._getItemHeight(), this._getItemWidth()));
+      // The minimum spacing, regardless of whether it satisfies the row/columng minima,
+      // is the spacing we get from CSS.
+      let spacing = Math.max(this._spacing, maxSpacing);
+      this.setSpacing(spacing);
+   }*/
 };
+Signals.addSignalMethods(ConfigurableGridSection.prototype);
 
 /**
  * ConfigurableMenuApplet
@@ -4458,6 +4776,169 @@ ConfigurableMenuApplet.prototype = {
          this._appletBox.destroy();
          this.actor = null;
       }
+   }
+};
+
+//ConfigurableMenus
+function ConfigurableAppletMenu(parent) {
+   this._init(parent);
+}
+
+ConfigurableAppletMenu.prototype = {
+   _init: function(parent) {
+      this.parent = parent;
+      this.actor = new St.BoxLayout({ vertical: false, reactive: true, track_hover: true });
+      this.actor.connect('key-focus-in', Lang.bind(this, function(actor) {
+         this._categoryChange(this.rootGnomeCat);
+      }));
+      this.actor.connect('key-focus-out', Lang.bind(this, function(actor) {
+         this.activeCategoryActor();
+      }));
+      this.categories = new Array();
+      this.categoriesSignals = new Array();
+      this._takeControl();
+      this.activeActor = null;
+   },
+
+   destroy: function() {
+      this.parent._applet_label.get_parent().remove_actor(this.parent._applet_label);
+      this.parent._applet_icon_box.get_parent().remove_actor(this.parent._applet_icon_box);
+
+      this.parent.actor.add(this.parent._applet_icon_box, { y_align: St.Align.MIDDLE, y_fill: false });
+      this.parent.actor.add(this.parent._applet_label, { y_align: St.Align.MIDDLE, y_fill: false });
+      this.disconnectCategories();
+      this.parent.actor.add_style_class_name('applet-box');
+      if(this.parent.orientation == St.Side.TOP)
+         this.parent.actor.add_style_class_name('menu-applet-panel-top-box');
+      else
+         this.parent.actor.add_style_class_name('menu-applet-panel-bottom-box'); 
+      this.actor.destroy();
+   },
+
+   _takeControl: function() {
+      if(this.parent.orientation == St.Side.TOP)
+         this.parent.actor.set_style_class_name('menu-applet-panel-top-box');
+      else
+         this.parent.actor.set_style_class_name('menu-applet-panel-bottom-box'); 
+      this.parent._applet_label.get_parent().remove_actor(this.parent._applet_label);
+      this.parent._applet_icon_box.get_parent().remove_actor(this.parent._applet_icon_box);
+
+      this.parent.actor.add(this.actor, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
+      this.rootGnomeCat = new St.BoxLayout({ style_class: 'applet-box', reactive: true, track_hover: true });
+      this.rootGnomeCat.add_style_class_name('menu-applet-category-box');
+      this.rootGnomeCat.add(this.parent._applet_icon_box, { y_align: St.Align.MIDDLE, y_fill: false });
+      this.rootGnomeCat.add(this.parent._applet_label, { y_align: St.Align.MIDDLE, y_fill: false });
+      this.actor.add(this.rootGnomeCat, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
+      this.rootGnomeCat.connect('enter-event', Lang.bind(this, this._changeHover, true));
+      this.rootGnomeCat.connect('leave-event', Lang.bind(this, this._changeHover, false));
+   },
+
+   _changeHover: function(actor, event, hover) {
+      if(hover) {
+         if(this.parent._applet_icon)
+            this.parent._applet_icon.add_style_pseudo_class('hover');
+         this.parent._applet_label.add_style_pseudo_class('hover');
+      } else {
+         if(this.parent._applet_icon)
+            this.parent._applet_icon.remove_style_pseudo_class('hover');
+         this.parent._applet_label.remove_style_pseudo_class('hover');
+      }
+   },
+
+   addCategory: function(category) {
+      this.categories.push(category);
+      this.actor.add(category.actor, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
+   },
+
+   connectCategories: function(event, callBackFunc) {
+      this.categoriesSignals[this.rootGnomeCat] = this.rootGnomeCat.connect(event, Lang.bind(this, callBackFunc));
+      for(let i = 0; i < this.categories.length; i++) {
+         this.categoriesSignals[this.categories[i].actor] = this.categories[i].actor.connect(event, Lang.bind(this, callBackFunc));
+      }
+   },
+
+   disconnectCategories: function() {
+     // for(let keyActor in this.categoriesSignals)
+     //     keyActor.disconnect(this.categoriesSignals[keyActor]);
+   },
+
+   setPanelHeight: function(panel_height) {
+      for(let i = 0; i < this.categories.length; i++) {
+         this.categories[i].on_panel_height_changed(panel_height);
+      }
+   },
+
+   getActorForName: function(name) {
+      if(name == "Main")
+         return this.rootGnomeCat;
+      for(let i = 0; i < this.categories.length; i++) {
+         if(this.categories[i].categoryName == name)
+            return this.categories[i].actor;
+      }
+      return null;
+   },
+
+   _categoryChange: function(actor) {
+      this.parent.searchEntry.clutter_text.set_text("");
+      this.parent.onCategorieGnomeChange(actor);
+   },
+
+   activeCategoryActor: function(actor) {
+      this.rootGnomeCat.remove_style_pseudo_class('active');
+      for(let i = 0; i < this.categories.length; i++)
+         this.categories[i].actor.remove_style_pseudo_class('active');
+      if(actor) {
+         actor.add_style_pseudo_class('active');
+         this.activeActor = actor;
+      } else {
+         this.activeActor = null;
+      }
+   },
+
+   getFirstElement: function() {
+      return this.rootGnomeCat;
+   },
+
+   navegateAppletMenu: function(symbol, actor) {
+      let actorChange = this.activeActor;
+      if(!actorChange)
+        actorChange = this.rootGnomeCat;	
+      let resultActor;
+      if(symbol == Clutter.KEY_Right) {
+         let index = this._findActorIndex(actorChange);
+         if(index == this.categories.length - 1)
+            index = -1;
+         else
+            index++;
+         if(index == -1)
+           resultActor = this.rootGnomeCat;
+         else
+           resultActor = this.categories[index].actor;
+      } else if(symbol == Clutter.KEY_Left) {
+         let index = this._findActorIndex(actorChange);
+         if(index == -1)
+            index = this.categories.length - 1;
+         else if(index == 0)
+            index = -1;
+         else
+            index--;
+         if(index == -1)
+           resultActor = this.rootGnomeCat;
+         else
+           resultActor = this.categories[index].actor;
+      } else {
+         return false;
+      }
+      this._categoryChange(resultActor);
+      return true;
+   },
+
+   _findActorIndex: function(actor) {
+      for(let i = 0; i < this.categories.length; i++) {
+         if(this.categories[i].actor == actor)
+            return i;
+      }
+      return -1;
    }
 };
 
@@ -5295,169 +5776,5 @@ MenuFactory.prototype = {
             shellItem.actor.connect('allocate', Lang.bind(this, this._allocateOrnament, shellItem));
          }
       }
-   }
-};
-
-//ConfigurableMenus
-
-function ConfigurableAppletMenu(parent) {
-   this._init(parent);
-}
-
-ConfigurableAppletMenu.prototype = {
-   _init: function(parent) {
-      this.parent = parent;
-      this.actor = new St.BoxLayout({ vertical: false, reactive: true, track_hover: true });
-      this.actor.connect('key-focus-in', Lang.bind(this, function(actor) {
-         this._categoryChange(this.rootGnomeCat);
-      }));
-      this.actor.connect('key-focus-out', Lang.bind(this, function(actor) {
-         this.activeCategoryActor();
-      }));
-      this.categories = new Array();
-      this.categoriesSignals = new Array();
-      this._takeControl();
-      this.activeActor = null;
-   },
-
-   destroy: function() {
-      this.parent._applet_label.get_parent().remove_actor(this.parent._applet_label);
-      this.parent._applet_icon_box.get_parent().remove_actor(this.parent._applet_icon_box);
-
-      this.parent.actor.add(this.parent._applet_icon_box, { y_align: St.Align.MIDDLE, y_fill: false });
-      this.parent.actor.add(this.parent._applet_label, { y_align: St.Align.MIDDLE, y_fill: false });
-      this.disconnectCategories();
-      this.parent.actor.add_style_class_name('applet-box');
-      if(this.parent.orientation == St.Side.TOP)
-         this.parent.actor.add_style_class_name('menu-applet-panel-top-box');
-      else
-         this.parent.actor.add_style_class_name('menu-applet-panel-bottom-box'); 
-      this.actor.destroy();
-   },
-
-   _takeControl: function() {
-      if(this.parent.orientation == St.Side.TOP)
-         this.parent.actor.set_style_class_name('menu-applet-panel-top-box');
-      else
-         this.parent.actor.set_style_class_name('menu-applet-panel-bottom-box'); 
-      this.parent._applet_label.get_parent().remove_actor(this.parent._applet_label);
-      this.parent._applet_icon_box.get_parent().remove_actor(this.parent._applet_icon_box);
-
-      this.parent.actor.add(this.actor, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
-      this.rootGnomeCat = new St.BoxLayout({ style_class: 'applet-box', reactive: true, track_hover: true });
-      this.rootGnomeCat.add_style_class_name('menu-applet-category-box');
-      this.rootGnomeCat.add(this.parent._applet_icon_box, { y_align: St.Align.MIDDLE, y_fill: false });
-      this.rootGnomeCat.add(this.parent._applet_label, { y_align: St.Align.MIDDLE, y_fill: false });
-      this.actor.add(this.rootGnomeCat, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
-      this.rootGnomeCat.connect('enter-event', Lang.bind(this, this._changeHover, true));
-      this.rootGnomeCat.connect('leave-event', Lang.bind(this, this._changeHover, false));
-   },
-
-   _changeHover: function(actor, event, hover) {
-      if(hover) {
-         if(this.parent._applet_icon)
-            this.parent._applet_icon.add_style_pseudo_class('hover');
-         this.parent._applet_label.add_style_pseudo_class('hover');
-      } else {
-         if(this.parent._applet_icon)
-            this.parent._applet_icon.remove_style_pseudo_class('hover');
-         this.parent._applet_label.remove_style_pseudo_class('hover');
-      }
-   },
-
-   addCategory: function(category) {
-      this.categories.push(category);
-      this.actor.add(category.actor, { y_align: St.Align.MIDDLE, y_fill: true, expand: true });
-   },
-
-   connectCategories: function(event, callBackFunc) {
-      this.categoriesSignals[this.rootGnomeCat] = this.rootGnomeCat.connect(event, Lang.bind(this, callBackFunc));
-      for(let i = 0; i < this.categories.length; i++) {
-         this.categoriesSignals[this.categories[i].actor] = this.categories[i].actor.connect(event, Lang.bind(this, callBackFunc));
-      }
-   },
-
-   disconnectCategories: function() {
-     // for(let keyActor in this.categoriesSignals)
-     //     keyActor.disconnect(this.categoriesSignals[keyActor]);
-   },
-
-   setPanelHeight: function(panel_height) {
-      for(let i = 0; i < this.categories.length; i++) {
-         this.categories[i].on_panel_height_changed(panel_height);
-      }
-   },
-
-   getActorForName: function(name) {
-      if(name == "Main")
-         return this.rootGnomeCat;
-      for(let i = 0; i < this.categories.length; i++) {
-         if(this.categories[i].categoryName == name)
-            return this.categories[i].actor;
-      }
-      return null;
-   },
-
-   _categoryChange: function(actor) {
-      this.parent.searchEntry.clutter_text.set_text("");
-      this.parent.onCategorieGnomeChange(actor);
-   },
-
-   activeCategoryActor: function(actor) {
-      this.rootGnomeCat.remove_style_pseudo_class('active');
-      for(let i = 0; i < this.categories.length; i++)
-         this.categories[i].actor.remove_style_pseudo_class('active');
-      if(actor) {
-         actor.add_style_pseudo_class('active');
-         this.activeActor = actor;
-      } else {
-         this.activeActor = null;
-      }
-   },
-
-   getFirstElement: function() {
-      return this.rootGnomeCat;
-   },
-
-   navegateAppletMenu: function(symbol, actor) {
-      let actorChange = this.activeActor;
-      if(!actorChange)
-        actorChange = this.rootGnomeCat;	
-      let resultActor;
-      if(symbol == Clutter.KEY_Right) {
-         let index = this._findActorIndex(actorChange);
-         if(index == this.categories.length - 1)
-            index = -1;
-         else
-            index++;
-         if(index == -1)
-           resultActor = this.rootGnomeCat;
-         else
-           resultActor = this.categories[index].actor;
-      } else if(symbol == Clutter.KEY_Left) {
-         let index = this._findActorIndex(actorChange);
-         if(index == -1)
-            index = this.categories.length - 1;
-         else if(index == 0)
-            index = -1;
-         else
-            index--;
-         if(index == -1)
-           resultActor = this.rootGnomeCat;
-         else
-           resultActor = this.categories[index].actor;
-      } else {
-         return false;
-      }
-      this._categoryChange(resultActor);
-      return true;
-   },
-
-   _findActorIndex: function(actor) {
-      for(let i = 0; i < this.categories.length; i++) {
-         if(this.categories[i].actor == actor)
-            return i;
-      }
-      return -1;
    }
 };
