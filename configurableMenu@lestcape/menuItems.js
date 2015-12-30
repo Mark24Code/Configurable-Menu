@@ -820,11 +820,9 @@ GenericApplicationButton.prototype = {
    closeMenu: function() {
       if(this.withMenu) {
          if(this.widthC) {
-            this.parent._clearView();
             this.parent.menu.actor.set_width(this.widthC);
             this.parent.width = this.widthC;
             this.widthC = null;
-            this.parent._updateView();
          }
          this.menu.close();
       }
@@ -1456,11 +1454,9 @@ RecentButton.prototype = {
 
    closeMenu: function() {
       if(this.widthC) {
-         this.parent._clearView();
          this.parent.menu.actor.set_width(this.widthC);
          this.parent.width = this.widthC;
          this.widthC = null;
-         this.parent._updateView();
       }
       this.menu.close();
    },

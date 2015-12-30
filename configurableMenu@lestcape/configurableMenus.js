@@ -1639,14 +1639,20 @@ ConfigurablePopupBaseMenuItem.prototype = {
    // %expand (defaults to #false), and %align (defaults to
    // #St.Align.START)
    addActor: function(child, params) {
-      params = Params.parse(params, { span: 1,
-                                      expand: false,
-                                      align: St.Align.START });
-      params.actor = child;
-      this._children.push(params);
+      if((params)&&((params.span)||(params.align))) {
+         params = Params.parse(params, { span: 1,
+                                         expand: false,
+                                         align: St.Align.START });
+         params = { x_align: params.align,
+                    expand: params.expand,
+                    x_fill: params.expand };
+      }
       this.actor.connect('destroy', Lang.bind(this, function () { this._removeChild(child); }));
-      //this.actor.add_actor(child);
-      this.actor.add(child);
+      this.actor.add(child, params);
+      if(params) {
+         params.actor = child;
+         this._children.push(params);
+      }
    },
 
    _removeChild: function(child) {
@@ -3803,7 +3809,7 @@ function ArrayBoxLayout() {
 ArrayBoxLayout.prototype = {
 
    _init: function(columnWidth, params) {
-       this._numberOfcolumns = 1;
+       this._nColumns = 1;
        this._columnWidth = columnWidth;
        this.actor = new St.BoxLayout(params);
        this.actor._delegate = this;
@@ -3833,6 +3839,7 @@ ArrayBoxLayout.prototype = {
  *
  * A class to allow a Grid of menu items.
  */
+/*
 function ConfigurableGridSection() {
    this._init.apply(this, arguments);
 }
@@ -3868,9 +3875,528 @@ ConfigurableGridSection.prototype = {
       this._maxActorHeight = 0;
       this._nColumns = 0;
       //this.activate = false;
-      this._itemsActors = [];
+      this._menuItems = [];
       this._visibleItems = [];
       this._visibleItemsChange = false;
+
+      this.actor.set_style_class_name(params.style_class);
+      this.actor.set_vertical(!params.vertical);
+      this.actor.connect('style-changed', Lang.bind(this, this._onStyleChanged));
+      this.idSignalMapped = this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
+      this.idSignalAlloc = this.actor.connect('allocation_changed', Lang.bind(this, this._onAllocationChanged));
+      //this.actor.connect_after('queue-relayout', Lang.bind(this, this._onQueueRelayout));
+      this.actor._delegate = this;
+      //this.counter = 0;
+      this._nColumns = 1;
+      this._scrollViewPort = null;
+      this.box = new St.BoxLayout({ vertical: params.vertical });
+      if(this._fillParent)
+         this.actor.add(this.box, { x_fill: false, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
+      else
+         this.actor.add_actor(this.box);
+      this._relayoutBlocked = false;
+   },
+
+   _onMapped: function() {
+      this._scrollViewPort = null;
+      let actor = this.actor.get_parent();
+      while((actor) && (!(actor instanceof St.ScrollView))) {
+         actor = actor.get_parent();
+      }
+      if(actor && actor._delegate)
+         this._scrollViewPort = actor._delegate;
+   },
+
+   sortMenuItems: function(pattern, sortType, appsUsage) {
+   },
+
+   addMenuItem: function(menuItem, position) {
+      this._relayoutBlocked = true;
+      ConfigurablePopupMenuSection.prototype.addMenuItem.call(this, menuItem, position);
+      let width = menuItem.actor.width;
+      if(this._maxActorWidth < width)
+         this._maxActorWidth = width;
+      if(this._maxActorHeight < menuItem.actor.height)
+         this._maxActorHeight = menuItem.actor.height;
+      if(menuItem.actor.visible) {
+         this._visibleItems.push(menuItem);
+         this._visibleItemsChange = true;
+      }
+      this._menuItems.push(menuItem);
+      this._relayoutBlocked = false;
+   },
+
+   // Override: We don't want add generic types of actors.
+   addActor: function(actor) {
+      if(actor._delegate)
+         this.addMenuItem(actor._delegate);
+   },
+
+   // Override: We need to do a relayout when a popup menu is diaplayed
+   _connectSubMenuSignals: function(object, menu) {
+      ConfigurablePopupMenuSection.prototype._connectSubMenuSignals.call(this, object, menu);
+      object._subMenuOpenId = menu.connect('open-state-changed', Lang.bind(this, function(submenu, open) {
+         this._visibleItemsChange = true;
+         if(open)
+            this._openedSubMenu = submenu;
+         else
+            this._openedSubMenu = null;
+      //   tthis.actor.queue_relayout();
+      }));
+   },
+
+   // Override:
+   _connectItemSignals: function(menuItem) {
+      menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function (menuItem, active) {
+         if (active && this._activeMenuItem != menuItem) {
+            if (this._activeMenuItem)
+               this._activeMenuItem.setActive(false);
+            this._activeMenuItem = menuItem;
+            this.emit('active-changed', menuItem);
+         } else if (!active && this._activeMenuItem == menuItem) {
+            this._activeMenuItem = null;
+            this.emit('active-changed', null);
+         }
+      }));
+      menuItem._sensitiveChangeId = menuItem.connect('sensitive-changed', Lang.bind(this, function(menuItem, sensitive) {
+         if (!sensitive && this._activeMenuItem == menuItem) {
+            if (!this.actor.navigate_focus(menuItem.actor,
+                                           Gtk.DirectionType.TAB_FORWARD,
+                                           true))
+               this.actor.grab_key_focus();
+         } else if (sensitive && this._activeMenuItem == null) {
+            if (global.stage.get_key_focus() == this.actor)
+               menuItem.actor.grab_key_focus();
+         }
+      }));
+      menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function (menuItem, event, keepMenu) {
+         this.emit('activate', menuItem, keepMenu);
+         if (!keepMenu){
+            this.close(true);
+         }
+      }));
+      menuItem.actor.connect('show', Lang.bind(this, function(actor, event) {
+         this._relayoutBlocked = true;
+         this._visibleItemsChange = true;
+         let index = 0;
+         for(let pos in this._menuItems) {
+            if((this._menuItems[pos].actor == actor) || (index >= this._visibleItems.length))
+               break;
+            if(this._menuItems[pos].actor == this._visibleItems[index].actor)
+               index++;
+         }
+         this._visibleItems.splice(index, 0, menuItem);
+         this._relayoutBlocked = false;
+      }));
+      menuItem.actor.connect('hide', Lang.bind(this, function(actor, event) {
+         this._relayoutBlocked = true;
+         let index = this._visibleItems.indexOf(menuItem);
+         this._visibleItems.splice(index, 1);
+         this._visibleItemsChange = true;
+         this._relayoutBlocked = false;
+      }));
+      menuItem.connect('destroy', Lang.bind(this, function(emitter) {
+         this.removeItem(menuItem);
+         menuItem.disconnect(menuItem._activateId);
+         menuItem.disconnect(menuItem._activeChangeId);
+         menuItem.disconnect(menuItem._sensitiveChangeId);
+         if (menuItem.menu) {
+            menuItem.menu.disconnect(menuItem._subMenuActivateId);
+            menuItem.menu.disconnect(menuItem._subMenuActiveChangeId);
+            this.disconnect(menuItem._closingId);
+         }
+         if (menuItem == this._activeMenuItem)
+            this._activeMenuItem = null;
+         this.length--;
+      }));
+   },
+
+   _getVisibleChildren: function() {
+      //if(this._visibleItemsChange) {
+      //   let children = this._menuItems;
+      //   children = children.filter(function(menuItem) {
+      //      return (menuItem.actor.visible && !(menuItem instanceof PopupMenu.PopupSubMenu));
+      //   });
+      //   this._visibleItems = children;
+      //   return this._visibleItems;
+      //}
+      return this._visibleItems;
+   },
+
+   _updateActorMaxWidth: function(visibleChildren) {
+      let maxWidth = 0;
+      visibleChildren.forEach(function(menuItem) {
+         let width = menuItem.actor.width;
+         if(maxWidth < width) {
+            maxWidth = width;
+         }
+      }, this);
+      if(maxWidth > 0)
+         this._maxActorWidth = maxWidth;
+   },
+
+   _updateActorMaxHeight: function(visibleChildren) {
+      let maxHeight = 0;
+      visibleChildren.forEach(function(menuItem) {
+         let height = menuItem.actor.height;
+         if(maxHeight < height)
+            maxHeight = height;
+      }, this);
+      if(maxHeight > 0)
+         this._maxActorHeight = maxHeight;
+   },
+
+   _getElementAtPos: function(visibleChildren, nColumns, x, y) {
+      //let nRows = Math.ceil(visibleChildren.length/nColumns);
+      let realPos = nColumns*y + x;
+      if(realPos > 0 && realPos < visibleChildren.length) {
+         return visibleChildren[realPos];
+      }
+      return null;
+   },
+
+   _getActorViewPort: function() {
+      let actor = this.actor.get_parent();
+      while((actor) && (!(actor instanceof St.ScrollView))) {
+         actor = actor.get_parent();
+      }
+      if(actor && actor._delegate)
+         return actor._delegate;
+      return null;
+   },
+
+   _getViewPortSize: function(availWidth) {
+      return [null, null];
+      if(this.viewPort) {
+         let viewPortAllocation = this.viewPort.actor.allocation;
+         let vscroll = this.viewPort.scroll.get_vscroll_bar();
+         let position = vscroll.get_adjustment().get_value();
+         //if(!this._scrollStartId) {
+         //   this._scrollStartId = vscroll.connect('scroll-start', Lang.bind(this, function() {
+         //      this._isInScroll = true;
+         //      this._allocateMore();
+         //   }));
+         //   this._scrollStopId = vscroll.connect('scroll-stop', Lang.bind(this, function() {
+         //      this._isInScroll = false;
+         //   }));
+         //}
+         return [viewPortAllocation.y2 - viewPortAllocation.y1, position];
+      }
+      return [null, null];
+   },
+
+   _updateSpace: function(availWidth) {
+   },
+
+   _getAllocatedChildSizeAndSpacing: function(child) {
+      let [,, natWidth, natHeight] = child.get_preferred_size();
+      let width = natWidth//Math.max(this._getItemWidth(), natWidth);
+      let xSpacing = Math.max(0, width - natWidth) / 2;
+      let height = Math.max(this._getItemHeight(), natHeight);
+      let ySpacing = Math.max(0, height - natHeight) / 2;
+      return [width, height, xSpacing, ySpacing];
+   },
+
+   _computeColumnLayout: function (forWidth) {
+      let usedWidth = 0;
+      let spacing = this.getSpacing();
+      let nColumns = Math.floor(forWidth/(this._getItemWidth() + spacing));
+      nColumns = (this._colLimit != null) ? Math.min(this._colLimit, nColumns) : nColumns;
+      usedWidth = nColumns*(this._getItemWidth() + spacing);
+      if (nColumns > 0)
+         usedWidth -= spacing;
+      return [nColumns, usedWidth];
+   },
+
+   _onStyleChanged: function() {
+      this.actor.queue_relayout();
+   },
+
+   destroyAll: function() {
+      this.actor.destroy_all_children();
+      this._menuItems = [];
+      this._visibleItems = [];
+      if(this._fillParent)
+         this.actor.add(this.box, { x_fill: false, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
+      else
+         this.actor.add_actor(this.box);
+      this._nColumns = 1;
+   },
+
+   removeItem: function(item) {
+      if(this.actor.contanins(item.actor)) {
+         let parent = item.actor.get_parent();
+         if(parent)
+            parent.remove_child(item.actor);
+         let index = this._menuItems.indexOf(item.actor);
+         if(index != -1) {
+            this._menuItems.splice(index, 1);
+            this._visibleItemsChange = true;
+         }
+         index = this._visibleItems.indexOf(item);
+         if(index != -1)
+            this._visibleItems.splice(index, 1);
+         if(item.menu) {
+            parent =item.menu.actor.get_parent();
+            if(parent)
+               parent.remove_child(item.menu.actor);
+         }
+      }
+   },
+
+   setSpacing: function(spacing) {
+      this._fixedSpacing = spacing;
+   },
+
+   getNumberOfColumns: function() {
+      return this._nColumns;
+   },
+
+   getSpacing: function() {
+      return this._fixedSpacing ? this._fixedSpacing : this._spacing;
+   },
+
+   _getItemWidth: function() {
+      return (this._maxItemWidth > 0) ? Math.max(this._maxItemWidth, this._maxActorWidth) : this._maxActorWidth;
+   },
+
+   _getItemHeight: function() {
+      return (this._maxItemHeight > 0) ? Math.max(this._maxItemHeight, this._maxActorHeight) : this._maxActorHeight;
+   },
+
+   _onAllocationChanged: function(actor) {
+      let box = actor.get_allocation_box();
+      this._allocate(actor, box);
+      //  this._updateActorMaxWidth(this._getVisibleChildren());
+      //let aviableWidth = box.x2 - box.x1;
+      ///let themeNode = this.actor.get_theme_node();
+      ///let [minBoxWidth, natBoxWidth] = themeNode.adjust_preferred_width(this._getItemWidth(), aviableWidth);
+      //let [nColumns, ] = this._computeColumnLayout(aviableWidth - (natBoxWidth - aviableWidth));
+      //if((this._nColumns != nColumns)||(this._visibleItemsChange)||(!this._relayoutBlocked)) {
+      //   this._allocate(actor, box);
+      //}
+   },
+
+   queueRelayout: function() {
+      let box = this.actor.get_allocation_box();
+      this._allocate(this.actor, box);
+   },
+
+   _onQueueRelayout: function(actor) {
+      //this._updateActorMaxWidth(this._getVisibleChildren());
+   },
+
+   _allocate: function(grid, box, flags) {
+      this._updateActorMaxWidth(this._getVisibleChildren());
+      let aviableWidth = box.x2 - box.x1;
+      let themeNode = this.actor.get_theme_node();
+      let [minBoxWidth, natBoxWidth] = themeNode.adjust_preferred_width(this._getItemWidth(), aviableWidth);
+      let [nColumns, ] = this._computeColumnLayout(aviableWidth - (natBoxWidth - aviableWidth));
+      if(((this._visibleItemsChange)||(this._nColumns != nColumns))&&(!this._relayoutBlocked)) {
+         //Main.notify("alloc" + (!this._relayoutBlocked) + " " + this._visibleItemsChange + " " +(this._nColumns != nColumns));
+         this._setNumbersOfColumms(nColumns);
+         this.actor.min_width = minBoxWidth;
+         let currentBox, falseActor;
+         let viewBox = this.actor.get_children();
+         let columnIndex = 0;
+         for(let i = 0; i < this._visibleItems.length; i ++) {
+            let parent = this._visibleItems[i].actor.get_parent();
+            if(parent) {
+               parent.remove_actor(this._visibleItems[i].actor);
+               if(this._visibleItems[i].menu)
+                  parent.remove_actor(this._visibleItems[i].menu.actor);
+            }
+            if(columnIndex == nColumns)
+               columnIndex = 0;
+            currentBox = viewBox[columnIndex];
+            if(currentBox) {
+               currentBox.add_actor(this._visibleItems[i].actor);
+               if(this._visibleItems[i].menu)
+                  currentBox.add_actor(this._visibleItems[i].menu.actor);
+               //else {//FIXME: Remplace menu actor by a hide false actor this is wrong and create a memory leak.
+                  //falseActor = new St.BoxLayout();
+                  //falseActor.hide();
+                  //currentBox.add_actor(falseActor);
+               //}
+            }
+            columnIndex++;
+         }
+      }
+      //Mainloop.idle_add(Lang.bind(this, this._allocateMenu));
+      this._relayoutBlocked = false;
+      this._visibleItemsChange = false;
+   },
+
+   _allocateMenu: function() {
+      for(let i = 0; i < this._visibleItems.length; i ++) {
+         if(this._visibleItems[i].menu) {
+            let parent = this._visibleItems[i].menu.actor.get_parent();
+            if(parent)
+                parent.remove_actor(this._visibleItems[i].menu.actor);
+            parent = this._visibleItems[i].actor.get_parent();
+            if(parent) {
+               let child = parent.get_children();
+               let index = child.indexOf(this._visibleItems[i].actor);
+               if(index != -1) {
+                  if(index+1 < child.length)
+                     parent.insert_before(this._visibleItems[i].menu.actor, child[index+1]);
+                  else
+                     parent.add_actor(this._visibleItems[i].menu.actor);
+               }
+            }
+         }
+      }
+   },
+
+   _setNumbersOfColumms: function(numberOfcolumns) {
+      if(numberOfcolumns != this._nColumns) {
+         let newViewBox;
+         let appBox = this.actor.get_children();
+         let vertical = !this.actor.get_vertical();
+         for(let i = appBox.length; i < numberOfcolumns; i++) {
+            newViewBox = new St.BoxLayout({ vertical: vertical });
+            if(this._fillParent)
+               this.actor.add(newViewBox, { x_fill: false, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
+            else
+               this.actor.add_actor(newViewBox);
+         }
+         this._nColumns = numberOfcolumns;
+      }
+   },
+
+   canAddActorInViewPort: function(actor, col, row) {
+      if(this._scrollViewPort) {
+         let [ax, ay] = actor.get_transformed_position();
+         let [aw, ah] = actor.get_transformed_size();
+         let appBox = this.actor.get_children();
+         if(col < appBox.length) {
+             let colBox = appBox[col];
+             let [bx, by] = colBox.get_transformed_position();
+             return this._scrollViewPort.isBoxInViewPort(bx, by + ah*row, aw, ah);
+         }
+      }
+      return false;
+   },
+
+   _removeItemInPos: function(appBox, x, y) {
+       let viewBox = appBox[x].get_children();
+       if(viewBox[2*y]) {
+          appBox[x].remove_actor(viewBox[2*y]);
+          if(viewBox[2*y+1]) {
+             appBox[x].remove_actor(viewBox[2*y+1]);
+             return viewBox[2*y]._delegate;
+          }
+       }
+       return null;
+   },
+
+   _addItemInPos: function(appBox, menuItem, x, y) {
+       let viewBox = appBox[x].get_children();
+       let beforeItem = viewBox[2*y];
+       if(beforeItem)
+          appBox[x].insert_before(menuItem.actor, beforeItem);
+       else
+          appBox[x].add_actor(menuItem.actor);
+       if(menuItem.menu) {
+          if(beforeItem)
+             appBox[x].insert_before(menuItem.menu.actor, beforeItem);
+          else
+             appBox[x].add_actor(menuItem.menu.actor);
+       } else {//Remplace menu actor by a hide false actor.
+          falseActor = new St.BoxLayout();
+          falseActor.hide();
+          if(beforeItem)
+             appBox[x].insert_before(falseActor, beforeItem);
+          else
+             appBox[x].add_actor(falseActor);
+       }
+   },
+
+   _getPreferredWidth: function(forHeight) {
+      let columnWidth = this._getItemWidth();
+      if(this._visibleItemsChange) {
+         //let children = this._getVisibleChildren();
+         //this._maxActorWidth = 0;
+         //this._updateActorMaxWidth(children);
+      }
+      if (this._fillParent) {
+
+         // Ignore all size requests of children and request a size of 0;
+         // later we'll allocate as many children as fit the parent
+         return [columnWidth, columnWidth];
+      }
+
+      return [columnWidth, columnWidth];
+      let nChildren = this.actor.get_n_children();
+      let nColumns = this._colLimit ? Math.min(this._colLimit, nChildren) : nChildren;
+      let totalSpacing = Math.max(0, nColumns - 1) * this.getSpacing();
+      // Kind of a lie, but not really an issue right now.  If
+      // we wanted to support some sort of hidden/overflow that would
+      // need higher level design
+      //alloc.min_size = this._getItemWidth();
+      //alloc.natural_size = nColumns * this._getItemWidth() + totalSpacing;
+      return [this._getItemWidth(), nColumns * this._getItemWidth() + totalSpacing];
+   },
+
+   _getPreferredHeight: function(forWidth) {
+      if (this._fillParent) {
+         // Ignore all size requests of children and request a size of 0;
+         // later we'll allocate as many children as fit the parent
+         return [0, 0];
+      }
+      let children = this._getVisibleChildren();
+      let nColumns = children.length;
+      if (forWidth >= 0)
+         [nColumns, ] = this._computeColumnLayout(forWidth);
+      if(this._nColumns != nColumns)
+         this._visibleItemsChange = true;
+      let height = this._getPreferredAllocationHeight(nColumns, children);
+      //alloc.min_size = height;
+      //alloc.natural_size = height;
+      return [height, height];
+   }
+};
+Signals.addSignalMethods(ConfigurableGridSection.prototype);*/
+
+function ConfigurableGridSection() {
+   this._init.apply(this, arguments);
+}
+
+ConfigurableGridSection.prototype = {
+   __proto__: ConfigurablePopupMenuSection.prototype,
+
+   _init: function(params) {
+      ConfigurablePopupMenuSection.prototype._init.call(this);
+      params = Params.parse(params, {
+         style_class: null,
+         vertical: true,
+         rowLimit: null,
+         columnLimit: null,
+         minRows: 1,
+         minColumns: 1,
+         maxItemWidth: -1,
+         maxItemHeight: -1,
+         itemSpacing: 0,
+         fillParent: true,
+         xAlign: St.Align.START
+      });
+      this._rowLimit = params.rowLimit;
+      this._colLimit = params.columnLimit;
+      this._minRows = params.minRows;
+      this._minColumns = params.minColumns;
+      this._xAlign = params.xAlign;
+      this._fillParent = params.fillParent;
+      this._maxItemWidth = params.maxItemWidth;
+      this._maxItemHeight = params.maxItemHeight;
+      this._spacing = params.itemSpacing;
+      this._maxActorWidth = 0;
+      this._maxActorHeight = 0;
+      this._nColumns = 0;
+      //this.activate = false;
+      this._menuItems = [];
+      this._visibleItems = [];
+      this._visibleItemsChange = false;
+      this._relayoutBlocked = false;
 
       this.box = new Cinnamon.GenericContainer();
       if(!this.box.insert_before) {
@@ -3919,23 +4445,23 @@ ConfigurableGridSection.prototype = {
          this._maxActorHeight = menuItem.actor.height;
       if(menuItem.menu) {
          if(menuItem.actor.visible) {
-            this._visibleItems.push(menuItem.actor);
+            this._visibleItems.push(menuItem);
             this._visibleItemsChange = true;
          }
-         this._itemsActors.push(menuItem.actor);
+         this._menuItems.push(menuItem);
          menuItem.actor.connect('show', Lang.bind(this, function(actor, event) {
             this._visibleItemsChange = true;
             let index = 0;
-            for(let pos in this._itemsActors) {
-               if(this._itemsActors[pos] == actor)
+            for(let pos in this._menuItems) {
+               if((this._menuItems[pos].actor == actor) || (index >= this._visibleItems.length))
                   break;
-               if(this._itemsActors[pos] == this._visibleItems[index])
+               if(this._menuItems[pos].actor == this._visibleItems[index].actor)
                   index++;
             }
-            this._visibleItems.splice(index, 0, actor);
+            this._visibleItems.splice(index, 0, menuItem);
          }));
          menuItem.actor.connect('hide', Lang.bind(this, function(actor, event) {
-            let index = this._visibleItems.indexOf(actor);
+            let index = this._visibleItems.indexOf(menuItem);
             this._visibleItems.splice(index, 1);
          }));
          //Main.notify("" + menuItem.menu.actor + " " + menuItem.menu.actor.get_parent());
@@ -3943,49 +4469,49 @@ ConfigurableGridSection.prototype = {
    },
 
    _connectItemSignals: function(menuItem) {
-        menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function (menuItem, active) {
-            if (active && this._activeMenuItem != menuItem) {
-                if (this._activeMenuItem)
-                    this._activeMenuItem.setActive(false);
-                this._activeMenuItem = menuItem;
-                this.emit('active-changed', menuItem);
-            } else if (!active && this._activeMenuItem == menuItem) {
-                this._activeMenuItem = null;
-                this.emit('active-changed', null);
-            }
-        }));
-        menuItem._sensitiveChangeId = menuItem.connect('sensitive-changed', Lang.bind(this, function(menuItem, sensitive) {
-            if (!sensitive && this._activeMenuItem == menuItem) {
-                if (!this.actor.navigate_focus(menuItem.actor,
-                                               Gtk.DirectionType.TAB_FORWARD,
-                                               true))
-                    this.actor.grab_key_focus();
-            } else if (sensitive && this._activeMenuItem == null) {
-                if (global.stage.get_key_focus() == this.actor)
-                    menuItem.actor.grab_key_focus();
-            }
-        }));
-        menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function (menuItem, event, keepMenu) {
-            this.emit('activate', menuItem, keepMenu);
-            if (!keepMenu){
-                this.close(true);
-            }
-        }));
-        menuItem.connect('destroy', Lang.bind(this, function(emitter) {
-            this.removeItem(menuItem);
-            menuItem.disconnect(menuItem._activateId);
-            menuItem.disconnect(menuItem._activeChangeId);
-            menuItem.disconnect(menuItem._sensitiveChangeId);
-            if (menuItem.menu) {
-                menuItem.menu.disconnect(menuItem._subMenuActivateId);
-                menuItem.menu.disconnect(menuItem._subMenuActiveChangeId);
-                this.disconnect(menuItem._closingId);
-            }
-            if (menuItem == this._activeMenuItem)
-                this._activeMenuItem = null;
-            this.length--;
-        }));
-    },
+      menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function (menuItem, active) {
+         if (active && this._activeMenuItem != menuItem) {
+            if (this._activeMenuItem)
+               this._activeMenuItem.setActive(false);
+            this._activeMenuItem = menuItem;
+            this.emit('active-changed', menuItem);
+         } else if (!active && this._activeMenuItem == menuItem) {
+            this._activeMenuItem = null;
+            this.emit('active-changed', null);
+         }
+      }));
+      menuItem._sensitiveChangeId = menuItem.connect('sensitive-changed', Lang.bind(this, function(menuItem, sensitive) {
+         if (!sensitive && this._activeMenuItem == menuItem) {
+            if (!this.actor.navigate_focus(menuItem.actor,
+                                           Gtk.DirectionType.TAB_FORWARD,
+                                           true))
+               this.actor.grab_key_focus();
+         } else if (sensitive && this._activeMenuItem == null) {
+            if (global.stage.get_key_focus() == this.actor)
+               menuItem.actor.grab_key_focus();
+         }
+      }));
+      menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function (menuItem, event, keepMenu) {
+         this.emit('activate', menuItem, keepMenu);
+         if (!keepMenu){
+            this.close(true);
+         }
+      }));
+      menuItem.actor.connect('destroy', Lang.bind(this, function(emitter) {
+         this.removeItem(menuItem);
+         menuItem.disconnect(menuItem._activateId);
+         menuItem.disconnect(menuItem._activeChangeId);
+         menuItem.disconnect(menuItem._sensitiveChangeId);
+         if (menuItem.menu) {
+            menuItem.menu.disconnect(menuItem._subMenuActivateId);
+            menuItem.menu.disconnect(menuItem._subMenuActiveChangeId);
+            this.disconnect(menuItem._closingId);
+         }
+         if (menuItem == this._activeMenuItem)
+            this._activeMenuItem = null;
+         this.length--;
+      }));
+   },
 
    // Override: We don't want add generic types of actors.
    addActor: function(actor) {
@@ -3997,6 +4523,7 @@ ConfigurableGridSection.prototype = {
    _connectSubMenuSignals: function(object, menu) {
       ConfigurablePopupMenuSection.prototype._connectSubMenuSignals.call(this, object, menu);
       object._subMenuOpenId = menu.connect('open-state-changed', Lang.bind(this, function(submenu, open) {
+         this._visibleItemsChange = true;
          if(open)
             this._openedSubMenu = submenu;
          else
@@ -4006,16 +4533,15 @@ ConfigurableGridSection.prototype = {
    },
 
    _getVisibleChildren: function() {
-      /*if(this._visibleItemsChange) {
-         //let children = this.box.get_children();
-         let children = this._itemsActors;
-         children = children.filter(function(actor) {
-            return (actor.visible && actor._delegate && !(actor._delegate instanceof PopupMenu.PopupSubMenu));
-         });
-         this._visibleItemsChange = false;
-         this._visibleItems = children;
-         return this._visibleItems;
-      }*/
+      //if(this._visibleItemsChange) {
+      //   let children = this._menuItems;
+      //   children = children.filter(function(menuItem) {
+      //      return (menuItem.actor.visible && !(menuItem instanceof PopupMenu.PopupSubMenu));
+      //   });
+      //   this._visibleItemsChange = false;
+      //   this._visibleItems = children;
+      //   return this._visibleItems;
+      //}
       return this._visibleItems;
    },
 
@@ -4030,17 +4556,26 @@ ConfigurableGridSection.prototype = {
    },
 
    _updateActorMaxWidth: function(visibleChildren) {
-      visibleChildren.forEach(function(actor) {
-         if(this._maxActorWidth < actor.width)
-            this._maxActorWidth = actor.width;
+      let maxWidth = 0;
+      visibleChildren.forEach(function(menuItem) {
+         let width = menuItem.actor.width;
+         if(maxWidth < width) {
+            maxWidth = width;
+         }
       }, this);
+      if(maxWidth > 0)
+         this._maxActorWidth = maxWidth;
    },
 
    _updateActorMaxHeight: function(visibleChildren) {
-      visibleChildren.forEach(function(actor) {
-         if(this._maxActorHeight < actor.height)
-            this._maxActorHeight = actor.height;
+      let maxHeight = 0;
+      visibleChildren.forEach(function(menuItem) {
+         let height = menuItem.actor.height;
+         if(maxHeight < height)
+            maxHeight = height;
       }, this);
+      if(maxHeight > 0)
+         this._maxActorHeight = maxHeight;
    },
 
    _getElementAtPos: function(visibleChildren, nColumns, x, y) {
@@ -4052,10 +4587,18 @@ ConfigurableGridSection.prototype = {
       return null;
    },
 
+   queueRelayout: function() {
+      let box = this.actor.get_allocation_box();
+      let aviableWidth = box.x2 - box.x1;
+      let [nColumns, ] = this._computeColumnLayout(aviableWidth);
+      if(((this._visibleItemsChange)||(this._nColumns != nColumns))&&(!this._relayoutBlocked)) {
+         this.box.queue_relayout();
+      }
+   },
+
    _getPreferredWidth: function(grid, forHeight, alloc) {
       if(this._visibleItemsChange) {
          let children = this._getVisibleChildren();
-         this._maxActorWidth = 0;
          this._updateActorMaxWidth(children);
       }
       if (this._fillParent) {
@@ -4107,94 +4650,82 @@ ConfigurableGridSection.prototype = {
    },
 
    _allocate: function(grid, box, flags) {
-      if(!this.actor.mapped || !this._visibleItemsChange)
-         return;
-      this._visibleItemsChange = false;
-      if (this._fillParent) {
-         // Reset the passed in box to fill the parent
-         let parentBox = this.actor.get_parent().allocation;
-         let gridBox = this.actor.get_theme_node().get_content_box(parentBox);
-         box = this.box.get_theme_node().get_content_box(gridBox);
-      }
-      if(this.counter < 3)
-         this.counter += 1;
-      //else
-      //   Main.notify("allocate");
-
       let children = this._getVisibleChildren();
-
       //this._updateActorMaxWidth(children);
       //this._updateActorMaxHeight(children);
       let availWidth = box.x2 - box.x1;
       let availHeight = box.y2 - box.y1;
-      let spacing = this.getSpacing();
       let [nColumns, usedWidth] = this._computeColumnLayout(availWidth);
       this._nColumns = nColumns;
+      if(((this._visibleItemsChange)||(this._nColumns != nColumns))&&(!this._relayoutBlocked)) {
+         this._visibleItemsChange = false;
+         if (this._fillParent) {
+            // Reset the passed in box to fill the parent
+            //let parentBox = this.actor.get_parent().allocation;
+            //let gridBox = this.actor.get_theme_node().get_content_box(parentBox);
+            //box = this.box.get_theme_node().get_content_box(gridBox);
+         }
+         //if(this.counter < 3)
+         //   this.counter += 1;
+         //else
+         //   Main.notify("allocate");
+         let spacing = this.getSpacing();
 
-      let leftEmptySpace;
-      switch(this._xAlign) {
-         case St.Align.START:
-            leftEmptySpace = 0;
-            break;
-         case St.Align.MIDDLE:
-            leftEmptySpace = Math.floor((availWidth - usedWidth) / 2);
-            break;
-         case St.Align.END:
-            leftEmptySpace = availWidth - usedWidth;
-      }
+         let leftEmptySpace;
+         switch(this._xAlign) {
+            case St.Align.START:
+               leftEmptySpace = 0;
+               break;
+            case St.Align.MIDDLE:
+               leftEmptySpace = Math.floor((availWidth - usedWidth) / 2);
+               break;
+            case St.Align.END:
+               leftEmptySpace = availWidth - usedWidth;
+         }
 
-      let x = box.x1 + leftEmptySpace;
-      let y = box.y1;
-      let columnIndex = 0;
-      let rowIndex = 0;
-      let [viewPortSize, viewPortPosition] = this._getViewPortSize();
+         let x = box.x1 + leftEmptySpace;
+         let y = box.y1;
+         let columnIndex = 0;
+         let rowIndex = 0;
+         let [viewPortSize, viewPortPosition] = this._getViewPortSize();
 
-      let colsHeight = [];
-      for (let i = 0; i < nColumns; i++) {
-         colsHeight.push(0);
-      }
+         let colsHeight = [];
+         for (let i = 0; i < nColumns; i++) {
+            colsHeight.push(0);
+         }
 
-      let maxWidth = 0;
-      let maxHeight = 0;
-      for (let i = 0; i < children.length; i++) {
-         let childBox = this._calculateChildBox(children[i], x, colsHeight[columnIndex], box);
-         if ((this._rowLimit && rowIndex >= this._rowLimit) ||
-            (this._fillParent && childBox.y2 > availHeight) ||
-            (viewPortSize && childBox.y2 > viewPortSize + viewPortPosition)) {
-            this.box.set_skip_paint(children[i], true);
-         } else {
-            children[i].allocate(childBox, flags);
-            this.box.set_skip_paint(children[i], false);
-            let boxHeight = childBox.y2 - childBox.y1;
-            let boxWidth = childBox.x2 - childBox.x1;
-            if(boxHeight > maxHeight)
-               maxHeight = boxHeight;
-            if(boxWidth > maxWidth)
-               maxWidth = boxWidth;
-            colsHeight[columnIndex] += (childBox.y2 - childBox.y1) + spacing;
-            if(children[i]._delegate && children[i]._delegate.menu && children[i]._delegate.menu.isOpen) {
-                let childMenu = children[i]._delegate.menu.actor;
-                let childMenuBox = this._calculateChildBox(childMenu, x, colsHeight[columnIndex], box);
-                childMenu.allocate(childMenuBox, flags);
-                this.box.set_skip_paint(childMenu, false);
-                colsHeight[columnIndex] += (childMenuBox.y2 - childMenuBox.y1);
+         for (let i = 0; i < children.length; i++) {
+            let childBox = this._calculateChildBox(children[i].actor, x, colsHeight[columnIndex], box);
+            if ((this._rowLimit && rowIndex >= this._rowLimit)
+                || (this._fillParent && childBox.y2 > availHeight)
+                || (viewPortSize && childBox.y2 > viewPortSize + viewPortPosition)) {
+               this.box.set_skip_paint(children[i].actor, true);
+            } else {
+               children[i].actor.allocate(childBox, flags);
+               this.box.set_skip_paint(children[i].actor, false);
+               colsHeight[columnIndex] += (childBox.y2 - childBox.y1) + spacing;
+               if(children[i].menu && children[i].menu.isOpen) {
+                  let childMenu = children[i].menu.actor;
+                  let childMenuBox = this._calculateChildBox(childMenu, x, colsHeight[columnIndex], box);
+                  childMenu.allocate(childMenuBox, flags);
+                  this.box.set_skip_paint(childMenu, false);
+                  colsHeight[columnIndex] += (childMenuBox.y2 - childMenuBox.y1);
+               }
+            }
+            //this._rowLimit = 0;
+            columnIndex++;
+            if (columnIndex == nColumns) {
+               columnIndex = 0;
+               rowIndex++;
+            }
+            if (columnIndex == 0) {
+               //y += (childBox.y2 - childBox.y1) + spacing;
+               x = box.x1 + leftEmptySpace;
+            } else {
+               x += this._getItemWidth() + spacing;
             }
          }
-         //this._rowLimit = 0;
-         columnIndex++;
-         if (columnIndex == nColumns) {
-            columnIndex = 0;
-            rowIndex++;
-         }
-         if (columnIndex == 0) {
-            //y += (childBox.y2 - childBox.y1) + spacing;
-            x = box.x1 + leftEmptySpace;
-         } else {
-            x += this._getItemWidth() + spacing;
-         }
       }
-      this._maxActorWidth = maxWidth;
-      this._maxActorHeight = maxHeight;
    },
 
    _getViewPortSize: function(availWidth) {
@@ -4203,15 +4734,15 @@ ConfigurableGridSection.prototype = {
          let viewPortAllocation = this.viewPort.actor.allocation;
          let vscroll = this.viewPort.scroll.get_vscroll_bar();
          let position = vscroll.get_adjustment().get_value();
-         /*if(!this._scrollStartId) {
-            this._scrollStartId = vscroll.connect('scroll-start', Lang.bind(this, function() {
-               this._isInScroll = true;
-               this._allocateMore();
-            }));
-            this._scrollStopId = vscroll.connect('scroll-stop', Lang.bind(this, function() {
-               this._isInScroll = false;
-            }));
-         }*/
+         //if(!this._scrollStartId) {
+         //   this._scrollStartId = vscroll.connect('scroll-start', Lang.bind(this, function() {
+         //      this._isInScroll = true;
+         //      this._allocateMore();
+         //   }));
+         //   this._scrollStopId = vscroll.connect('scroll-stop', Lang.bind(this, function() {
+         //      this._isInScroll = false;
+         //   }));
+         //}
          return [viewPortAllocation.y2 - viewPortAllocation.y1, position];
       }
       return [null, null];
@@ -4225,11 +4756,11 @@ ConfigurableGridSection.prototype = {
    },
 
    _updateSpace: function(availWidth) {
-      /*let estimateHeight = this._getPreferredAllocationHeight(availWidth);
-      Main.notify("" + viewPortHeight);
-      let portSize = 20;
-      this._spaceActor.height = this._getPreferredAllocationHeight(availWidth) - portSize*50;
-      return portSize;*/
+      //let estimateHeight = this._getPreferredAllocationHeight(availWidth);
+      //Main.notify("" + viewPortHeight);
+      //let portSize = 20;
+      //this._spaceActor.height = this._getPreferredAllocationHeight(availWidth) - portSize*50;
+      //return portSize;
       let spaceBox = new Clutter.ActorBox();
       x = box.x1 + leftEmptySpace;
       let spaceBox = this._calculateSpaceBox(this._spaceActor, x, y, box);
@@ -4280,19 +4811,18 @@ ConfigurableGridSection.prototype = {
    },
 
    _computeColumnLayout: function (forWidth) {
-      let nColumns = 0;
       let usedWidth = 0;
       let spacing = this.getSpacing();
-
-      while ((this._colLimit == null || nColumns < this._colLimit) &&
-             (usedWidth + this._getItemWidth() <= forWidth)) {
-         usedWidth += this._getItemWidth() + spacing;
-         nColumns += 1;
-      }
-
+      let nColumns = Math.floor(forWidth/(this._getItemWidth() + spacing));
+      nColumns = (this._colLimit != null) ? Math.min(this._colLimit, nColumns) : nColumns;
+      usedWidth = nColumns*(this._getItemWidth() + spacing);
+      //while ((this._colLimit == null || nColumns < this._colLimit) &&
+      //       (usedWidth + this._getItemWidth() <= forWidth)) {
+      //   usedWidth += this._getItemWidth() + spacing;
+      //   nColumns += 1;
+      //}
       if (nColumns > 0)
          usedWidth -= spacing;
-
       return [nColumns, usedWidth];
    },
 
@@ -4302,22 +4832,22 @@ ConfigurableGridSection.prototype = {
 
    destroyAll: function() {
       this.box.destroy_all_children();
-      this._itemsActors = [];
+      this._menuItems = [];
       this._visibleItems = [];
    },
 
    removeItem: function(item) {
-      this.box.remove_child(item.actor);
-      let index = this._itemsActors.indexOf(item.actor);
+      this.box.remove_actor(item.actor);
+      let index = this._menuItems.indexOf(item);
       if(index != -1) {
-         this._itemsActors.splice(index, 1);
+         this._menuItems.splice(index, 1);
          this._visibleItemsChange = true;
       }
-      index = this._visibleItems.indexOf(item.actor);
+      index = this._visibleItems.indexOf(item);
       if(index != -1)
          this._visibleItems.splice(index, 1);
       if(item.menu)
-         this.box.remove_child(item.menu.actor);
+         this.box.remove_actor(item.menu.actor);
    },
 
    setSpacing: function(spacing) {
@@ -4339,30 +4869,30 @@ ConfigurableGridSection.prototype = {
    _getItemHeight: function() {
       return (this._maxItemHeight > 0) ? Math.max(this._maxItemHeight, this._maxActorHeight) : this._maxActorHeight;
    },
-/*
-   _updateSpacingForSize: function(availWidth, availHeight) {
-      let maxEmptyVArea = availHeight - this._minRows * this._getItemHeight();
-      let maxEmptyHArea = availWidth - this._minColumns * this._getItemWidth();
-      let maxHSpacing, maxVSpacing;
 
-      if (this._minRows <=  1)
-         maxVSpacing = maxEmptyVArea;
-      else
-         maxVSpacing = Math.floor(maxEmptyVArea / (this._minRows - 1));
+//   _updateSpacingForSize: function(availWidth, availHeight) {
+//      let maxEmptyVArea = availHeight - this._minRows * this._getItemHeight();
+//      let maxEmptyHArea = availWidth - this._minColumns * this._getItemWidth();
+//      let maxHSpacing, maxVSpacing;
 
-      if (this._minColumns <=  1)
-         maxHSpacing = maxEmptyHArea;
-      else
-         maxHSpacing = Math.floor(maxEmptyHArea / (this._minColumns - 1));
+//      if (this._minRows <=  1)
+//         maxVSpacing = maxEmptyVArea;
+//      else
+//         maxVSpacing = Math.floor(maxEmptyVArea / (this._minRows - 1));
 
-      let maxSpacing = Math.min(maxHSpacing, maxVSpacing);
+//      if (this._minColumns <=  1)
+//         maxHSpacing = maxEmptyHArea;
+//      else
+//         maxHSpacing = Math.floor(maxEmptyHArea / (this._minColumns - 1));
+
+//      let maxSpacing = Math.min(maxHSpacing, maxVSpacing);
       // Limit spacing to the item size
-      maxSpacing = Math.min(maxSpacing, Math.min(this._getItemHeight(), this._getItemWidth()));
+//      maxSpacing = Math.min(maxSpacing, Math.min(this._getItemHeight(), this._getItemWidth()));
       // The minimum spacing, regardless of whether it satisfies the row/columng minima,
       // is the spacing we get from CSS.
-      let spacing = Math.max(this._spacing, maxSpacing);
-      this.setSpacing(spacing);
-   }*/
+//      let spacing = Math.max(this._spacing, maxSpacing);
+//      this.setSpacing(spacing);
+//   }
 };
 Signals.addSignalMethods(ConfigurableGridSection.prototype);
 

@@ -95,7 +95,9 @@ SpecialBookmarks.prototype = {
    },
 
    iconFactory: function(iconSize) {
-      return new St.Icon({icon_name: this._icon, icon_size: iconSize, icon_type: St.IconType.FULLCOLOR});
+      let icon = Gio.ThemedIcon.new(this._icon);          
+      let gicon = St.TextureCache.get_default().load_gicon(null, icon, iconSize);
+      return gicon;
    },
 
    get_icon_name: function() {
@@ -1848,12 +1850,6 @@ MyApplet.prototype = {
       this.pkg.updateButtonStatus(this.iconAppSize, this.textButtonWidth, this.appButtonDescription, this.iconView, this._applicationsBoxWidth);
    },
 
-   _updateView: function() {
-   },
-
-   _clearView: function() {
-   },
-
    _updateVFade: function() { 
       let mag_on = this.a11y_settings.get_boolean("screen-magnifier-enabled");
       if(mag_on) {
@@ -2799,7 +2795,7 @@ MyApplet.prototype = {
             this._applet_context_menu.toggle(); 
          }
       }
-      if(event.get_button() == 3) {         
+      if(event.get_button() == 3) {       
          if(this._applet_context_menu._getMenuItems().length > 0) {
             this._applet_context_menu.setLauncher(this);
             this._applet_context_menu.setArrowSide(this.orientation);
@@ -2932,14 +2928,16 @@ MyApplet.prototype = {
 
    _onMenuButtonRelease: function(actor, event) {
       try {
-         if((event.get_button() == 3)&&(this.appMenu)&&(!this.appMenu.isInResizeMode())) {
-            if((this.appMenu)&&(this.appMenu.isOpen)) {
-               this.onEnterMenuGnome();
-               this.appMenuClose();
+         if(event.get_button() == 3) {
+            if((!this.appMenu)||(!this.appMenu.isInResizeMode())) {
+               if((this.appMenu)&&(this.appMenu.isOpen)) {
+                  this.onEnterMenuGnome();
+                  this.appMenuClose();
+               }
+               this._applet_context_menu.setLauncher(this.menu);
+               this._applet_context_menu.setArrowSide(this.popupOrientation);
+               this._applet_context_menu.toggle();
             }
-            this._applet_context_menu.setLauncher(this.menu);
-            this._applet_context_menu.setArrowSide(this.popupOrientation);
-            this._applet_context_menu.toggle();
          } else if(this._applet_context_menu.isOpen) {
             this._applet_context_menu.close();
          }
@@ -4864,6 +4862,7 @@ MyApplet.prototype = {
       if(search) {
           this.standarAppGrid.sortMenuItems(search, this.searchSorted, this.appsUsage);
       }
+      this.standarAppGrid.queueRelayout();
    },
 
    _onSearchTextChanged: function(se, prop) {
@@ -5063,7 +5062,6 @@ MyApplet.prototype = {
       this._applicationsBoxWidth = 0;
       this._activeContainer = null;
       //Remove all categories
-      this._clearView();
       this.iconViewCount = 1;
       this.categoriesBox.destroy_all_children();
 
@@ -5615,9 +5613,9 @@ MyApplet.prototype = {
    _onOpenStateChanged: function(menu, open) {
       if(open) {
          this.menuIsOpening = true;
+         global.stage.set_key_focus(this.searchEntry);
          this.standarAppGrid.actor.visible = true;
          this._initialDisplay();
-         global.stage.set_key_focus(this.searchEntry);
          this.actor.add_style_pseudo_class('active');
          this._selectedItemIndex = null;
          this._activeContainer = null;

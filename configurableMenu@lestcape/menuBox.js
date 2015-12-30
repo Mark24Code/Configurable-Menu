@@ -18,6 +18,7 @@ const St = imports.gi.St;
 const Gtk = imports.gi.Gtk;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
+const Meta = imports.gi.Meta;
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
 const AccountsService = imports.gi.AccountsService;
@@ -269,7 +270,7 @@ FavoritesBoxLine.prototype = {
             this._dragPlaceholder.child.set_width (source.actor.height);
             this._dragPlaceholder.child.set_height (source.actor.height);
             this.actor.insert_actor(this._dragPlaceholder.actor, this._dragPlaceholderPos);
-            this.parentBox._onDragPlaceholderChange(this._dragPlaceholder);
+            this.parentBox.setDragPlaceholder(this._dragPlaceholder);
             if(fadeIn)
                this._dragPlaceholder.animateIn();
          }
@@ -351,6 +352,7 @@ FavoritesBoxExtended.prototype = {
       vertical = (vertical == true);
       this.parent = parent;
       this.favRefresh = true;
+      this._lastFocus = null;
       this.actor = new St.BoxLayout();
       //this.actor._delegate = this;
       this.linesDragPlaces = new Array();
@@ -365,6 +367,10 @@ FavoritesBoxExtended.prototype = {
       this.setVertical(vertical);
    },
 
+   _onKeyFocusChanged: function() {
+      let focusedActor = global.stage.get_key_focus();
+   },
+
    destroy: function() {
       for(let i = 0; i < this.linesDragPlaces.length; i++) {
          this.linesDragPlaces[i].destroy();
@@ -372,7 +378,7 @@ FavoritesBoxExtended.prototype = {
       this.actor.destroy();
    },
 
-   _onDragPlaceholderChange: function(dragPlaceholder) {
+   setDragPlaceholder: function(dragPlaceholder) {
       let currLinePlaceholder;
       this._dragPlaceholder = dragPlaceholder;
       for(let i = 0; i < this.linesDragPlaces.length; i++) {
@@ -486,6 +492,7 @@ FavoritesBoxExtended.prototype = {
                this.activeHoverElement(actor);
             }));
          }
+         actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
          let childrens = this.actor.get_children();
          let currentNumberItems = childrens[0].get_children().length;
          for(let i = 1; i < childrens.length; i++) {
@@ -503,6 +510,10 @@ FavoritesBoxExtended.prototype = {
       }
    },
 
+   _onEnterEvent: function(actor) {
+      this._lastFocus = global.stage.get_key_focus();
+   },
+
    _addInCorrectBox: function(box, actor, menu, properties) {
       box.add(actor, properties);
       box.add_actor(menu.actor);
@@ -511,42 +522,31 @@ FavoritesBoxExtended.prototype = {
    removeAll: function() {
       try {
          this.firstElement = null;
-         let parentPlaceHolder;
+         //Remove all favorites and release the focus if is necessary.
          for(let i = 0; i < this.linesDragPlaces.length; i++) {
-            this.linesDragPlaces[i].visible = false;
-            parentPlaceHolder = this.linesDragPlaces[i].actor.get_parent();
-            if(parentPlaceHolder == this.actor)
-               this.actor.remove_actor(this.linesDragPlaces[i].actor);
+            this._navegateFocusOut(this.linesDragPlaces[i]);
+            this.linesDragPlaces[i].actor.destroy();
          }
-         this.oldLines = this.linesDragPlaces;
+         if(this._dragPlaceholder) {
+            let parentHolder = this._dragPlaceholder.actor.get_parent();
+            if(parentHolder)
+               parentHolder.remove_actor(this._dragPlaceholder.actor);
+            this._dragPlaceholder = null;
+         }
+         this.favRefresh = true;
          this.linesDragPlaces = new Array();
-
-         Mainloop.idle_add(Lang.bind(this, function() {
-            if(this._dragPlaceholder) {
-               let parentHolder = this._dragPlaceholder.actor.get_parent();
-               if(parentHolder)
-                  parentHolder.remove_actor(this._dragPlaceholder.actor);
-               this._dragPlaceholder = null;
-            }
-            this.favRefresh = true;
-            //Remove all favorites
-            let childrens;
-            if(this.oldLines) {
-               let  lastPos = this.oldLines.length;
-               while(0 < lastPos) {
-                  lastPos--;
-                  //this.actor.remove_actor(this.linesDragPlaces[lastPos].actor);
-                  this.oldLines[lastPos].actor.get_children().forEach(Lang.bind(this, function (child) {
-                     child.destroy();
-                  }));
-                  this.oldLines[lastPos].actor.destroy();
-                  //this.oldLines.splice(lastPos, 1);
-               }
-               this.oldLines = null;
-            }
-         }));
       } catch(e) {
          Main.notify("Favorite remove element error", e.message);
+      }
+   },
+
+   _navegateFocusOut: function(linesDragPlaces) {
+      let focus = global.stage.get_key_focus();
+      if(linesDragPlaces.actor.contains(focus)) {
+         if(this._lastFocus)
+            this._lastFocus.grab_key_focus();
+         else
+            global.stage.set_key_focus(null);
       }
    },
 
