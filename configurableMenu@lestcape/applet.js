@@ -2795,7 +2795,8 @@ MyApplet.prototype = {
             this._applet_context_menu.toggle(); 
          }
       }
-      if(event.get_button() == 3) {       
+      if(event.get_button() == 3) {
+         this.menu.close();   
          if(this._applet_context_menu._getMenuItems().length > 0) {
             this._applet_context_menu.setLauncher(this);
             this._applet_context_menu.setArrowSide(this.orientation);
@@ -4862,7 +4863,7 @@ MyApplet.prototype = {
       if(search) {
           this.standarAppGrid.sortMenuItems(search, this.searchSorted, this.appsUsage);
       }
-      this.standarAppGrid.queueRelayout();
+      this.standarAppGrid.queueRelayout(true);
    },
 
    _onSearchTextChanged: function(se, prop) {
@@ -5053,17 +5054,21 @@ MyApplet.prototype = {
    _refreshApps: function() {
       for(let i = 0; i < this._categoryButtons.length; i++)
          this._categoryButtons[i].actor.destroy();
-      //this.standarAppGrid.actor.destroy_all_children();
-      this.standarAppGrid.destroyAll();
+      this.standarAppGrid.removeAll();
+      this._applicationsButtons.map(function(child) {
+         child.destroy();
+      });
       this._applicationsButtons = new Array();
       this._transientButtons = new Array();
       this._categoryButtons = new Array();
       this._applicationsButtonFromApp = new Object(); 
       this._applicationsBoxWidth = 0;
       this._activeContainer = null;
+
       //Remove all categories
       this.iconViewCount = 1;
-      this.categoriesBox.destroy_all_children();
+      if(this.categoriesBox.get_children().length > 0)
+         this.categoriesBox.destroy_all_children();
 
       this._allAppsCategoryButton = new MenuItems.CategoryButton(null, this.iconCatSize, this.showCategoriesIcons);
       this._addEnterEvent(this._allAppsCategoryButton, Lang.bind(this, function() {

@@ -787,8 +787,9 @@ GenericApplicationButton.prototype = {
                      this.parent._updateSubMenuSize();
                   } else {
                      this.widthC = this.parent.menu.actor.get_width();
+                     this.parent.menu.actor.set_width(-1);
                      this.toggleMenu();
-                     this.parent._updateSize();
+                     //this.parent._updateSize();
                   }
                   this.parent._previousContextMenuOpen = this;
                } else {
@@ -904,7 +905,6 @@ GenericApplicationButton.prototype = {
          }
       }
       this.menu.toggle();
-      //this.parent._updateSize();
    },
     
    _subMenuOpenStateChanged: function() {
@@ -1563,7 +1563,6 @@ RecentButton.prototype = {
                   }
                   this.parent._updateSubMenuSize();
                } else {
-                  //this.widthC = this.parent.menu.actor.get_width();
                   this.toggleMenu();
                   this.parent._updateSize();
                }

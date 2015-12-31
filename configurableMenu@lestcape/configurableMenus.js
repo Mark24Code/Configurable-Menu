@@ -4177,7 +4177,9 @@ ConfigurableGridSection.prototype = {
       //}
    },
 
-   queueRelayout: function() {
+   queueRelayout: function(force) {
+      if(force)
+         this._visibleItemsChange = true;
       let box = this.actor.get_allocation_box();
       this._allocate(this.actor, box);
    },
@@ -4587,7 +4589,9 @@ ConfigurableGridSection.prototype = {
       return null;
    },
 
-   queueRelayout: function() {
+   queueRelayout: function(force) {
+      if(force)
+         this._visibleItemsChange = true;
       let box = this.actor.get_allocation_box();
       let aviableWidth = box.x2 - box.x1;
       let [nColumns, ] = this._computeColumnLayout(aviableWidth);
@@ -4831,13 +4835,32 @@ ConfigurableGridSection.prototype = {
    },
 
    destroyAll: function() {
-      this.box.destroy_all_children();
+      this._menuItems.map(function(child) {
+         child.destroy();
+      });
+      this._menuItems = [];
+      this._visibleItems = [];
+
+      if(this._fillParent)
+         this.actor.add(this.box, { x_fill: false, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
+      else
+         this.actor.add_actor(this.box);
+      this._nColumns = 1;
+   },
+
+   removeAll: function() {
+      this._menuItems.map(function(child) {
+         this.removeItem(child);
+      }, this);
       this._menuItems = [];
       this._visibleItems = [];
    },
 
+
    removeItem: function(item) {
-      this.box.remove_actor(item.actor);
+      let parent = item.actor.get_parent();
+      if(parent)
+         parent.remove_actor(item.actor);
       let index = this._menuItems.indexOf(item);
       if(index != -1) {
          this._menuItems.splice(index, 1);
@@ -4846,8 +4869,11 @@ ConfigurableGridSection.prototype = {
       index = this._visibleItems.indexOf(item);
       if(index != -1)
          this._visibleItems.splice(index, 1);
-      if(item.menu)
-         this.box.remove_actor(item.menu.actor);
+      if(item.menu) {
+         parent = item.menu.actor.get_parent();
+         if(parent)
+            parent.remove_actor(item.menu.actor);
+      }
    },
 
    setSpacing: function(spacing) {
