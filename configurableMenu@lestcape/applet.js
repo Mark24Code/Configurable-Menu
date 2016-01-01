@@ -1181,7 +1181,6 @@ MyApplet.prototype = {
 
    _onMenuKeyPress: function(actor, event) {
       try {
-        Main.notify("call");
         this.destroyVectorBox();
         let symbol = event.get_key_symbol();
         let item_actor = null;
@@ -3028,6 +3027,8 @@ MyApplet.prototype = {
          this._releaseParent(this.bttChanger.actor);
       if(this.section)
          this._releaseParent(this.section.actor);
+      if(this.flotingSection)
+         this._releaseParent(this.flotingSection.actor);
       if(this.controlView)
          this._releaseParent(this.controlView.actor);
       if(this.categoriesApplicationsBox)
@@ -3161,6 +3162,7 @@ MyApplet.prototype = {
       this.mainBox = new St.BoxLayout({ vertical: false });
       this.menuBox = new St.BoxLayout({ vertical: false, style_class: 'menu-main-box'});
       this.section = new PopupMenu.PopupMenuSection();
+      this.flotingSection = new PopupMenu.PopupMenuSection();
       this.extendedBox = new St.BoxLayout({ vertical: true });
       this.separatorTop = new MenuBox.SeparatorBox(this.showSeparatorLine, this.separatorSize);
       this.separatorMiddle = new MenuBox.SeparatorBox(this.showSeparatorLine, this.separatorSize);
@@ -4025,9 +4027,7 @@ MyApplet.prototype = {
    loadKicker: function() {
       this._appletGenerateApplicationMenu(true);
       this.appMenu.addMenuItem(this.flotingSection);
-      this.flotingSection.actor.add_actor(this.menuGnomeMainBox);
-      this.menuGnomeMainBox.add(this.operativePanel, { x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.START, expand: true });
-
+      this.flotingSection.actor.add(this.operativePanel, { x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.START, expand: true });
       this.betterPanel.set_vertical(true);
       this.changeTopBoxDown.set_vertical(true);
       this.betterPanel.add(this.categoriesWrapper, { x_fill: true, y_fill: true, y_align: St.Align.START, expand: true });
@@ -4070,9 +4070,7 @@ MyApplet.prototype = {
    loadClassicGnome: function() {
       this._appletGenerateGnomeMenu(true);
       this.appMenu.addMenuItem(this.flotingSection);
-      this.flotingSection.actor.add_actor(this.menuGnomeMainBox);
-      this.menuGnomeMainBox.add(this.operativePanel, { x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.START, expand: true });
-
+      this.flotingSection.actor.add(this.operativePanel, { x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.START, expand: true });
       this.allowFavName = true;
       this.betterPanel.set_vertical(true);
       this.changeTopBoxDown.set_vertical(true);
@@ -4304,9 +4302,9 @@ MyApplet.prototype = {
       if((this.appMenu)&&(this.displayed)&&(this.menu.isOpen)) {
          if(this._applet_context_menu.isOpen)
             this._applet_context_menu.close();
-         this.appMenu.reparentMenu(this.menu, this.popupOrientation);
+         this.appMenu.setLauncher(this.menu);
+         this.appMenu.setArrowSide(this.popupOrientation);
          if(!this.appMenu.isOpen) {
-            //this.appMenu.actor
             this.appMenu.open();
          }
          if((categoryActor)&&(!this.subMenuAlign)) {

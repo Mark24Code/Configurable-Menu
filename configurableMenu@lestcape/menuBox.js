@@ -80,12 +80,12 @@ PlacesGnomeBox.prototype = {
       this.specialPlaces = new St.BoxLayout({ vertical: true });
       this._addPlaces(this.specialPlaces, this.parent._listSpecialBookmarks());
       this.actor.add(this.specialPlaces, {x_fill: true, expand: true});
-      this.separator1 = new MenuBox.SeparatorBox(true, 20);
+      this.separator1 = new SeparatorBox(true, 20);
       this.actor.add_actor(this.separator1.actor);
       this.bookmarksPlaces = new St.BoxLayout({ vertical: true });
       this._addPlaces(this.bookmarksPlaces, Main.placesManager.getBookmarks());
       this.actor.add(this.bookmarksPlaces, {x_fill: true, expand: true});
-      this.separator2 = new MenuBox.SeparatorBox(true, 20);
+      this.separator2 = new SeparatorBox(true, 20);
       this.actor.add_actor(this.separator2.actor);
       this.removablePlaces = new St.BoxLayout({ vertical: true });
       this.actor.add(this.removablePlaces, {x_fill: true, expand: true});
