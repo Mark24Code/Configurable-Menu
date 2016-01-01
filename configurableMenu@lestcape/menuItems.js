@@ -17,21 +17,24 @@
 const Signals = imports.signals;
 const Params = imports.misc.params;
 const Atk = imports.gi.Atk;
-const Tweener = imports.ui.tweener;
-
 const St = imports.gi.St;
 const Pango = imports.gi.Pango;
 const Clutter = imports.gi.Clutter;
+const AccountsService = imports.gi.AccountsService;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;
 const Cinnamon = imports.gi.Cinnamon;
-const DND = imports.ui.dnd;
+const Gettext = imports.gettext;
 const Lang = imports.lang;
+const Mainloop = imports.mainloop;
+const Tweener = imports.ui.tweener;
+const DND = imports.ui.dnd;
 const PopupMenu = imports.ui.popupMenu;
 const Main = imports.ui.main;
 const AppFavorites = imports.ui.appFavorites;
 const FileUtils = imports.misc.fileUtils;
+const Util = imports.misc.util;
 const AppletPath = imports.ui.appletManager.applets['configurableMenu@lestcape'];
 const ConfigurableMenus = AppletPath.configurableMenus;
 
@@ -698,7 +701,7 @@ function GenericApplicationButton(parent, parentScroll, app, withMenu, searchTex
 
 GenericApplicationButton.prototype = {
    __proto__: ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype,
-    
+
    _init: function(parent, parentScroll, app, withMenu, searchTexts) {
       ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, { hover: false });
       this.app = app;
@@ -2525,6 +2528,389 @@ DriveMenuItem.prototype = {
          }
       };
       return this.app;
+   }
+};
+
+function ButtonChangerMenuItem(parent, icon, iconSize, labels, selected) {
+   this._init(parent, icon, iconSize, labels, selected);
+}
+
+ButtonChangerMenuItem.prototype = {
+   __proto__: ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype,
+
+   _init: function (parent, icon, iconSize, labels, selected) {
+      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, labels[selected]);
+      this.theme = "";
+      this.visible = true;
+      this.actor.set_style_class_name('menu-category-button');
+      this.actor.reactive = true;
+      this.actor.track_hover = true;
+      this.parent = parent;
+      this.labels = labels;
+      this.selected = selected;
+      this.label.set_style_class_name('menu-selected-app-title');
+      this.icon = new St.Icon({ style_class: 'popup-menu-icon', icon_type: St.IconType.FULLCOLOR, icon_name: icon, icon_size: iconSize });
+      this.label.realize();
+      if(this.icon) {
+         this.actor.add(this.icon, {x_fill: false, y_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE });
+         this.icon.realize();
+      } 
+      this.actor.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
+      this.actor.connect('enter-event', Lang.bind(this, function() {
+         global.set_cursor(Cinnamon.Cursor.POINTING_HAND);
+         this.setActive(true);
+      }));
+      this.actor.connect('leave-event', Lang.bind(this, function() {
+         global.unset_cursor();
+         this.setActive(false);
+      }));
+   },
+
+   registerCallBack: function(callBackOnSelectedChange) {
+      this.callBackOnSelectedChange = callBackOnSelectedChange;
+   },
+
+   setIconSize: function(iconSize) {
+      if(this.icon)
+         this.icon.set_icon_size(iconSize);
+   },
+
+   setTextVisible: function(visible) {
+      this.label.visible = visible;
+   },
+
+   activate: function (event, keepMenu) {
+      this.activateNext();
+      this.emit('activate', event, true);
+   },
+
+   setTheme: function(theme) {
+      this.theme = '-' + theme;
+      this.actor.set_style_class_name('menu-category-button');
+      this.actor.add_style_class_name('menu-swap-button-' + this.theme);
+   },
+
+   setActive: function(active) {
+      if(this.active != active) {
+         this.active = active;
+         if(!this.parent.actorResize) {
+            if(active) {
+               this.actor.set_style_class_name('menu-category-button-selected');
+               this.actor.add_style_class_name('menu-swap-button' + this.theme + '-selected');
+            }
+            else {
+               this.actor.set_style_class_name('menu-category-button');
+               this.actor.add_style_class_name('menu-swap-button' + this.theme);
+            }
+         }
+         this.emit('active-changed', active);
+      }
+   },
+ 
+   _onButtonReleaseEvent: function(actor, event) {
+      if(!this.parent.pressed) {
+         if(event.get_button() == 1) {
+            this.setActive(false);
+            this.activateNext();
+            Mainloop.idle_add(Lang.bind(this, function() {
+               let [mx, my] = event.get_coords();
+               let [ax, ay] = actor.get_transformed_position();
+               let aw = actor.get_width();
+               let ah = actor.get_height();
+               if((mx > ax)&&(mx < ax + aw)&&(my > ay)&&(my < ay + ah))
+                  this.setActive(true);
+            }));
+         }
+      }
+      //this.parent._disableResize();
+      return true;
+   },
+
+   activateNext: function() {
+      if(this.selected >= this.labels.length - 1)
+         this.selected = 0;
+      else
+         this.selected ++;
+      this.activateIndex(this.selected);
+   },
+
+   getSelected: function() {
+      return this.labels[this.selected];
+   },
+
+   activateSelected: function(selected) {
+      let index = this.labels.indexOf(selected);
+      if((index != -1)&&(index != this.selected)) {
+         this.activateIndex(index);
+      }
+   },
+
+   activateIndex: function(index) {
+      this.selected = index;
+      this.label.set_text(this.labels[this.selected]);
+      if(this.callBackOnSelectedChange) {
+         this.callBackOnSelectedChange(this.labels[this.selected]);
+      }
+   }
+};
+
+function HoverIconBox(parent, iconSize) {
+   this._init(parent, iconSize);
+}
+
+HoverIconBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype,
+    
+   _init: function(parent, iconSize) {
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false, focusOnHover: false });
+      try {
+         this.actor._delegate = this;
+         this.parent = parent;
+         this.iconSize = iconSize;
+         this.container = this.actor;
+         this.actor = new St.BoxLayout({ vertical: false });
+         this.actor.add_actor(this.container);
+
+         this.container.set_height(this.iconSize);
+         this._userIcon = new St.Icon({ icon_size: this.iconSize });
+         this.icon = new St.Icon({ icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR });
+         
+         this.menu = new PopupMenu.PopupSubMenu(this.actor);
+         this.actor.add_actor(this.menu.actor);
+         this.menu.actor.set_style_class_name('menu-context-menu');
+         this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
+
+         this._user = AccountsService.UserManager.get_default().get_user(GLib.get_user_name());
+         this._userLoadedId = this._user.connect('notify::is_loaded', Lang.bind(this, this._onUserChanged));
+         this._userChangedId = this._user.connect('changed', Lang.bind(this, this._onUserChanged));
+
+         let menuItem;
+         let userBox = new St.BoxLayout({ style_class: 'user-box', vertical: false });
+         this.userLabel = new St.Label();//{ style_class: 'user-label' });
+         userBox.add(this.userLabel, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
+         this.menu.addActor(userBox);
+
+         this.notificationsSwitch = new PopupMenu.PopupSwitchMenuItem(_("Notifications"), this._toggleNotifications, { focusOnHover: false });
+         this.notificationsSwitch.actor.style = "padding-top: "+(2)+"px;padding-bottom: "+(2)+"px;padding-left: "+(1)+"px;padding-right: "+(1)+"px;margin:auto;";
+         this.menu.addMenuItem(this.notificationsSwitch);
+         global.settings.connect('changed::display-notifications', Lang.bind(this, function() {
+            this.notificationsSwitch.setToggleState(global.settings.get_boolean("display-notifications"));
+         }));
+         this.notificationsSwitch.connect('toggled', Lang.bind(this, function() {
+            global.settings.set_boolean("display-notifications", this.notificationsSwitch.state);
+         }));
+
+         this.account = new PopupMenu.PopupMenuItem(_("Account Details"), { focusOnHover: false });
+         this.account.actor.style = "padding-top: "+(2)+"px;padding-bottom: "+(2)+"px;padding-left: "+(1)+"px;padding-right: "+(1)+"px;margin:auto;";
+         this.menu.addMenuItem(this.account);
+         this.account.connect('activate', Lang.bind(this, function() {
+            Util.spawnCommandLine("cinnamon-settings user");
+         }));
+
+         this._onUserChanged();
+         this.refreshFace();
+         this.container.style = "padding-top: "+(0)+"px;padding-bottom: "+(0)+"px;padding-left: "+(0)+"px;padding-right: "+(0)+"px;margin:auto;";
+         this.container.connect('button-press-event', Lang.bind(this, function() {
+            this.actor.add_style_pseudo_class('pressed');
+         }));
+      } catch(e) {
+         Main.notifyError("ErrorHover:",e.message);
+      }
+   },
+
+   destroy: function() {
+      this.menu.destroy();
+      PopupMenu.PopupSubMenuMenuItem.prototype.destroy.call(this);
+      this.actor.destroy();
+   },
+
+   setSpecialColor: function(specialColor) {
+      if(specialColor) {
+         this.actor.set_style_class_name('menu-favorites-box');
+         this.actor.add_style_class_name('menu-hover-icon-box');
+      }
+      else {
+         this.actor.set_style_class_name('');
+      }
+   },
+
+   //setActive: function(active) {
+   //   this.actor.remove_style_pseudo_class('active');
+   //},
+
+   navegateHoverMenu: function(symbol, actor) {
+      if((symbol == Clutter.KEY_Down)||(symbol == Clutter.KEY_Up)) {
+         if(this.account.active) {
+            this.fav_actor = this.notificationsSwitch.actor;
+            Mainloop.idle_add(Lang.bind(this, this._putFocus));
+         }
+         if(this.notificationsSwitch.active) {
+            this.fav_actor = this.account.actor;
+            Mainloop.idle_add(Lang.bind(this, this._putFocus));
+         }
+      }
+   },
+
+   _onKeyPressEvent: function(actor, event) {
+      let symbol = event.get_key_symbol();
+
+      if(symbol == Clutter.KEY_Right) {
+         this.toggleMenu();
+         global.stage.set_key_focus(this.notificationsSwitch.actor);
+         //this.menu.actor.navigate_focus(null, Gtk.DirectionType.DOWN, false);
+         return true;
+      } else if (symbol == Clutter.KEY_Left && this.menu.isOpen) {
+         global.stage.set_key_focus(this.actor);
+         this.toggleMenu();
+         return true;
+      }
+
+      return PopupMenu.PopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
+    },
+
+   _putFocus: function() {
+      global.stage.set_key_focus(this.fav_actor);
+   },
+
+   setIconSize: function (iconSize) {
+      this.iconSize = iconSize;
+      if(this._userIcon)
+         this._userIcon.set_icon_size(this.iconSize);
+      if(this.icon)
+         this.icon.set_icon_size(this.iconSize);
+      if(this.lastApp)
+         this.lastApp.set_icon_size(this.iconSize);
+      this.container.set_height(this.iconSize);
+   },
+
+   _onButtonReleaseEvent: function (actor, event) {
+      if(event.get_button()==1) {
+         this.activate(event);
+         this.toggleMenu();
+         if(this.parent.controlBox) {
+            this.parent.controlBox.visible = false;
+            this.parent.controlBox.visible = true;
+         }
+      }
+      this.actor.remove_style_pseudo_class('pressed');
+      return true;
+   },
+
+   _subMenuOpenStateChanged: function(menu, open) {
+       if(this.menu.isOpen) {
+          this.parent._updateSize();
+          //this.menu.actor.can_focus = false;
+       }
+       else {
+          //global.stage.set_key_focus(this.parent.searchEntry);
+          //this.menu.actor.can_focus = true;
+       }
+   },
+    
+   activate: function(event) {
+      //this.parent.menu.close();
+      //Main.notify("close");
+      //PopupMenu.PopupBaseMenuItem.prototype.activate.call(this, event, true);
+   },
+
+   closeMenu: function() {
+      this.menu.close(true);
+      this.setActive(false);
+      this.container.remove_style_pseudo_class('open');
+   },
+    
+   toggleMenu: function() {
+      if(this.menu.isOpen) {
+         this.menu.close(true);
+         this.container.remove_style_pseudo_class('open');
+         //this.menu.sourceActor._delegate.setActive(false);
+      } else {
+         this.menu.open();
+         this.container.add_style_pseudo_class('open');
+         //this.menu.sourceActor._delegate.setActive(true);
+      }
+   },
+
+   _onUserChanged: function() {
+      if(this._user.is_loaded) {
+         this.userLabel.set_text (this._user.get_real_name());
+         if(this._userIcon) {
+
+            let iconFileName = this._user.get_icon_file();
+            let iconFile = Gio.file_new_for_path(iconFileName);
+            let icon;
+            if(iconFile.query_exists(null)) {
+               icon = new Gio.FileIcon({file: iconFile});
+            } else {
+               icon = new Gio.ThemedIcon({name: 'avatar-default'});
+            }
+            this._userIcon.set_gicon(icon);
+            this._userIcon.show(); 
+ 
+         }
+      }
+   },
+
+   refresh: function (icon) {
+      if(this.actor.visible) {
+         if((icon)&&(this.icon)) {
+            this._removeIcon();
+            this.icon.set_icon_name(icon);
+            this.container.add_actor(this.icon, 0);
+         } else
+            this.refreshFace();
+      }
+   },
+
+   refreshApp: function (app) {
+      if(this.actor.visible) {
+         this._removeIcon();
+         this.lastApp = app.create_icon_texture(this.iconSize);
+         if(this.lastApp) {
+            this.container.add_actor(this.lastApp, 0);
+         }
+      }
+   },
+
+   refreshPlace: function (place) {
+      if(this.actor.visible) {
+         this._removeIcon();
+         this.lastApp = place.iconFactory(this.iconSize);
+         if(this.lastApp) {
+            this.container.add_actor(this.lastApp, 0);
+         }
+      }
+   },
+
+   refreshFile: function (file) {
+      if(this.actor.visible) {
+         this._removeIcon();
+         this.lastApp = file.createIcon(this.iconSize);
+         if(this.lastApp) {
+            this.container.add_actor(this.lastApp, 0);
+         }
+      }
+   },
+
+   refreshFace: function () {
+      if(this.actor.visible) {
+         this._removeIcon();
+         if(this._userIcon) {
+            this.container.add_actor(this._userIcon, 0);
+         }
+      }
+   },
+
+   _removeIcon: function () {
+      if(this.lastApp) {
+         this.container.remove_actor(this.lastApp);
+         this.lastApp.destroy();
+         this.lastApp = null;
+      }
+      if((this.icon)&&(this.icon.get_parent() == this.container))
+         this.container.remove_actor(this.icon);
+      if((this._userIcon)&&(this._userIcon.get_parent() == this.container))
+         this.container.remove_actor(this._userIcon);
    }
 };
 

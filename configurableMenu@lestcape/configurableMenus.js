@@ -251,7 +251,6 @@ BoxPointer.prototype = {
     show: function(animate, onComplete) {
         let themeNode = this.actor.get_theme_node();
         let rise = themeNode.get_length('-arrow-rise');
-
         if (animate) {
             this.opacity = 0;
             this.actor.show();
@@ -1015,9 +1014,9 @@ ConfigurablePointer.prototype = {
       let borderWidth = this.themeNode.get_length('-arrow-border-width');
       let base = this.themeNode.get_length('-arrow-base');
       let rise = 0;
-      if(this._riseArrow)
+      if(this._riseArrow) {
          rise = this.themeNode.get_length('-arrow-rise');
-
+      }
       let borderRadius = this.themeNode.get_length('-arrow-border-radius');
 
       let halfBorder = borderWidth / 2;
@@ -5223,7 +5222,7 @@ ConfigurableMenuApplet.prototype = {
             } else if(this._activeSubMenuItem && this._activeSubMenuItem.menu) {
                this._activeSubMenuItem.menu.actor.grab_key_focus();
             }
-         } 
+         }
          if((close)||(event.get_key_symbol() == Clutter.Escape)) {
             this.close(true);
             if((this.launcher)&&(this.launcher.setActive))

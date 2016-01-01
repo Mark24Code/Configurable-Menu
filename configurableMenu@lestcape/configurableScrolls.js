@@ -69,16 +69,18 @@ ScrollItemsBox.prototype = {
    setPanelToScroll: function(panelToScroll) {
       if(this.panelToScroll != panelToScroll) {
          if(this.panelToScroll) {
-            if(this.panelToScroll.get_parent() == this._panelWrapper) 
-               this._panelWrapper.remove_actor(this.panelToScroll);
             if(this._idReparent != 0) {
                this.panelToScroll.disconnect(this._idReparent);
                this._idReparent = 0;
             }
+            if(this.panelToScroll.get_parent() == this._panelWrapper) 
+               this._panelWrapper.remove_actor(this.panelToScroll);
          }
          this.panelToScroll = panelToScroll;
-         this._panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: true, x_align: this._align, y_align: St.Align.START, expand: true });
-         this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
+         if(this.panelToScroll) {
+            this._panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: true, x_align: this._align, y_align: St.Align.START, expand: true });
+            this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
+         }
       }
    },
 
@@ -86,16 +88,16 @@ ScrollItemsBox.prototype = {
       if(this._align != align) {
          this._align = align;
          if(this.panelToScroll) {
-            let parent = this.panelToScroll.get_parent();
-            if(parent) 
-               parent.remove_actor(parent);
             if(this._idReparent != 0) {
                this.panelToScroll.disconnect(this._idReparent);
                this._idReparent = 0;
             }
+            let parent = this.panelToScroll.get_parent();
+            if(parent)
+               parent.remove_actor(this.panelToScroll);
+            this._panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: true, x_align: this._align, y_align: St.Align.START, expand: true });
+            this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
          }
-         this._panelWrapper.add(this.panelToScroll, { x_fill: true, y_fill: true, x_align: this._align, y_align: St.Align.START, expand: true });
-         this._idReparent = this.panelToScroll.connect('parent-set', Lang.bind(this, this._onParentChange));
       }
    },
 

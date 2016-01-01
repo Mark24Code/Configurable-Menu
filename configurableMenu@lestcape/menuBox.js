@@ -21,7 +21,7 @@ const GLib = imports.gi.GLib;
 const Meta = imports.gi.Meta;
 const Cinnamon = imports.gi.Cinnamon;
 const Clutter = imports.gi.Clutter;
-const AccountsService = imports.gi.AccountsService;
+const Gettext = imports.gettext;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const Signals = imports.signals;
@@ -37,6 +37,14 @@ const AppletPath = imports.ui.appletManager.applets['configurableMenu@lestcape']
 const ConfigurableScrolls = AppletPath.configurableScrolls;
 const MenuItems = AppletPath.menuItems;
 //MenuBox
+
+function _(str) {
+   let resultConf = Gettext.dgettext("configurableMenu@lestcape", str);
+   if(resultConf != str) {
+      return resultConf;
+   }
+   return Gettext.gettext(str);
+};
 
 function PlacesGnomeBox(parent, selectedAppBox, hover, iconSize, iconView, scrollBox, textButtonWidth) {
    this._init(parent, selectedAppBox, hover, iconSize, iconView, scrollBox, textButtonWidth);
@@ -730,266 +738,6 @@ SystemBox.prototype = {
    }
 };
 
-function HoverIconBox(parent, iconSize) {
-   this._init(parent, iconSize);
-}
-
-HoverIconBox.prototype = {
-   __proto__: PopupMenu.PopupSubMenuMenuItem.prototype,
-    
-   _init: function(parent, iconSize) {
-      PopupMenu.PopupBaseMenuItem.prototype._init.call(this, {hover: false, focusOnHover: false });
-      try {
-         //this.actor._delegate = this;
-         this.parent = parent;
-         this.iconSize = iconSize;
-
-         this.container = new St.BoxLayout({ vertical: false });
-         this.container.add_actor(this.actor);
-
-         this.actor.set_height(this.iconSize);
-         this._userIcon = new St.Icon({ icon_size: this.iconSize });
-         this.icon = new St.Icon({ icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR });
-         
-         this.menu = new PopupMenu.PopupSubMenu(this.actor);
-         this.container.add_actor(this.menu.actor);
-         this.menu.actor.set_style_class_name('menu-context-menu');
-         this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
-
-         this._user = AccountsService.UserManager.get_default().get_user(GLib.get_user_name());
-         this._userLoadedId = this._user.connect('notify::is_loaded', Lang.bind(this, this._onUserChanged));
-         this._userChangedId = this._user.connect('changed', Lang.bind(this, this._onUserChanged));
-
-         let menuItem;
-         let userBox = new St.BoxLayout({ style_class: 'user-box', vertical: false });
-         this.userLabel = new St.Label();//{ style_class: 'user-label' });
-         userBox.add(this.userLabel, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
-         this.menu.addActor(userBox);
-
-         this.notificationsSwitch = new PopupMenu.PopupSwitchMenuItem(_("Notifications"), this._toggleNotifications, { focusOnHover: false });
-         this.notificationsSwitch.actor.style = "padding-top: "+(2)+"px;padding-bottom: "+(2)+"px;padding-left: "+(1)+"px;padding-right: "+(1)+"px;margin:auto;";
-         this.menu.addMenuItem(this.notificationsSwitch);
-         global.settings.connect('changed::display-notifications', Lang.bind(this, function() {
-            this.notificationsSwitch.setToggleState(global.settings.get_boolean("display-notifications"));
-         }));
-         this.notificationsSwitch.connect('toggled', Lang.bind(this, function() {
-            global.settings.set_boolean("display-notifications", this.notificationsSwitch.state);
-         }));
-
-         this.account = new PopupMenu.PopupMenuItem(_("Account Details"), { focusOnHover: false });
-         this.account.actor.style = "padding-top: "+(2)+"px;padding-bottom: "+(2)+"px;padding-left: "+(1)+"px;padding-right: "+(1)+"px;margin:auto;";
-         this.menu.addMenuItem(this.account);
-         this.account.connect('activate', Lang.bind(this, function() {
-            Util.spawnCommandLine("cinnamon-settings user");
-         }));
-
-         this._onUserChanged();
-         this.refreshFace();
-         this.actor.style = "padding-top: "+(0)+"px;padding-bottom: "+(0)+"px;padding-left: "+(0)+"px;padding-right: "+(0)+"px;margin:auto;";
-         this.actor.connect('button-press-event', Lang.bind(this, function() {
-            this.container.add_style_pseudo_class('pressed');
-         }));
-      } catch(e) {
-         Main.notifyError("ErrorHover:",e.message);
-      }
-   },
-
-   destroy: function() {
-      this.menu.destroy();
-      PopupMenu.PopupSubMenuMenuItem.prototype.destroy.call(this);
-      this.container.destroy();
-   },
-
-   setSpecialColor: function(specialColor) {
-      if(specialColor) {
-         this.container.set_style_class_name('menu-favorites-box');
-         this.container.add_style_class_name('menu-hover-icon-box');
-      }
-      else {
-         this.container.set_style_class_name('');
-      }
-   },
-
-   //setActive: function(active) {
-   //   this.actor.remove_style_pseudo_class('active');
-   //},
-
-   navegateHoverMenu: function(symbol, actor) {
-      if((symbol == Clutter.KEY_Down)||(symbol == Clutter.KEY_Up)) {
-         if(this.account.active) {
-            this.fav_actor = this.notificationsSwitch.actor;
-            Mainloop.idle_add(Lang.bind(this, this._putFocus));
-         }
-         if(this.notificationsSwitch.active) {
-            this.fav_actor = this.account.actor;
-            Mainloop.idle_add(Lang.bind(this, this._putFocus));
-         }
-      }
-   },
-
-   _onKeyPressEvent: function(actor, event) {
-      let symbol = event.get_key_symbol();
-
-      if(symbol == Clutter.KEY_Right) {
-         this.toggleMenu();
-         global.stage.set_key_focus(this.notificationsSwitch.actor);
-         //this.menu.actor.navigate_focus(null, Gtk.DirectionType.DOWN, false);
-         return true;
-      } else if (symbol == Clutter.KEY_Left && this.menu.isOpen) {
-         global.stage.set_key_focus(this.actor);
-         this.toggleMenu();
-         return true;
-      }
-
-      return PopupMenu.PopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
-    },
-
-   _putFocus: function() {
-      global.stage.set_key_focus(this.fav_actor);
-   },
-
-   setIconSize: function (iconSize) {
-      this.iconSize = iconSize;
-      if(this._userIcon)
-         this._userIcon.set_icon_size(this.iconSize);
-      if(this.icon)
-         this.icon.set_icon_size(this.iconSize);
-      if(this.lastApp)
-         this.lastApp.set_icon_size(this.iconSize);
-      this.actor.set_height(this.iconSize);
-   },
-
-   _onButtonReleaseEvent: function (actor, event) {
-      if(event.get_button()==1) {
-         this.activate(event);
-         this.toggleMenu();
-         if(this.parent.controlBox) {
-            this.parent.controlBox.visible = false;
-            this.parent.controlBox.visible = true;
-         }
-      }
-      this.actor.remove_style_pseudo_class('pressed');
-      return true;
-   },
-
-   _subMenuOpenStateChanged: function(menu, open) {
-       if(this.menu.isOpen) {
-          this.parent._updateSize();
-          //this.menu.actor.can_focus = false;
-       }
-       else {
-          //global.stage.set_key_focus(this.parent.searchEntry);
-          //this.menu.actor.can_focus = true;
-       }
-   },
-    
-   activate: function(event) {
-      //this.parent.menu.close();
-      //Main.notify("close");
-      //PopupMenu.PopupBaseMenuItem.prototype.activate.call(this, event, true);
-   },
-
-   closeMenu: function() {
-      this.menu.close(true);
-      this.setActive(false);
-      this.container.remove_style_pseudo_class('open');
-   },
-    
-   toggleMenu: function() {
-      if(this.menu.isOpen) {
-         this.menu.close(true);
-         this.container.remove_style_pseudo_class('open');
-         this.menu.sourceActor._delegate.setActive(false);
-      } else {
-         this.menu.open();
-         this.container.add_style_pseudo_class('open');
-         this.menu.sourceActor._delegate.setActive(true);
-      }
-   },
-
-   _onUserChanged: function() {
-      if(this._user.is_loaded) {
-         this.userLabel.set_text (this._user.get_real_name());
-         if(this._userIcon) {
-
-            let iconFileName = this._user.get_icon_file();
-            let iconFile = Gio.file_new_for_path(iconFileName);
-            let icon;
-            if(iconFile.query_exists(null)) {
-               icon = new Gio.FileIcon({file: iconFile});
-            } else {
-               icon = new Gio.ThemedIcon({name: 'avatar-default'});
-            }
-            this._userIcon.set_gicon(icon);
-            this._userIcon.show(); 
- 
-         }
-      }
-   },
-
-   refresh: function (icon) {
-      if(this.actor.visible) {
-         if((icon)&&(this.icon)) {
-            this._removeIcon();
-            this.icon.set_icon_name(icon);
-            this.addActor(this.icon, 0);
-         } else
-            this.refreshFace();
-      }
-   },
-
-   refreshApp: function (app) {
-      if(this.actor.visible) {
-         this._removeIcon();
-         this.lastApp = app.create_icon_texture(this.iconSize);
-         if(this.lastApp) {
-            this.addActor(this.lastApp, 0);
-         }
-      }
-   },
-
-   refreshPlace: function (place) {
-      if(this.actor.visible) {
-         this._removeIcon();
-         this.lastApp = place.iconFactory(this.iconSize);
-         if(this.lastApp) {
-            this.addActor(this.lastApp, 0);
-         }
-      }
-   },
-
-   refreshFile: function (file) {
-      if(this.actor.visible) {
-         this._removeIcon();
-         this.lastApp = file.createIcon(this.iconSize);
-         if(this.lastApp) {
-            this.addActor(this.lastApp, 0);
-         }
-      }
-   },
-
-   refreshFace: function () {
-      if(this.actor.visible) {
-         this._removeIcon();
-         if(this._userIcon) {
-            this.addActor(this._userIcon, 0);
-         }
-      }
-   },
-
-   _removeIcon: function () {
-      if(this.lastApp) {
-         this.removeActor(this.lastApp);
-         this.lastApp.destroy();
-         this.lastApp = null;
-      }
-      if((this.icon)&&(this.icon.get_parent() == this.actor))
-         this.removeActor(this.icon);
-      if((this._userIcon)&&(this._userIcon.get_parent() == this.actor))
-         this.removeActor(this._userIcon);
-   }
-};
-
 function CategoriesApplicationsBox() {
    this._init();
 }
@@ -1303,11 +1051,14 @@ PowerBox.prototype = {
       }));
       this.actor.connect('key-focus-out', Lang.bind(this, function(actor, event) {
          for(let cSys in this._powerButtons)
-            this._systemButton[cSys].setActive(false);
-         if(this.signalKeyPowerID > 0)
+            this._powerButtons[cSys].setActive(false);
+         if(this.signalKeyPowerID > 0) {
             this.actor.disconnect(this.signalKeyPowerID);
+            this.signalKeyPowerID = 0;
+         }
          this.powerSelected = -1;
-         this.bttChanger.setActive(false);
+         if(this._bttChanger)
+            this._bttChanger.setActive(false);
       }));
       this.separatorPower = new SeparatorBox(false, 0);
       //Lock screen "preferences-desktop-screensaver"
@@ -1485,11 +1236,11 @@ PowerBox.prototype = {
       this.activeBar = new St.BoxLayout({ vertical: false });
       this.separator = new St.BoxLayout({ vertical: true });
       this.separator.style = "padding-left: "+(this.iconSize)+"px;margin:auto;";
-      this.bttChanger = new ButtonChangerBox(this.parent, "forward", this.iconSize, ["Show Down", "Options"], 0);
-      this.bttChanger.registerCallBack(Lang.bind(this, this._onPowerChange));
-      this.bttChanger.setTextVisible(false);
+      this._bttChanger = new MenuItems.ButtonChangerMenuItem(this.parent, "forward", this.iconSize, ["Show Down", "Options"], 0);
+      this._bttChanger.registerCallBack(Lang.bind(this, this._onPowerChange));
+      this._bttChanger.setTextVisible(false);
       this.activeBar.add(this._powerButtons[2].actor, { x_fill: false, x_align: aling });
-      this.activeBar.add(this.bttChanger.actor, { x_fill: true, x_align: aling });
+      this.activeBar.add(this._bttChanger.actor, { x_fill: true, x_align: aling });
       this.actor.add(this.activeBar, { x_fill: false, y_fill: false, x_align: aling, y_align: aling, expand: true });
       this.separator.add(this._powerButtons[0].actor, { x_fill: true, x_align: aling, y_align: aling });
       this.separator.add(this._powerButtons[1].actor, { x_fill: true, x_align: aling, y_align: aling });
@@ -1521,7 +1272,8 @@ PowerBox.prototype = {
      if(this.powerSelected != -1) {
         this._powerButtons[this.powerSelected].setActive(false);
         this.powerSelected = -1;
-        this.bttChanger.setActive(true);
+        if(this._bttChanger)
+           this._bttChanger.setActive(true);
      }
   },
 
@@ -1629,21 +1381,21 @@ PowerBox.prototype = {
          this._powerButtons[this.powerSelected].setActive(false);
          this.powerSelected = -1;
       }
-      if(this.activeBar)
-         this.bttChanger.activateSelected("Show Down");
+      if((this.activeBar)&&(this._bttChanger))
+         this._bttChanger.activateSelected("Show Down");
    },
 
    navegatePowerBox: function(symbol, actor) {
       if(this.activeBar) {
          if((symbol == Clutter.KEY_Up) || (symbol == Clutter.KEY_Left)) {
             if(this.powerSelected == -1) {
-               this.bttChanger.setActive(false);
+               this._bttChanger.setActive(false);
                this.powerSelected = 2;
                this._powerButtons[this.powerSelected].setActive(true);
             } else if(this.powerSelected == 0) {
                this._powerButtons[this.powerSelected].setActive(false);
                this.powerSelected = -1;
-               this.bttChanger.setActive(true);
+               this._bttChanger.setActive(true);
             } else {
                this._powerButtons[this.powerSelected].setActive(false);
                if(this._powerButtons[this.powerSelected - 1].actor.visible) {
@@ -1651,13 +1403,13 @@ PowerBox.prototype = {
                   this._powerButtons[this.powerSelected].setActive(true);
                } else {
                   this.powerSelected = -1;
-                  this.bttChanger.setActive(true);
+                  this._bttChanger.setActive(true);
                }
             }
          }
          else if((symbol == Clutter.KEY_Down) || (symbol == Clutter.KEY_Right)) {
             if(this.powerSelected == -1) {
-               this.bttChanger.setActive(false);
+               this._bttChanger.setActive(false);
                if(this._powerButtons[0].actor.visible)
                   this.powerSelected = 0;
                else
@@ -1666,7 +1418,7 @@ PowerBox.prototype = {
             } else if(this.powerSelected == 2) {
                this._powerButtons[this.powerSelected].setActive(false);
                this.powerSelected = -1;
-               this.bttChanger.setActive(true);
+               this._bttChanger.setActive(true);
             } else {
                this._powerButtons[this.powerSelected].setActive(false);
                this.powerSelected++;
@@ -1678,7 +1430,7 @@ PowerBox.prototype = {
                this._powerButtons[this.powerSelected].setActive(false);
                this._powerButtons[this.powerSelected].executeAction();
             } else {
-               this.bttChanger.activateNext();
+               this._bttChanger.activateNext();
             }
          }
       } else {
@@ -1841,136 +1593,6 @@ SelectedAppBox.prototype = {
          Mainloop.source_remove(this.timeOutDateTime);
          this.showTime();
          this.timeOutDateTime = Mainloop.timeout_add_seconds(1, Lang.bind(this, this._refrech));
-      }
-   }
-};
-
-function ButtonChangerBox(parent, icon, iconSize, labels, selected) {
-   this._init(parent, icon, iconSize, labels, selected);
-}
-
-ButtonChangerBox.prototype = {
-   __proto__: PopupMenu.PopupSubMenuMenuItem.prototype,
-
-   _init: function (parent, icon, iconSize, labels, selected) {
-      PopupMenu.PopupSubMenuMenuItem.prototype._init.call(this, labels[selected]);
-      this.theme = "";
-      this.visible = true;
-      this.actor.set_style_class_name('');
-      this.actor.reactive = true;
-      this.box = new St.BoxLayout({ style_class: 'menu-category-button', reactive: true, track_hover: true });
-      this.parent = parent;
-      this.labels = labels;
-      this.selected = selected;
-      let parentT = this.label.get_parent();
-      if(parentT == this.actor) this.removeActor(this.label);
-      if(parentT != null) parentT.remove_actor(this.label);
-      this.label.set_style_class_name('menu-selected-app-title');
-
-      parentT = this._triangle.get_parent();
-      if(parentT == this.actor) this.removeActor(this._triangle);
-      else if(parentT != null) parentT.remove_actor(this._triangle);
-      //this._triangle = new St.Label();
-      this.addActor(this.box);
-
-      this.icon = new St.Icon({ style_class: 'popup-menu-icon', icon_type: St.IconType.FULLCOLOR, icon_name: icon, icon_size: iconSize });
-      this.box.add(this.label, {x_fill: false, y_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE });
-      this.label.realize();
-      if(this.icon) {
-         this.box.add(this.icon, {x_fill: false, y_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE });
-         this.icon.realize();
-      } 
-
-      this.box.connect('enter-event', Lang.bind(this, function() {
-         this.setActive(true);
-      }));
-      this.box.connect('leave-event', Lang.bind(this, function() {
-         this.setActive(false); 
-      }));
-   },
-
-   registerCallBack: function(callBackOnSelectedChange) {
-      this.callBackOnSelectedChange = callBackOnSelectedChange;
-   },
-
-   setIconSize: function(iconSize) {
-      if(this.icon)
-         this.icon.set_icon_size(iconSize);
-   },
-
-   setTextVisible: function(visible) {
-      this.label.visible = visible;
-   },
-
-   setTheme: function(theme) {
-      this.theme = '-' + theme;
-      this.box.set_style_class_name('menu-category-button');
-      this.box.add_style_class_name('menu-swap-button-' + this.theme);
-   },
-
-   setActive: function(active) {
-      if(this.active != active) {
-         this.active = active;
-         if(!this.parent.actorResize) {
-            if(active) {
-               global.set_cursor(Cinnamon.Cursor.POINTING_HAND);
-               this.box.set_style_class_name('menu-category-button-selected');
-               this.box.add_style_class_name('menu-swap-button' + this.theme + '-selected');
-            }
-            else {
-               global.unset_cursor();
-               this.box.set_style_class_name('menu-category-button');
-               this.box.add_style_class_name('menu-swap-button' + this.theme);
-            }
-         }
-         this.emit('active-changed', active);
-      }
-   },
- 
-   _onButtonReleaseEvent: function(actor, event) {
-      if(!this.parent.pressed) {
-         if(event.get_button() == 1) {
-            this.setActive(false);
-            this.activateNext();
-            Mainloop.idle_add(Lang.bind(this, function() {
-               let [mx, my] = event.get_coords();
-               let [ax, ay] = actor.get_transformed_position();
-               let aw = actor.get_width();
-               let ah = actor.get_height();
-               if((mx > ax)&&(mx < ax + aw)&&(my > ay)&&(my < ay + ah))
-                  this.setActive(true);
-            }));
-         }
-         //PopupMenu.PopupSubMenuMenuItem.prototype._onButtonReleaseEvent.call(actor, event);
-      }
-      this.parent._disableResize();
-      return true;
-   },
-
-   activateNext: function() {
-      if(this.selected >= this.labels.length - 1)
-         this.selected = 0;
-      else
-         this.selected ++;
-      this.activateIndex(this.selected);
-   },
-
-   getSelected: function() {
-      return this.labels[this.selected];
-   },
-
-   activateSelected: function(selected) {
-      let index = this.labels.indexOf(selected);
-      if((index != -1)&&(index != this.selected)) {
-         this.activateIndex(index);
-      }
-   },
-
-   activateIndex: function(index) {
-      this.selected = index;
-      this.label.set_text(this.labels[this.selected]);
-      if(this.callBackOnSelectedChange) {
-         this.callBackOnSelectedChange(this.labels[this.selected]);
       }
    }
 };
@@ -2248,12 +1870,12 @@ GnoMenuBox.prototype = {
    },
 
    takeHover: function(take) {
-      let parent = this.hover.container.get_parent();
+      let parent = this.hover.actor.get_parent();
       if(parent) {
-         parent.remove_actor(this.hover.container);
+         parent.remove_actor(this.hover.actor);
       }
       if(take) {
-         this.hoverBox.add(this.hover.container, { x_fill: false, x_align: St.Align.MIDDLE, expand: true });
+         this.hoverBox.add(this.hover.actor, { x_fill: false, x_align: St.Align.MIDDLE, expand: true });
       }
    },
 
@@ -2700,12 +2322,12 @@ AccessibleBox.prototype = {
   // },
 
    takeHover: function(take) {
-      let parent = this.hover.container.get_parent();
+      let parent = this.hover.actor.get_parent();
       if(parent) {
-         parent.remove_actor(this.hover.container);
+         parent.remove_actor(this.hover.actor);
       }
       if(take) {
-         this.hoverBox.add(this.hover.container, { x_fill: false, x_align: St.Align.MIDDLE, expand: true });
+         this.hoverBox.add(this.hover.actor, { x_fill: false, x_align: St.Align.MIDDLE, expand: true });
          this.hoverBox.set_style("padding-top: 10px; padding-bottom: 10px;");
       } else {
          this.hoverBox.set_style("padding-top: 0px; padding-bottom: 0px;");
