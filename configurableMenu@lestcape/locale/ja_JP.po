@@ -1,0 +1,1016 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Configurable Menu 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-01-10 14:06-0600\n"
+"PO-Revision-Date: 2016-01-06 12:55+0900\n"
+"Last-Translator: BALLOON a.k.a. Fu-sen. (Keiichi SHIGA) <fu-sen"
+"+mint@shigakeiichi.com>\n"
+"Language-Team: BALLOON a.k.a. Fu-sen. (Keiichi SHIGA) <lfu-sen"
+"+mint@shigakeiichi.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Poedit 1.8.6\n"
+"Language: ja_JP\n"
+
+#: applet.js:83 applet.js:3678 cinnamonMenu.js:536
+msgid "Execution of '%s' failed:"
+msgstr "‘%s’ の実行に失敗しました:"
+
+#: applet.js:103 applet.js:3678 cinnamonMenu.js:536
+msgid "Command not found."
+msgstr "コマンドが見つかりません。"
+
+#: applet.js:133 applet.js:3678 cinnamonMenu.js:536
+msgid "Package %s"
+msgstr "パッケージ %s"
+
+#: applet.js:150 applet.js:3678 cinnamonMenu.js:536
+msgid "Package to install %s"
+msgstr "パッケージ %s のインストール"
+
+#: applet.js:383 applet.js:3678 cinnamonMenu.js:536 applet.js:1452
+msgid "List View"
+msgstr "リスト表示"
+
+#: applet.js:1455
+msgid "Grid View"
+msgstr "グリット表示"
+
+#: applet.js:1455
+msgid "Show application entries in list view"
+msgstr "リストビューでアプリケーションエントリを表示する"
+
+#: applet.js:1459
+msgid "Prevent resizing"
+msgstr "サイズの変更を禁止する"
+
+#: applet.js:1459
+msgid "Prevent resizing the menu"
+msgstr "メニューのサイズを変更できないようにします"
+
+#: applet.js:1461
+msgid "Allow resizing"
+msgstr "サイズの変更を有効にする"
+
+#: applet.js:1461
+msgid "Allow resizing the menu"
+msgstr "メニューのサイズ変更を可能にします"
+
+#: applet.js:1465
+msgid "Recover size"
+msgstr "通常サイズへ復旧する"
+
+#: applet.js:1465
+msgid "Recover the normal menu size"
+msgstr "通常のメニューサイズへ復旧します"
+
+#: applet.js:1467
+msgid "Full Screen"
+msgstr "フルスクリーン"
+
+#: applet.js:1467
+msgid "Put the menu in full screen mode"
+msgstr "フルスクリーンモードでメニューを表示します"
+
+#: applet.js:1470
+msgid "Configure the menu options"
+msgstr "メニューオプションの設定"
+
+#: applet.js:1671 applet.js:1683
+msgid "Remove from accessible panel"
+msgstr "Accessible パネルから削除する"
+
+#: applet.js:1674 applet.js:1686
+msgid "Add to accessible panel"
+msgstr "Accessible パネルへ追加する"
+
+#: applet.js:1674 applet.js:1686
+msgid "Save name"
+msgstr "名前の保存"
+
+#: applet.js:1674 applet.js:1686
+msgid "Edit name"
+msgstr "名前の編集"
+
+#: applet.js:1674 applet.js:1686
+msgid "Default name"
+msgstr "名前の初期化"
+
+#: applet.js:5815
+msgid "Filter:"
+msgstr "フィルタ:"
+
+#: applet.js:5817 applet.js:6100 applet.js:6131 applet.js:6165
+msgid "Favorites"
+msgstr "お気に入り"
+
+#: applet.js:6213
+msgid "Search %s for %s"
+msgstr "%s の %s 検索"
+
+#. configurableMenu@lestcape->settings-schema.json->header-layouts->description
+msgid "Layouts:"
+msgstr "レイアウト:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-menu->description
+msgid "Menu:"
+msgstr "メニュー:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-size->description
+msgid "Menu Size:"
+msgstr "メニューサイズ:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-reaction->description
+msgid "Menu Reaction:"
+msgstr "メニュー動作:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-categories->description
+msgid "Categories:"
+msgstr "カテゴリ:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-apps->description
+msgid "Applications:"
+msgstr "アプリケーション:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-favorites->description
+msgid "Favorites:"
+msgstr "お気に入り:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-hover->description
+msgid "Hover Icon:"
+msgstr "詳細表示部のアイコン:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-system->description
+msgid "System Buttons:"
+msgstr "システムボタン:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-control->description
+msgid "Control Buttons:"
+msgstr "コントロールボタン:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-separators->description
+msgid "Separators:"
+msgstr "セパレーター:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-information->description
+msgid "Information Panel:"
+msgstr "情報パネル:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-accessible->description
+msgid "Accessible Panel:"
+msgstr "Accessible パネル:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-gnomenu->description
+msgid "GnoMenu Panel:"
+msgstr "GnoMenu パネル:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-submenu->description
+msgid "Submenu:"
+msgstr "サブメニュー:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-search->description
+msgid "General search options:"
+msgstr "通常検索オプション:"
+
+#. configurableMenu@lestcape->settings-schema.json->header-install->description
+msgid "Installer and uninstaller tools:"
+msgstr "インストール・アンインストールツール:"
+
+#. configurableMenu@lestcape->settings-schema.json->effect->description
+msgid "Effect on opening and closing:"
+msgstr "開く・閉じるの効果:"
+
+#. configurableMenu@lestcape->settings-schema.json->effect->tooltip
+msgid "Select the effect on the menu opening and closing."
+msgstr "メニュー開閉の効果を選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->effect->options
+msgid "None"
+msgstr "なし"
+
+#. configurableMenu@lestcape->settings-schema.json->effect->options
+msgid "Dispel"
+msgstr "フェード"
+
+#. configurableMenu@lestcape->settings-schema.json->effect->options
+msgid "Hide Horizontal"
+msgstr "横方向"
+
+#. configurableMenu@lestcape->settings-schema.json->effect->options
+msgid "Hide Vertical"
+msgstr "縦方向"
+
+#. configurableMenu@lestcape->settings-schema.json->effect-time->description
+msgid "Duration of effect:"
+msgstr "効果の持続時間:"
+
+#. configurableMenu@lestcape->settings-schema.json->effect-time->tooltip
+msgid "The time on seconds to perform the effect(More time is slower)."
+msgstr "効果を実行する秒数を設定します。(値が大きいほど遅くなります)"
+
+#. configurableMenu@lestcape->settings-schema.json->swap-panels->description
+msgid "Swap the top and bottom panel"
+msgstr "上部と下部のパネルを入れ替える"
+
+#. configurableMenu@lestcape->settings-schema.json->swap-panels->tooltip
+msgid "Choose whether or not to swap the top and bottom panel on the menu."
+msgstr "メニューの上部と下部のパネルを交換するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->allow-search->description
+msgid "Show search entry"
+msgstr "検索枠を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->allow-search->tooltip
+msgid "Choose whether or not to show search entry on the menu."
+msgstr "メニューの検索項目を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->app-title-
+#. size->description
+msgid "Font size of the selected application name:"
+msgstr "選択アプリケーション名のフォントサイズ："
+
+#. configurableMenu@lestcape->settings-schema.json->app-title-size->tooltip
+msgid "Set the font size of the selected application name."
+msgstr "選択したアプリケーション名のフォントサイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->menu-theme-
+#. save-button->description
+msgid "Save the layout configuration"
+msgstr "レイアウト構成を保存する"
+
+#. configurableMenu@lestcape->settings-schema.json->menu-theme-
+#. save-button->tooltip
+msgid "Press this button to save the layout configuration."
+msgstr "レイアウトの設定を保存するには、このボタンを押します。"
+
+#. configurableMenu@lestcape->settings-schema.json->app-title-size->units
+msgid "points"
+msgstr "ポイント"
+
+#. configurableMenu@lestcape->settings-schema.json->favorites-
+#. lines->description
+msgid "Number of favorites lines:"
+msgstr "お気に入りの行数:"
+
+#. configurableMenu@lestcape->settings-schema.json->favorites-lines->tooltip
+msgid "Choose the number of favorites lines."
+msgstr "お気に入りの行数を選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->favorites-lines->units
+msgid "lines"
+msgstr "行"
+
+#. configurableMenu@lestcape->settings-schema.json->gnomenu-buttons-theme->description
+msgid "GnoMenu buttons layout:"
+msgstr "GnoMenu ボタンのレイアウト:"
+
+#. configurableMenu@lestcape->settings-schema.json->gnomenu-buttons-theme->tooltip
+msgid "Select a layout of GnoMenu buttons."
+msgstr "GnoMenu ボタンのレイアウトを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->gnomenu-buttons-theme->options
+msgid "Only Icons"
+msgstr "アイコンのみ"
+
+#. configurableMenu@lestcape->settings-schema.json->gnomenu-buttons-theme->options
+msgid "Only Text"
+msgstr "テキストのみ"
+
+#. configurableMenu@lestcape->settings-schema.json->gnomenu-buttons-theme->options
+msgid "Grid"
+msgstr "グリット"
+
+#. configurableMenu@lestcape->settings-schema.json->gnomenu-buttons-theme->options
+msgid "List"
+msgstr "リスト"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->description
+msgid "System buttons layout:"
+msgstr "システムボタンのレイアウト:"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->tooltip
+msgid "Select a layout of system buttons."
+msgstr "システムボタンのレイアウトを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->options
+msgid "Retractable Text"
+msgstr "格納型テキスト"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->options
+msgid "Vertical Text"
+msgstr "縦並びテキスト"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->options
+msgid "Horizontal Grid"
+msgstr "水平グリット"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->options
+msgid "Vertical Icon"
+msgstr "垂直アイコン"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->options
+msgid "Horizontal Text"
+msgstr "水平テキスト"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->options
+msgid "Vertical List"
+msgstr "垂直リスト"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->options
+msgid "Vertical Grid"
+msgstr "垂直グリット"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->options
+msgid "Horizontal Icon"
+msgstr "水平アイコン"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->options
+msgid "Horizontal List"
+msgstr "水平リスト"
+
+#. configurableMenu@lestcape->settings-schema.json->power-theme->options
+msgid "Retractable"
+msgstr "格納型"
+
+#. configurableMenu@lestcape->settings-schema.json->scroll-
+#. favorites->description
+msgid "Show scrolling area of favorites"
+msgstr "お気に入りのスクロール領域を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->scroll-favorites->tooltip
+msgid "Choose whether or not to show the scrolling area of favorites."
+msgstr "お気に入りにスクロール領域を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->activate-on-
+#. press->description
+msgid "Open the menu when I press my mouse over it"
+msgstr "上にマウスを置いた時にメニューを開く"
+
+#. configurableMenu@lestcape->settings-schema.json->activate-on-press->tooltip
+msgid "Enable opening the menu when the mouse press over the applet."
+msgstr ""
+"アプレット上でマウスを押し・離したでメニュー開閉を行うのを有効にします。"
+
+#. configurableMenu@lestcape->settings-schema.json->height->description
+msgid "Menu height:"
+msgstr "メニューの縦幅:"
+
+#. configurableMenu@lestcape->settings-schema.json->height->tooltip
+msgid "Height of the menu."
+msgstr "メニューの縦幅を設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->app-
+#. description->description
+msgid "Application entries have description"
+msgstr "アプリケーションエントリに説明を付ける"
+
+#. configurableMenu@lestcape->settings-schema.json->app-description->tooltip
+msgid "Choose whether or not to have description on application entries."
+msgstr "アプリケーションエントリの説明を付けるかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-control-
+#. size->description
+msgid "Control icon size:"
+msgstr "コントロールアイコンのサイズ:"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-control-size->tooltip
+msgid "Set the control icon size."
+msgstr "コントロールアイコンサイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->scroll-
+#. applications->description
+msgid "Show scrolling area of applications"
+msgstr "アプリケーションにスクロール領域を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->scroll-
+#. applications->tooltip
+msgid "Choose whether or not to show the scrolling area of applications."
+msgstr "アプリケーションのスクロール領域を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->scroll-
+#. accessible->description
+msgid "Show scrolling area of accessible panel"
+msgstr "Accessible パネルにスクロール領域を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->scroll-accessible->tooltip
+msgid "Choose whether or not to show the scrolling area of accessible panel."
+msgstr "Accessible パネルのスクロール領域を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->scroll-
+#. gnomenu->description
+msgid "Show scrolling area of GnoMenu panel"
+msgstr "GnuMenu パネルにスクロール領域を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->scroll-gnomenu->tooltip
+msgid "Choose whether or not to show the scrolling area of GnoMenu panel."
+msgstr "GnoMenu パネルのスクロール領域を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->show-app-
+#. title->description
+msgid "Show name of the selected application"
+msgstr "選択アプリケーションの名前を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->show-app-title->tooltip
+msgid ""
+"Choose whether or not to show the selected application name on the menu."
+msgstr "メニューで選択したアプリケーション名を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->full-screen->description
+msgid "Full screen"
+msgstr "フルスクリーン"
+
+#. configurableMenu@lestcape->settings-schema.json->full-screen->tooltip
+msgid "Choose whether or not to put the menu in full screen mode."
+msgstr "フルスクリーンモードでメニューを表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->control-symbolic->description
+msgid "Show symbolic icons on the control buttons"
+msgstr "コントロールボタンのシンボリックアイコン 表示"
+
+#. configurableMenu@lestcape->settings-schema.json->control-symbolic->tooltip
+msgid ""
+"Enable this option to show symbolic icons, on the control buttons and "
+"disable to show full color."
+msgstr ""
+"コントロールボタンのシンボリックアイコンを表示し、フルカラー表示を無効にする"
+"には、このオプションを有効にします。"
+
+#. configurableMenu@lestcape->settings-schema.json->show-view-
+#. item->description
+msgid "Show control buttons"
+msgstr "コントロールボタンを表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->show-view-item->tooltip
+msgid "Choose whether or not to show control buttons."
+msgstr "コントロールボタンを表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-app-size->description
+msgid "Application icon size:"
+msgstr "アプリケーションアイコンのサイズ:"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-app-size->tooltip
+msgid "Set the application icon size."
+msgstr "アプリケーションのアイコンサイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->hover-box->description
+msgid "Hover icon have a box"
+msgstr "詳細表示部アイコンの周りに枠を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->hover-box->tooltip
+msgid "Choose whether or not to have a box on the hover icon."
+msgstr "詳細表示部アイコンの周りに枠を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->accessible-
+#. box->description
+msgid "Accessible panel has a box"
+msgstr "Accessible パネルの周りに枠を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->accessible-box->tooltip
+msgid "Choose whether or not to have a box on the accessible panel."
+msgstr "Accessible パネルの周りに枠を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->gnomenu-box->description
+msgid "GnoMenu buttons have a box"
+msgstr "GnoMenu ボタンの周りに枠を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->gnomenu-box->tooltip
+msgid "Choose whether or not to have a box on the GnoMenu buttons."
+msgstr "GnoMenu ボタンの周りに枠を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->spacer-size->description
+msgid "Separator size:"
+msgstr "セパレーターのサイズ:"
+
+#. configurableMenu@lestcape->settings-schema.json->spacer-size->tooltip
+msgid "Choose the size of separator."
+msgstr "セパレーターのサイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->time-format->description
+msgid "Time format:"
+msgstr "時間のフォーマット:"
+
+#. configurableMenu@lestcape->settings-schema.json->time-format->tooltip
+msgid "Choose the time format to show time on the menu."
+msgstr "メニューの時間を表示するフォーマット形式を設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->width->description
+msgid "Menu width:"
+msgstr "メニューの横幅:"
+
+#. configurableMenu@lestcape->settings-schema.json->width->tooltip
+msgid "Width of the menu."
+msgstr "メニューの横幅を設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->description
+msgid "Menu layout:"
+msgstr "メニューのレイアウト:"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->tooltip
+msgid "Select a layout of menu."
+msgstr "メニューのレイアウトを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Accessible"
+msgstr "Accessible"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Classic"
+msgstr "クラシック"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Classic Gnome"
+msgstr "クラシック GNOME"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Whisker"
+msgstr "Whisker"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Kicker"
+msgstr "Kicker"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Dragon"
+msgstr "Dragon"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Stylized"
+msgstr "Stylized"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Accessible Inverted"
+msgstr "Accessible 逆表示"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Dragon Inverted"
+msgstr "Dragon 逆表示 "
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Luz Helena"
+msgstr "Luz Helena"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Windows 7"
+msgstr "Windows 7"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Mint"
+msgstr "Mint"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Vampire"
+msgstr "Vampire"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "Garibaldo"
+msgstr "Garibaldo"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "GnoMenu Left"
+msgstr "GnoMenu 左"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "GnoMenu Right"
+msgstr "GnoMenu 右"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "GnoMenu Top"
+msgstr "GnoMenu 上"
+
+#. configurableMenu@lestcape->settings-schema.json->theme->options
+msgid "GnoMenu Bottom"
+msgstr "GnoMenu 下"
+
+#. configurableMenu@lestcape->settings-schema.json->show-hover-
+#. icon->description
+msgid "Show hover icon"
+msgstr "詳細表示部にアイコンを表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->show-hover-icon->tooltip
+msgid "Choose whether or not to show hover icon on the menu."
+msgstr "詳細表示部にアイコンを表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-hover-
+#. size->description
+msgid "Hover icon size:"
+msgstr "詳細表示部アイコンのサイズ: "
+
+#. configurableMenu@lestcape->settings-schema.json->icon-hover-size->tooltip
+msgid "Set the hover icon size."
+msgstr "詳細表示部に表示するアイコンのサイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->view-item->description
+msgid "Show application entries in grid view"
+msgstr "グリット表示でアプリケーションエントリを表示"
+
+#. configurableMenu@lestcape->settings-schema.json->view-item->tooltip
+msgid ""
+"Enable show application entries in grid(icon) view and disable show "
+"application entries in list view."
+msgstr ""
+"グリッド（アイコン）表示のアプリケーションエントリを有効にし、リスト表示のア"
+"プリケーションエントリーを無効にします。"
+
+#. configurableMenu@lestcape->settings-schema.json->app-button-
+#. width->description
+msgid "Maximum width of the application entry text:"
+msgstr "アプリケーションエントリテキストの最大横幅"
+
+#. configurableMenu@lestcape->settings-schema.json->app-button-width->tooltip
+msgid "Set the maximum width of the application entry text."
+msgstr "アプリケーションのエントリテキスト最大横幅を設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->accessible-
+#. icons->description
+msgid "Show icons on the accessible panel"
+msgstr "Accessible パネルにアイコンを表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->accessible-icons->tooltip
+msgid "Choose whether or not to have icons on the accessible panel."
+msgstr "Accessible パネル上にアイコンを表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->fix-menu-
+#. corner->description
+msgid "Menu bordering screen edge"
+msgstr "メニューを画面端に付ける"
+
+#. configurableMenu@lestcape->settings-schema.json->fix-menu-corner->tooltip
+msgid "Choose whether or not the menu bordering the screen edge."
+msgstr "メニューが画面端に付けるかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-accesible-
+#. size->description
+msgid "Accessible icons size:"
+msgstr "Accessible アイコンのサイズ:"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-accesible-
+#. size->tooltip
+msgid "Set the accessible icons size."
+msgstr "Accessible アイコンのサイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-gnomenu-
+#. size->description
+msgid "GnoMenu icons size:"
+msgstr "GnoMenu アイコンのサイズ:"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-gnomenu-
+#. size->tooltip
+msgid "Set the GnoMenu icons size."
+msgstr "GnoMenu アイコンのサイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-max-fav-
+#. size->description
+msgid "Maximum favorites icon size:"
+msgstr "お気に入りアイコンの最大サイズ:"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-max-fav-size->tooltip
+msgid "Set the maximum size of the favorites icon."
+msgstr "お気に入りアイコンの最大サイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-cat-size->description
+msgid "Category icon size:"
+msgstr "カテゴリアイコンのサイズ:"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-cat-size->tooltip
+msgid "Set the category icon size."
+msgstr "カテゴリアイコンサイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->show-time-
+#. date->description
+msgid "Show time and date"
+msgstr "日付・時間を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->show-time-date->tooltip
+msgid "Choose whether or not to show time and date on the menu."
+msgstr "メニューに日付・時間を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->automatic-
+#. size->description
+msgid "Automatic size"
+msgstr "サイズの自動化"
+
+#. configurableMenu@lestcape->settings-schema.json->allow-resizing->tooltip
+msgid "Choose whether or not to allow resizing the menu."
+msgstr "メニューのサイズを変更できるようにするかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->automatic-size->tooltip
+msgid "Choose whether or not to automatic adjust of the menu size."
+msgstr "メニューのサイズを自動的に調整するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-power-
+#. size->description
+msgid "System icons size:"
+msgstr "システムアイコンのサイズ:"
+
+#. configurableMenu@lestcape->settings-schema.json->icon-power-size->tooltip
+msgid "Set the system icons size."
+msgstr "システムアイコンのサイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->enable-
+#. autoscroll->description
+msgid "Enable autoscrolling"
+msgstr "自動スクロールを有効にする"
+
+#. configurableMenu@lestcape->settings-schema.json->enable-autoscroll->tooltip
+msgid "Choose whether or not to enable smooth autoscrolling on the menu."
+msgstr "メニューのスムーズな自動スクロールを有効にするかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->show-
+#. favorites->description
+msgid "Show favorites"
+msgstr "お気に入りを表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->show-favorites->tooltip
+msgid "Choose whether or not to show favorites on the menu."
+msgstr "メニューにお気に入りを表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->control-box->description
+msgid "Control buttons have a box"
+msgstr "コントロールボタンの周りに枠を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->control-box->tooltip
+msgid "Choose whether or not to have a box on the control buttons."
+msgstr "コントロールボタンの周りに枠を表示するかかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->categories-hover->description
+msgid "Open the category when I move my mouse over it"
+msgstr "上にマウスを移動した時にカテゴリを開く"
+
+#. configurableMenu@lestcape->settings-schema.json->categories-hover->tooltip
+msgid ""
+"Choose whether or not to open the category when the mouse move over it, "
+"otherwise need the mouse click."
+msgstr ""
+"上にマウスを移動した時にカテゴリを開くか、マウスのクリックでカテゴリを開くか"
+"を選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->categories-
+#. icons->description
+msgid "Show icons on the categories"
+msgstr "カテゴリアイコンを表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->categories-icons->tooltip
+msgid "Choose whether or not to have icons on the categories."
+msgstr "カテゴリアイコンを表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->show-recent->description
+msgid "Show recent files"
+msgstr "最近使用したファイルを表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->show-recent->tooltip
+msgid "Choose whether or not to show a recent file list in the menu."
+msgstr "メニューに最近使用したファイルの一覧を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->scroll-
+#. categories->description
+msgid "Show scrolling area of categories"
+msgstr "カテゴリにスクロール領域を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->scroll-categories->tooltip
+msgid "Choose whether or not to show the scrolling area of categories."
+msgstr "カテゴリのスクロール領域を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->arrow-categories->description
+msgid "Show arrow on the categories"
+msgstr "カテゴリの矢印を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->arrow-categories->tooltip
+msgid "Choose whether or not to show the arrow on the categories."
+msgstr "カテゴリに矢印を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->arrow-categories-selected->description
+msgid "Only show arrow when selected category"
+msgstr "カテゴリを選択した時のみ矢印を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->arrow-categories-selected->tooltip
+msgid ""
+"Choose whether or not to only show the arrow when selected the category."
+msgstr "カテゴリを選択した場合にのみ矢印を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->show-app-
+#. description->description
+msgid "Show description of the selected application"
+msgstr "選択したアプリケーションの説明を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->show-app-
+#. description->tooltip
+msgid ""
+"Choose whether or not to show the selected application description on the "
+"menu."
+msgstr ""
+"メニューで選択したアプリケーションの説明を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->show-box-
+#. pointer->description
+msgid "Show menu box pointer"
+msgstr "メニューボックスのポインターを表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->show-box-pointer->tooltip
+msgid "Choose whether or not to show the menu box pointer."
+msgstr "メニューボックスのポインタを表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->date-format->description
+msgid "Date format:"
+msgstr "日付のフォーマット:"
+
+#. configurableMenu@lestcape->settings-schema.json->date-format->tooltip
+msgid "Choose the date format to show time on the menu."
+msgstr "メニューに表示する日時の日付フォーマット形式を入力します。"
+
+#. configurableMenu@lestcape->settings-schema.json->spacer-line->description
+msgid "Show separator line"
+msgstr "セパレーターに線を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->spacer-line->tooltip
+msgid "Choose whether or not to show a line on separator."
+msgstr "セパレーター上に線を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->app-description-
+#. size->description
+msgid "Font size of the selected application description:"
+msgstr "選択アプリケーション説明のフォントサイズ："
+
+#. configurableMenu@lestcape->settings-schema.json->app-description-
+#. size->tooltip
+msgid "Set the font size of the selected application description."
+msgstr "選択したアプリケーション説明のフォントサイズを設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->show-power-
+#. buttons->description
+msgid "Show system buttons"
+msgstr "システムボタンを表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->show-power-
+#. buttons->tooltip
+msgid "Choose whether or not to show system buttons on the menu."
+msgstr "メニュー上のシステムボタンを表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->show-removable-
+#. drives->description
+msgid "Show removable drives on the accessible panel"
+msgstr "Accessible パネルにリムーバブルドライブを表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->show-removable-
+#. drives->tooltip
+msgid "Choose whether or not to show removable drives on the accessible panel."
+msgstr ""
+"Accessible パネルの取り外し可能なドライブを表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->power-box->description
+msgid "System buttons have a box"
+msgstr "システムボタンの周りに枠を表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->power-box->tooltip
+msgid "Choose whether or not to have a box on the system buttons."
+msgstr "システムボタンの周りに枠を表示するかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->power-symbolic->description
+msgid "Show symbolic icons on the system buttons"
+msgstr "システムボタンのアイコンを表示する"
+
+#. configurableMenu@lestcape->settings-schema.json->power-symbolic->tooltip
+msgid ""
+"Enable this option to show symbolic icons, on the system buttons and disable "
+"to show full color."
+msgstr ""
+"システムのボタンをアイコンで表示するには、このオプションを有効にします。"
+
+#. configurableMenu@lestcape->settings-schema.json->submenu-align->description
+msgid "Align the submenu with the parent"
+msgstr "メインメニュー・サブメニューの位置を揃える"
+
+#. configurableMenu@lestcape->settings-schema.json->submenu-align->tooltip
+msgid "Choose whether or not to align the submenu with the parent."
+msgstr "メインメニューとサブメニューとの位置を揃えるかどうかを選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->submenu-width->description
+msgid "Submenu width:"
+msgstr "サブメニューの横幅:"
+
+#. configurableMenu@lestcape->settings-schema.json->submenu-width->tooltip
+msgid "Set the submenu width."
+msgstr "サブメニューの横幅を設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->submenu-height->description
+msgid "Submenu height:"
+msgstr "サブメニューの縦幅:"
+
+#. configurableMenu@lestcape->settings-schema.json->submenu-height->tooltip
+msgid "Set the submenu height."
+msgstr "サブメニューの縦幅を設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->search-sorted->description
+msgid "Search results sorted by:"
+msgstr "検索結果の並べ替え方法:"
+
+#. configurableMenu@lestcape->settings-schema.json->search-sorted->tooltip
+msgid "Select a method to sort search results."
+msgstr "検索結果の並べ替え方法を選択します。"
+
+#. configurableMenu@lestcape->settings-schema.json->search-web->description
+msgid "Enable web search"
+msgstr "Web 検索を有効にする"
+
+#. configurableMenu@lestcape->settings-schema.json->search-web->tooltip
+msgid "Allows the web search with the selected search engines."
+msgstr "選択したた検索エンジンで Web 検索を可能にします。"
+
+#. configurableMenu@lestcape->settings-schema.json->search-wikipedia->description
+msgid "Enable web search with wikipedia"
+msgstr "Wikipedia Web 検索を有効にする"
+
+#. configurableMenu@lestcape->settings-schema.json->search-wikipedia->tooltip
+msgid "Allows web search to the wikipedia search engine."
+msgstr "Wikipedia 検索エンジンの Web 検索を有効にします。"
+
+#. configurableMenu@lestcape->settings-schema.json->search-google->description
+msgid "Enable web search with google"
+msgstr "Google Web 検索を有効にする"
+
+#. configurableMenu@lestcape->settings-schema.json->search-google->tooltip
+msgid "Allows web search to the google search engine."
+msgstr "Google 検索エンジンの Web 検索を可能にします。"
+
+#. configurableMenu@lestcape->settings-schema.json->search-duckduckgo->description
+msgid "Enable web search with duckduckgo"
+msgstr "DuckDuckGo Web 検索を有効にする"
+
+#. configurableMenu@lestcape->settings-schema.json->search-duckduckgo->tooltip
+msgid "Allows web search to the duckduckgo search engine."
+msgstr "DuckDuckGo 検索エンジンの Web 検索を可能にします。"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-tools->description
+msgid "Enable the Cinnamon Installer tool"
+msgstr "Cinnamon インストールツールを有効にする"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-tools->tooltip
+msgid ""
+"Allows install, uninstall and search for programs and packages(need internet "
+"connection to be download)."
+msgstr ""
+"プログラム・パッケージのインストール、アンインストール・パッケージを行えま"
+"す。(ダウンロードするためインターネット接続が必要です）"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-search->description
+msgid "Enable to search for packages"
+msgstr "パッケージ検索を有効にする"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-search->tooltip
+msgid "Allows search for new packages on the repository."
+msgstr "リポジトリより新しいパッケージの検索を可能にします。"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-max-search->description
+msgid "Maximum number of packages:"
+msgstr "パッケージの最大数:"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-max-search->tooltip
+msgid "Set the maximum number of packages to show."
+msgstr "表示するパッケージの最大数を設定します。"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-update-button->description
+msgid "Update the Cinnamon Installer tool"
+msgstr "Cinnamon インストーラーツールを更新する"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-update-button->tooltip
+msgid "Press this button to update the Cinnamon Installer tool."
+msgstr "Cinnamon インストーラツールを更新するには、このボタンを押します。"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-update-check->description
+msgid ""
+"Enable to check for a new version of Cinnamon Installer when the menu started"
+msgstr "メニュー起動時に Cinnamon インストーラの新バージョン確認を有効にします"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-update-check->tooltip
+msgid ""
+"Allows to check for a new version of Cinnamon Installer when the menu "
+"started."
+msgstr ""
+"メニューが起動した時に Cinnamon インストーラの新しいバージョンを確認する事が"
+"できます。"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-uninstall-button->description
+msgid "Uninstall the Cinnamon Installer tool"
+msgstr "Cinnamon インストーラツールをアンインストールする"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-uninstall-button->tooltip
+msgid "Press this button to uninstall the Cinnamon Installer tool."
+msgstr ""
+"Cinnamon インストーラツールをアンインストールするには、このボタンを押します。"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-default->description
+msgid "Enable the default Cinnamon packages manager tools"
+msgstr "デフォルト Cinnamon パッケージマネージャツールを有効にする"
+
+#. configurableMenu@lestcape->settings-schema.json->installer-default->tooltip
+msgid "Allows the use of the default packages manager(only if it's available)."
+msgstr ""
+"デフォルトのパッケージマネージャを使用することができます。(それだけが使用可能"
+"な場合)"
