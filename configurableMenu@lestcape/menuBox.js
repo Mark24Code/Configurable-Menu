@@ -34,7 +34,7 @@ const GnomeSession = imports.misc.gnomeSession;
 const ScreenSaver = imports.misc.screenSaver;
 
 const AppletPath = imports.ui.appletManager.applets['configurableMenu@lestcape'];
-const ConfigurableScrolls = AppletPath.configurableScrolls;
+const ConfigurableMenus = AppletPath.configurableMenus;
 const MenuItems = AppletPath.menuItems;
 //MenuBox
 
@@ -739,20 +739,29 @@ SystemBox.prototype = {
 };
 
 function CategoriesApplicationsBox() {
-   this._init();
+   this._init.apply(this, arguments);
 }
-
+//this.categoriesApplicationsBox.catBoxIter
 CategoriesApplicationsBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function() {
-      this.actor = new St.BoxLayout();
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
+      this.scrollBox = new ConfigurableMenus.ScrollItemsBox(this, this.box, true, St.Align.START);
+      this.actor = this.scrollBox.actor;
+      this.actor.set_style_class_name('menu-categories-box');
+      //this.actor.set_vertical(true);
+      this.actor.reactive = true;
       this.actor._delegate = this;
    },
 
-   destroy: function() {
-      this.actor.destroy();
+   _getVisibleChildren: function() {
+      //return this.box.get_focus_chain();
+      return this.box.get_children();
+            //.filter(x => !(x._delegate instanceof PopupMenu.PopupSeparatorMenuItem));
    },
-    
-   acceptDrop : function(source, actor, x, y, time) {
+
+   acceptDrop: function(source, actor, x, y, time) {
       if(source instanceof MenuItems.FavoritesButton) {
          source.actor.destroy();
          actor.destroy();
@@ -760,6 +769,95 @@ CategoriesApplicationsBox.prototype = {
          return true;
       }
       return false;
+   },
+
+   getFirstVisible: function() {
+      let children = this._getVisibleChildren();
+      if(children.length > 0)
+         return children[0];
+      Main.notify("" + children.length);
+      return null;
+   },
+
+   isInBorder: function(symbol, actor) {
+      let children = this._getVisibleChildren();
+      let num = children.length;
+      this._nColumns = 1;
+      let nRows = Math.floor(num / this._nColumns);
+      let index = children.indexOf(actor);
+      let posX = index % this._nColumns;
+      let posY = Math.floor(index/this._nColumns);
+      switch(symbol) {
+         case Clutter.KEY_Up:
+            return (posy == 0);
+         case Clutter.KEY_Down:
+            return (posY == nRows - 1);
+         case Clutter.KEY_Right:
+            return (posX == this._nColumns - 1);
+         case Clutter.KEY_Left:
+            return (posX == 0);
+      }
+      return false;
+   },
+
+   navegate: function(symbol, actor) {
+      let children = this._getVisibleChildren();
+      let num = children.length;
+      let nextItem = null;
+      if(actor) {
+         this._nColumns = 1;
+         let nRows = Math.floor(num / this._nColumns);
+         let index = children.indexOf(actor);
+         if(index != -1) {
+            let posX = index % this._nColumns;
+            let posY = Math.floor(index/this._nColumns);
+            switch(symbol) {
+               case Clutter.KEY_Up:
+                  posY = (posY == 0) ? nRows - 1 : posY - 1;
+                  break;
+               case Clutter.KEY_Down:
+                  posY = (posY == nRows - 1) ? 0 : posY + 1;
+                  break;
+               case Clutter.KEY_Right:
+                  posX = (posX == this._nColumns - 1) ? 0 : posX + 1;
+                  break;
+               case Clutter.KEY_Left:
+                  posX = (posX == 0) ? this._nColumns - 1 : posX - 1;
+                  break;
+            }
+            //Main.notify("bbbb " + index + " " + posX + " " + posY  + " " + this._nColumns + " " + nRows + " " + num);
+            if(posY*this._nColumns + posX < num)
+               nextItem = children[posY*this._nColumns + posX];
+         }
+      }
+      if(!nextItem && num > 0)
+         return children[0];
+      return nextItem;
+   },
+
+   setVertical: function(vertical) {
+      this.box.set_vertical(vertical);
+      this.scrollBox.setVertical(vertical);
+   },
+
+   getVertical: function(vertical) {
+      return this.box.get_vertical();
+   },
+
+   scrollToActor: function(actor) {
+      this.scrollBox.scrollToActor(actor);
+   },
+
+   setAutoScrolling: function(enabled) {
+      this.scrollBox.setAutoScrolling(enabled);
+   },
+
+   setScrollVisible: function(visible) {
+      this.scrollBox.setScrollVisible(visible);
+   },
+
+   setFill: function(fill) {
+      this.scrollBox.setFill(fill);
    }
 };
 
@@ -1355,10 +1453,10 @@ PowerBox.prototype = {
    _onEnterEvent: function(actor, event) {
       if(this.powerSelected != -1)
          this._powerButtons[this.powerSelected].setActive(false);
-      this.parent.applicationsScrollBox.setAutoScrolling(false);
+      this.parent.arrayBoxLayout.scrollBox.setAutoScrolling(false);
       this.parent.categoriesScrollBox.setAutoScrolling(false);
       //this.parent.favoritesScrollBox.setAutoScrolling(false);
-      this.parent.applicationsScrollBox.setAutoScrolling(this.parent.autoscroll_enabled);
+      this.parent.arrayBoxLayout.scrollBox.setAutoScrolling(this.parent.autoscroll_enabled);
       this.parent.categoriesScrollBox.setAutoScrolling(this.parent.autoscroll_enabled);
       //this.parent.favoritesScrollBox.setAutoScrolling(this.autoscroll_enabled);
       this.powerSelected = this.indexOf(actor);
@@ -1471,16 +1569,35 @@ SelectedAppBox.prototype = {
       this.appDescriptionSize = 6;
       this.appTitleSize = 15;
       this.timeOutDateTime = 0;
+      this._parentId = 0;
       this.boxHeightChange = true;
       this.actor = new St.BoxLayout({ style_class: 'menu-selected-app-box', vertical: true });
       this.appTitle = new St.Label({ style_class: 'menu-selected-app-title', text: "" });
       this.appDescription = new St.Label({ style_class: 'menu-selected-app-description', text: "" });
       this.actor.add_actor(this.appTitle);
       this.actor.add_actor(this.appDescription);
-     // this.setAlign(St.Align.START);
+      this.actor.connect('parent-set', Lang.bind(this, this._onParentSet));
       this.setDateTimeVisible(activeDateTime);
       this.appTitle.connect('allocation_changed', Lang.bind(this, this._onAllocationChanged));
       this.appDescription.connect('allocation_changed', Lang.bind(this, this._onAllocationChanged));
+      this.actor._delegate = this;
+   },
+
+   _onParentSet: function(actor, oldParent) {
+      if((oldParent)&&(this._parentId != 0))
+         oldParent.disconnect(this._parentId);
+      this._parentId = 0;
+      let parent = this.actor.get_parent();
+      if(parent)
+         this._parentId = parent.connect("allocation_changed", Lang.bind(this, this._onParentAllocationChanged)); 
+   },
+
+   _onParentAllocationChanged: function() {
+      let parent = this.actor.get_parent();
+      if(parent) {
+        let [minWidth, natWidth] = this.actor.get_preferred_width(-1);
+        this.actor.style = 'max-width: ' + natWidth + 'px;';
+      }
    },
 
    destroy: function() {
@@ -1608,7 +1725,7 @@ GnoMenuBox.prototype = {
       this.powerBox = new St.BoxLayout({ vertical: verticalPanel });
       this.actor.add_actor(this.hoverBox);
       this.itemsBox = new St.BoxLayout({ vertical: verticalPanel });
-      this.scrollActor = new ConfigurableScrolls.ScrollItemsBox(parent, this.itemsBox, verticalPanel, St.Align.START);
+      this.scrollActor = new ConfigurableMenus.ScrollItemsBox(parent, this.itemsBox, verticalPanel, St.Align.START);
       this.separatorTop = new SeparatorBox(false, 20);
       this.actor.add_actor(this.separatorTop.actor);
       this.actor.add(this.scrollActor.actor, { x_fill: true, y_fill: true, expand: false});
@@ -2175,7 +2292,7 @@ AccessibleBox.prototype = {
       this.itemsBox.add_actor(this.separatorMiddle.actor);
       this.itemsBox.add_actor(this.systemName);
       this.itemsBox.add_actor(this.itemsSystem);
-      this.scrollActor = new ConfigurableScrolls.ScrollItemsBox(parent, this.itemsBox, true, St.Align.START);
+      this.scrollActor = new ConfigurableMenus.ScrollItemsBox(parent, this.itemsBox, true, St.Align.START);
       this.separatorTop = new SeparatorBox(false, 20);//St.BoxLayout({ vertical: false, height: 20 });
       this.internalBox.add_actor(this.separatorTop.actor);
       this.internalBox.add(this.scrollActor.actor, { y_fill: true, expand: true });

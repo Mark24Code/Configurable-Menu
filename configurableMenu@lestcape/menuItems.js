@@ -570,6 +570,9 @@ CategoryButton.prototype = {
       this.actor._delegate = this;
    },
 
+   setActive: function (active) {
+   },
+
    _setCategoryProperties: function(category) {
       let labelName;
       let icon = null;
@@ -595,7 +598,7 @@ CategoryButton.prototype = {
    },
 
    setArrow: function(haveArrow, always, orientation) {
-      this.haveArrow = haveArrow;
+   /*   this.haveArrow = haveArrow;
       this.haveArrowalways = always;
      // Main.notify("haveArrow:" + haveArrow);
       this.actor.remove_actor(this.container);
@@ -616,7 +619,7 @@ CategoryButton.prototype = {
          }
       } else {
          this.actor.add(this.container, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
-      }
+      }*/
    },
 
    setArrowVisible: function(visible) {
@@ -712,8 +715,8 @@ GenericApplicationButton.prototype = {
       if((app)&&(searchTexts == null))
          searchTexts = [app.get_name(), app.get_description(), app.get_id()];
       if(this.withMenu) {
-         this.menu = new PopupMenu.PopupSubMenu(this.actor);
-         //this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
+         //this.menu = new PopupMenu.PopupSubMenu(this.actor);
+         this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
          this.menu.actor.set_style_class_name('menu-context-menu');
          this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
       }
@@ -726,6 +729,7 @@ GenericApplicationButton.prototype = {
          }
       }
       this.searchScore = 0;
+      this.actor._delegate = this;
    },
 
    search: function(pattern) {
@@ -783,16 +787,19 @@ GenericApplicationButton.prototype = {
                      if(boxH > monitor.height - 100)
                         boxH = monitor.height - 100;
                      box.set_height(boxH);
-                     this.widthC = null;
                      this.toggleMenu();
+                     this.widthC = null;
+                     this.menu.actor.set_width(-1);
                      if(this.parent.appMenu) {
                         this.actor.get_parent().set_height(-1);
                      }
                      this.parent._updateSubMenuSize();
                   } else {
-                     this.widthC = this.parent.menu.actor.get_width();
-                     this.parent.menu.actor.set_width(-1);
+                     this.widthC = this.parent.menu.requestedWidth;
                      this.toggleMenu();
+                     let [minWidth, natWidth] = this.menu.actor.get_preferred_width(-1);
+                     this.menu.actor.set_width(natWidth);
+                     this.parent.menu.setSize(this.parent.menu.requestedWidth, this.parent.menu.requestedHeight);
                      //this.parent._updateSize();
                   }
                   this.parent._previousContextMenuOpen = this;
@@ -824,12 +831,12 @@ GenericApplicationButton.prototype = {
     
    closeMenu: function() {
       if(this.withMenu) {
+         this.menu.close();
+         this.menu.actor.set_width(-1);
          if(this.widthC) {
-            this.parent.menu.actor.set_width(this.widthC);
-            this.parent.width = this.widthC;
+            this.parent.menu.setSize(this.widthC, this.parent.menu.requestedHeight);
             this.widthC = null;
          }
-         this.menu.close();
       }
    },
     
@@ -968,6 +975,7 @@ ApplicationButton.prototype = {
       this._draggable = DND.makeDraggable(this.actor);
       this._draggable.connect('drag-end', Lang.bind(this, this._onDragEnd));
       this.isDraggableApp = true;
+      this.actor._delegate = this;
    },
 
    _onDragEnd: function() {
