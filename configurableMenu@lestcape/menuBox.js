@@ -351,27 +351,33 @@ FavoritesBoxLine.prototype = {
    }
 };
 
-function FavoritesBoxExtended(parent, numberLines, vertical) {
-   this._init(parent, numberLines, vertical);
+function FavoritesBoxExtended() {
+   this._init.apply(this, arguments);
 }
 
 FavoritesBoxExtended.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function(parent, numberLines, vertical) {
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
       vertical = (vertical == true);
-      this.parent = parent;
-      this.favRefresh = true;
+      this._parent = parent;
+      this._favRefresh = true;
       this._lastFocus = null;
-      this.actor = new St.BoxLayout();
+      this._firstElement = null;
+      this.scrollBox = new ConfigurableMenus.ScrollItemsBox(this, this.box, vertical, St.Align.START);
+      this.actor = this.scrollBox.actor;
+      this.actor.add(this.box);
       //this.actor._delegate = this;
       this.linesDragPlaces = new Array();
       let internalLine;
       for(let i = 0; i < numberLines; i++) {
-         internalLine = new FavoritesBoxLine(this, vertical);
+         internalLine = new FavoritesBoxLine(this, !vertical);
          this.linesDragPlaces.push(internalLine);
-         this.actor.add(internalLine.actor, { x_align: St.Align.MIDDLE, y_align: St.Align.START, x_fill: true, y_fill: false, expand: true });
+         this.box.add(internalLine.actor, { x_align: St.Align.MIDDLE, y_align: St.Align.START, x_fill: true, y_fill: false, expand: true });
       }
-      this.firstElement = null;
-      this.actor.set_vertical(!vertical);
+
+      this.box.set_vertical(vertical);
       this.setVertical(vertical);
    },
 
@@ -379,11 +385,36 @@ FavoritesBoxExtended.prototype = {
       let focusedActor = global.stage.get_key_focus();
    },
 
-   destroy: function() {
-      for(let i = 0; i < this.linesDragPlaces.length; i++) {
-         this.linesDragPlaces[i].destroy();
+   _onEnterEvent: function(actor) {
+      this._lastFocus = global.stage.get_key_focus();
+   },
+
+   _addInCorrectBox: function(box, actor, menu, properties) {
+      box.add(actor, properties);
+      box.add_actor(menu.actor);
+   },
+
+   _navegateFocusOut: function(linesDragPlaces) {
+      let focus = global.stage.get_key_focus();
+      if(linesDragPlaces.actor.contains(focus)) {
+         if(this._lastFocus)
+            this._lastFocus.grab_key_focus();
+         else
+            global.stage.set_key_focus(null);
       }
-      this.actor.destroy();
+   },
+
+   _generateChildrenList: function() {
+      let result = new Array();
+      let childrens = this.box.get_children();
+      let childrensItems;
+      for(let i = 0; i < childrens.length; i++) {
+         childrensItems = childrens[i].get_children();
+         for(let j = 0; j < childrensItems.length; j++) {
+            result.push(childrensItems[j]);
+         }
+      }
+      return result;
    },
 
    setDragPlaceholder: function(dragPlaceholder) {
@@ -399,7 +430,7 @@ FavoritesBoxExtended.prototype = {
 
    activeHoverElement: function(actor) {
       let result = new Array();
-      let childrens = this.actor.get_children();
+      let childrens = this.box.get_children();
       let childrensItems;
       for(let i = 0; i < childrens.length; i++) {
          childrensItems = childrens[i].get_children();
@@ -409,7 +440,7 @@ FavoritesBoxExtended.prototype = {
       }
       if(actor) {
          actor.add_style_pseudo_class('hover');
-         this.parent.favoritesScrollBox.scrollToActor(actor);
+         this._parent.favoritesScrollBox.scrollToActor(actor);
       }
    },
 
@@ -418,7 +449,7 @@ FavoritesBoxExtended.prototype = {
    },
 
    getBeginPosAtLine: function(line, itemPos) {
-      this.favRefresh = false;
+      this._favRefresh = false;
       let sumOfElements = 0;
       if(itemPos > 0)
          sumOfElements += this.linesDragPlaces.length*(itemPos);
@@ -426,7 +457,7 @@ FavoritesBoxExtended.prototype = {
    },
 
    needRefresh: function() {
-      return this.favRefresh;
+      return this._favRefresh;
    },
 
    setNumberLines: function(numberLines) {
@@ -443,93 +474,74 @@ FavoritesBoxExtended.prototype = {
       for(let i = this.linesDragPlaces.length; i < numberLines; i++) {
          internalLine = new FavoritesBoxLine(this, this.isVertical());
          this.linesDragPlaces.push(internalLine);
-         this.actor.add(internalLine.actor, { x_align: St.Align.MIDDLE, y_align: St.Align.START, x_fill: true, y_fill: false, expand: true });
+         this.box.add(internalLine.actor, { x_align: St.Align.MIDDLE, y_align: St.Align.START, x_fill: true, y_fill: false, expand: true });
       }
       let lastPos = this.linesDragPlaces.length;
       while(numberLines < lastPos) {
          lastPos--;
-         if(this.linesDragPlaces[lastPos].actor.get_parent() == this.actor)
-            this.actor.remove_actor(this.linesDragPlaces[lastPos].actor);
+         if(this.linesDragPlaces[lastPos].actor.get_parent() == this.box)
+            this.box.remove_actor(this.linesDragPlaces[lastPos].actor);
          this.linesDragPlaces[lastPos].actor.destroy();
          this.linesDragPlaces.splice(lastPos, 1);
       }
       for(let i = 0; i < saveItems.length; i++) {
          this.add(saveItems[i]);
       }
-      //Main.notify("chil:" + this.actor.get_children().length + " line:" + this.linesDragPlaces.length);
+      //Main.notify("chil:" + this.box.get_children().length + " line:" + this.linesDragPlaces.length);
    },
 
    setVertical: function(vertical) {
       if(vertical != this.isVertical()) {
-         this.actor.set_vertical(!vertical);
-         let childrens = this.actor.get_children();
+         this.box.set_vertical(vertical);
+         this.scrollBox.setVertical(vertical);
+         let childrens = this.box.get_children();
          for(let i = 0; i < childrens.length; i++) {
-            childrens[i].set_vertical(vertical);
+            childrens[i].set_vertical(!vertical);
          }
       }
    },
 
-   getFirstElement: function() {
-     // let childrens = this.actor.get_children();
-     // if(childrens.length > 0) {
-     //    let childrensItems = childrens[0].get_children();
-     //    if(childrensItems.length > 0)
-     //       return childrensItems[0];
-     // }
-     // return null;
-      return this.firstElement;
-   },
-
    isVertical: function() {
-      return !this.actor.get_vertical();
+      return this.box.get_vertical();
    },
 
    getRealSpace: function() {
       let result = 0;
-      let childrens = this.actor.get_children();
+      let childrens = this.box.get_children();
       for(let i = 0; i < childrens.length; i++)
          result += childrens[i].get_height();
       return result;
    },
 
-   add: function(actor, menu, properties) {
+   addMenuItem: function(menuItem, position, properties) {
       try {
-         if(!this.firstElement) {
-            this.firstElement = actor;
-            this.firstElement.connect('key-focus-in', Lang.bind(this, function(actor, event) {
+         if(!this._firstElement) {
+            this._firstElement = menuItem.actor;
+            this._firstElement.connect('key-focus-in', Lang.bind(this, function(actor, event) {
                this.activeHoverElement(actor);
             }));
          }
-         actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
-         let childrens = this.actor.get_children();
+         menuItem.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
+         let childrens = this.box.get_children();
          let currentNumberItems = childrens[0].get_children().length;
          for(let i = 1; i < childrens.length; i++) {
             if(currentNumberItems > childrens[i].get_children().length) {
-               this._addInCorrectBox(childrens[i], actor, menu, properties);
+               this._addInCorrectBox(childrens[i], menuItem.actor, menuItem.menu, properties);
                currentNumberItems--; 
                break;
             }
          }
          if(currentNumberItems == childrens[0].get_children().length)
-            this._addInCorrectBox(childrens[0], actor, menu, properties);
+            this._addInCorrectBox(childrens[0], menuItem.actor, menuItem.menu, properties);
       
       } catch(e) {
          Main.notify("Favorite add element error", e.message);
       }
    },
 
-   _onEnterEvent: function(actor) {
-      this._lastFocus = global.stage.get_key_focus();
-   },
-
-   _addInCorrectBox: function(box, actor, menu, properties) {
-      box.add(actor, properties);
-      box.add_actor(menu.actor);
-   },
-
    removeAll: function() {
       try {
-         this.firstElement = null;
+         this._firstElement = null;
          //Remove all favorites and release the focus if is necessary.
          for(let i = 0; i < this.linesDragPlaces.length; i++) {
             this._navegateFocusOut(this.linesDragPlaces[i]);
@@ -541,38 +553,26 @@ FavoritesBoxExtended.prototype = {
                parentHolder.remove_actor(this._dragPlaceholder.actor);
             this._dragPlaceholder = null;
          }
-         this.favRefresh = true;
+         this._favRefresh = true;
          this.linesDragPlaces = new Array();
       } catch(e) {
          Main.notify("Favorite remove element error", e.message);
       }
    },
 
-   _navegateFocusOut: function(linesDragPlaces) {
-      let focus = global.stage.get_key_focus();
-      if(linesDragPlaces.actor.contains(focus)) {
-         if(this._lastFocus)
-            this._lastFocus.grab_key_focus();
-         else
-            global.stage.set_key_focus(null);
-      }
-   },
-
-   _generateChildrenList: function() {
-      let result = new Array();
-      let childrens = this.actor.get_children();
-      let childrensItems;
-      for(let i = 0; i < childrens.length; i++) {
-         childrensItems = childrens[i].get_children();
-         for(let j = 0; j < childrensItems.length; j++) {
-            result.push(childrensItems[j]);
-         }
-      }
-      return result;
+   getFirstElement: function() {
+     // let childrens = this.box.get_children();
+     // if(childrens.length > 0) {
+     //    let childrensItems = childrens[0].get_children();
+     //    if(childrensItems.length > 0)
+     //       return childrensItems[0];
+     // }
+     // return null;
+      return this._firstElement;
    },
 
    isInBorder: function(symbol, actor) {
-      let childrens = this.actor.get_children();
+      let childrens = this.box.get_children();
       let childrensItems;
       let posX, posY;
       for(let i = 0; i < childrens.length; i++) {
@@ -599,8 +599,8 @@ FavoritesBoxExtended.prototype = {
       return false;
    },
 
-   navegateFavBox: function(symbol, actor) {
-      let childrens = this.actor.get_children();
+   navegate: function(symbol, actor) {
+      let childrens = this.box.get_children();
       let childrensItems;
       let posX, posY;
       for(let i = 0; i < childrens.length; i++) {
@@ -675,6 +675,13 @@ FavoritesBoxExtended.prototype = {
       if(nextItem)
          global.stage.set_key_focus(nextItem);
       return nextItem;
+   },
+
+   destroy: function() {
+      for(let i = 0; i < this.linesDragPlaces.length; i++) {
+         this.linesDragPlaces[i].destroy();
+      }
+      this.actor.destroy();
    }
 };
 
@@ -738,11 +745,11 @@ SystemBox.prototype = {
    }
 };
 
-function CategoriesApplicationsBox() {
+function CategoriesBox() {
    this._init.apply(this, arguments);
 }
-//this.categoriesApplicationsBox.catBoxIter
-CategoriesApplicationsBox.prototype = {
+
+CategoriesBox.prototype = {
    __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
 
    _init: function() {
@@ -756,8 +763,8 @@ CategoriesApplicationsBox.prototype = {
    },
 
    _getVisibleChildren: function() {
-      //return this.box.get_focus_chain();
-      return this.box.get_children();
+      return this.box.get_focus_chain();
+      //return this.box.get_children();
             //.filter(x => !(x._delegate instanceof PopupMenu.PopupSeparatorMenuItem));
    },
 
@@ -782,20 +789,33 @@ CategoriesApplicationsBox.prototype = {
    isInBorder: function(symbol, actor) {
       let children = this._getVisibleChildren();
       let num = children.length;
-      this._nColumns = 1;
-      let nRows = Math.floor(num / this._nColumns);
-      let index = children.indexOf(actor);
-      let posX = index % this._nColumns;
-      let posY = Math.floor(index/this._nColumns);
-      switch(symbol) {
-         case Clutter.KEY_Up:
-            return (posy == 0);
-         case Clutter.KEY_Down:
-            return (posY == nRows - 1);
-         case Clutter.KEY_Right:
-            return (posX == this._nColumns - 1);
-         case Clutter.KEY_Left:
-            return (posX == 0);
+      let nColumns = 1;
+      if(actor) {
+         let index = children.indexOf(actor);
+         if(index != -1) {
+            let nColumns, nRows, posX, posY;
+            if(this.box.get_vertical()) {
+                nColumns = 1;
+                nRows = Math.floor(num / nColumns);
+                posX = index % nColumns;
+                posY = Math.floor(index/nColumns);
+            } else {
+                nRows = 1;
+                nColumns = Math.floor(num / nColumns);
+                posX = Math.floor(index/nColumns);
+                posY = index % nColumns;
+            }
+            switch(symbol) {
+               case Clutter.KEY_Up:
+                  return (posy == 0);
+               case Clutter.KEY_Down:
+                  return (posY == nRows - 1);
+               case Clutter.KEY_Right:
+                  return (posX == nColumns - 1);
+               case Clutter.KEY_Left:
+                  return (posX == 0);
+            }
+         }
       }
       return false;
    },
@@ -805,12 +825,20 @@ CategoriesApplicationsBox.prototype = {
       let num = children.length;
       let nextItem = null;
       if(actor) {
-         this._nColumns = 1;
-         let nRows = Math.floor(num / this._nColumns);
          let index = children.indexOf(actor);
          if(index != -1) {
-            let posX = index % this._nColumns;
-            let posY = Math.floor(index/this._nColumns);
+            let nColumns, nRows, posX, posY;
+            if(this.box.get_vertical()) {
+                nColumns = 1;
+                nRows = Math.floor(num / nColumns);
+                posX = index % nColumns;
+                posY = Math.floor(index/nColumns);
+            } else {
+                nRows = 1;
+                nColumns = Math.floor(num / nColumns);
+                posX = Math.floor(index/nColumns);
+                posY = index % nColumns;
+            }
             switch(symbol) {
                case Clutter.KEY_Up:
                   posY = (posY == 0) ? nRows - 1 : posY - 1;
@@ -819,15 +847,15 @@ CategoriesApplicationsBox.prototype = {
                   posY = (posY == nRows - 1) ? 0 : posY + 1;
                   break;
                case Clutter.KEY_Right:
-                  posX = (posX == this._nColumns - 1) ? 0 : posX + 1;
+                  posX = (posX == nColumns - 1) ? 0 : posX + 1;
                   break;
                case Clutter.KEY_Left:
-                  posX = (posX == 0) ? this._nColumns - 1 : posX - 1;
+                  posX = (posX == 0) ? nColumns - 1 : posX - 1;
                   break;
             }
-            //Main.notify("bbbb " + index + " " + posX + " " + posY  + " " + this._nColumns + " " + nRows + " " + num);
-            if(posY*this._nColumns + posX < num)
-               nextItem = children[posY*this._nColumns + posX];
+            //Main.notify("bbbb " + index + " " + posX + " " + posY  + " " + nColumns + " " + nRows + " " + num);
+            if(posY*nColumns + posX < num)
+               nextItem = children[posY*nColumns + posX];
          }
       }
       if(!nextItem && num > 0)
@@ -1454,10 +1482,10 @@ PowerBox.prototype = {
       if(this.powerSelected != -1)
          this._powerButtons[this.powerSelected].setActive(false);
       this.parent.arrayBoxLayout.scrollBox.setAutoScrolling(false);
-      this.parent.categoriesScrollBox.setAutoScrolling(false);
+      this.parent.categoriesBox.scrollBox.setAutoScrolling(false);
       //this.parent.favoritesScrollBox.setAutoScrolling(false);
       this.parent.arrayBoxLayout.scrollBox.setAutoScrolling(this.parent.autoscroll_enabled);
-      this.parent.categoriesScrollBox.setAutoScrolling(this.parent.autoscroll_enabled);
+      this.parent.categoriesBox.scrollBox.setAutoScrolling(this.parent.autoscroll_enabled);
       //this.parent.favoritesScrollBox.setAutoScrolling(this.autoscroll_enabled);
       this.powerSelected = this.indexOf(actor);
       this._powerButtons[this.powerSelected].setActive(true);
@@ -2518,24 +2546,24 @@ AccessibleBox.prototype = {
       let listBookmarks = this.parent._listBookmarks();
       let placesList = this.parent.getPlacesList();
       let placesName = this.parent.getPlacesNamesList();
-      let currBookmark, item;
+      let currBookmark, menuItemPlace;
       for(let i = 0; i < placesList.length; i++) {
          if(placesList[i] != "") {
             currBookmark = this.getBookmarkById(listBookmarks, placesList[i]);
-            item = new MenuItems.PlaceButtonAccessible(this.parent, this.scrollActor, currBookmark, placesName[placesList[i]], false,
+            menuItemPlace = new MenuItems.PlaceButtonAccessible(this.parent, this.scrollActor, currBookmark, placesName[placesList[i]], false,
                                                      this.iconSize, this.textButtonWidth, this.appButtonDescription);
-            item.actor.connect('enter-event', Lang.bind(this, this._appEnterEvent, item));
-            //item.connect('enter-event', Lang.bind(this, this._appEnterEvent, item));
-            item.actor.connect('leave-event', Lang.bind(this, this._appLeaveEvent, item));
-            this.itemsPlaces.add_actor(item.actor);
+            menuItemPlace.actor.connect('enter-event', Lang.bind(this, this._appEnterEvent, menuItemPlace));
+            //menuItemPlace.connect('enter-event', Lang.bind(this, this._appEnterEvent, menuItemPlace));
+            menuItemPlace.actor.connect('leave-event', Lang.bind(this, this._appLeaveEvent, menuItemPlace));
+            this.itemsPlaces.add_actor(menuItemPlace.actor);
             //if(item.menu)
-               this.itemsPlaces.add_actor(item.menu.actor);
+               this.itemsPlaces.add_actor(menuItemPlace.menu.actor);
             //else {//Remplace menu actor by a hide false actor.
             //   falseActor = new St.BoxLayout();
             //   falseActor.hide();
             //   this.itemsPlaces.add_actor(falseActor);
             //}
-            this._staticButtons.push(item);
+            this._staticButtons.push(menuItemPlace);
          }
       }
     } catch(e) {
@@ -2565,14 +2593,14 @@ AccessibleBox.prototype = {
       let app = appSys.lookup_app(appName);
       let appsName = this.parent.getAppsNamesList();
       if(app) {
-         let item = new MenuItems.FavoritesButton(this.parent, this.scrollActor, this.vertical, true, app, appsName[app.get_id()],
+         let menuItemFav = new MenuItems.FavoritesButton(this.parent, this.scrollActor, this.vertical, true, app, appsName[app.get_id()],
                                                 4, this.iconSize, true, this.textButtonWidth, this.appButtonDescription, this._applicationsBoxWidth);
-         item.actor.connect('enter-event', Lang.bind(this, this._appEnterEvent, item));
-         item.actor.connect('leave-event', Lang.bind(this, this._appLeaveEvent, item));
-         item.actor.set_style_class_name('menu-application-button');
-         this.itemsSystem.add_actor(item.actor);
-         this.itemsSystem.add_actor(item.menu.actor);
-         this._staticButtons.push(item);
+         menuItemFav.actor.connect('enter-event', Lang.bind(this, this._appEnterEvent, menuItemFav));
+         menuItemFav.actor.connect('leave-event', Lang.bind(this, this._appLeaveEvent, menuItemFav));
+         menuItemFav.actor.set_style_class_name('menu-application-button');
+         this.itemsSystem.add_actor(menuItemFav.actor);
+         this.itemsSystem.add_actor(menuItemFav.menu.actor);
+         this._staticButtons.push(menuItemFav);
       }
    },
 

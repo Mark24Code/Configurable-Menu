@@ -295,9 +295,9 @@ ScrollItemsBox.prototype = {
 
    setScrollVisible: function(visible) {
       this.visible = visible;
-      if(this.actor.get_vertical())
+      if(this.actor.get_vertical()) {
          this.scroll.get_vscroll_bar().visible = visible;
-      else {
+      } else {
          if((visible)&&(this.idSignalAlloc == 0))
             this.idSignalAlloc = this.actor.connect('allocation_changed', Lang.bind(this, this._onAllocationChanged));
          else if(this.idSignalAlloc > 0) {
@@ -3131,12 +3131,13 @@ ConfigurableMenu.prototype = {
          let [ax, ay] = actor.get_transformed_position();
          let aw = actor.get_width();
          let ah = actor.get_height();
-         if(this._correctPlaceResize(mx, my, ax, ay, aw, ah)) {
+         if(this._correctPlaceResize(mx, my, ax, ay, aw, ah) && !this._isInResizeMode) {
             this._findMouseDeltha();
             global.set_cursor(Cinnamon.Cursor.DND_MOVE);
             //global.set_stage_input_mode(Cinnamon.StageInputMode.FULLSCREEN);
             Clutter.grab_pointer(actor);
             this._isInResizeMode = true;
+            this.emit('resize-mode-changed', this._isInResizeMode);
             return true;
          }
       }
@@ -3240,9 +3241,12 @@ ConfigurableMenu.prototype = {
 
    _disableResize: function() {
       //global.set_stage_input_mode(Cinnamon.StageInputMode.NORMAL);
-      global.unset_cursor();
-      this._isInResizeMode = false;
-      Clutter.ungrab_pointer(this.actor);
+      if(this._isInResizeMode) {
+         this._isInResizeMode = false;
+         global.unset_cursor();
+         Clutter.ungrab_pointer(this.actor);
+         this.emit('resize-mode-changed', this._isInResizeMode);
+      }
    },
 
    _correctPlaceResize: function(mx, my, ax, ay, aw, ah) {
@@ -4323,10 +4327,20 @@ ConfigurablePopupMenuSection.prototype = {
       this._showItemIcon = true;
       this._desaturateItemIcon = false;
       this._vectorBlocker = null;
+      this.idSignalMapped = this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
    },
 
-   setVertical: function (vertical) {
-      this.box.set_vertical(vertical);
+   _onMapped: function() {
+      this._topMenu = this._getTopMenu(this.actor.get_parent());
+   },
+
+   _getTopMenu: function(actor) {
+      while(actor) {
+         if((actor._delegate) && (actor._delegate instanceof PopupMenu.PopupMenu))
+            return actor._delegate;
+         actor = actor.get_parent();
+      }
+      return null;
    },
 
    _getMenuItems: function() {
@@ -4338,6 +4352,14 @@ ConfigurablePopupMenuSection.prototype = {
                 item instanceof ConfigurablePopupBaseMenuItem ||
                 item instanceof ConfigurablePopupMenuSection;
       });
+   },
+
+   getTopMenu: function() {
+      return this._topMenu;
+   },
+
+   setVertical: function (vertical) {
+      this.box.set_vertical(vertical);
    },
 
    setActive: function (active) {
@@ -4457,7 +4479,6 @@ ConfigurablePopupMenuSection.prototype = {
       let parent = menuItem.actor.get_parent();
       if(parent)
          parent.remove_actor(menuItem.actor);
-      index = this._visibleItems.indexOf(menuItem);
       if(menuItem.menu) {
          parent = menuItem.menu.actor.get_parent();
          if(parent)
@@ -4466,8 +4487,6 @@ ConfigurablePopupMenuSection.prototype = {
       if (menuItem instanceof PopupMenu.PopupMenuSection) {
          this._disconnectSubMenuSignals(menuItem, menuItem);
          menuItem.disconnect(menuItem._destroyId);
-         menuItem.disconnect(menuItem._subMenuActivateId);
-         menuItem.disconnect(menuItem._subMenuActiveChangeId);
       } else if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
          if(menuItem.menu)
             this._disconnectSubMenuSignals(menuItem, menuItem.menu);
@@ -4487,11 +4506,17 @@ ConfigurablePopupMenuSection.prototype = {
       menuItem.disconnect(menuItem._sensitiveChangeId);
       menuItem.disconnect(menuItem._activateId);
       menuItem.disconnect(menuItem._closingId);
+      //menuItem._activeChangeId = null;
+      //menuItem._sensitiveChangeId = null;
+      //menuItem._activateId = null;
+      //menuItem._closingId = null;
    },
 
    _disconnectSubMenuSignals: function(object, menu) {
       menu.disconnect(object._subMenuActivateId);
       menu.disconnect(object._subMenuActiveChangeId);
+      //object._subMenuActivateId = null;
+      //object._subMenuActiveChangeId = null;
    },
 
    clearAll: function() {
@@ -4652,6 +4677,17 @@ ArrayBoxLayout.prototype = {
       this.actor._delegate = this;
    },
 
+   setVertical: function (vertical) {
+      this.box.set_vertical(vertical);
+      this.scrollBox.setVertical(vertical);
+   },
+
+   _getVisibleChildren: function() {
+      return this.box.get_focus_chain().filter(x =>
+             !((x._delegate instanceof PopupMenu.PopupSeparatorMenuItem) ||
+             (x._delegate instanceof PopupMenu.PopupSeparatorMenuItem)));
+   },
+
    setActive: function (active) {
       if(active != this.active) {
          this.active = active;
@@ -4668,6 +4704,50 @@ ArrayBoxLayout.prototype = {
          }
       }
       return this._activeMenuItem;
+   },
+
+   contains: function(actor) {
+      if(this.actor.contains(actor))
+         return true;
+      let menuItems = this._getMenuItems();
+      for(let pos in menuItems) {
+         if(menuItems[pos].contains && menuItems[pos].contains(actor))
+            return true;
+      }
+      return false;
+   },
+
+   getFirstVisible: function() {
+      let menuItems = this._getMenuItems();
+      for(let pos in menuItems) {
+          if(menuItems[pos].getFirstVisible)
+             return menuItems[pos].getFirstVisible();
+      }
+      return null;
+   },
+
+   isInBorder: function(symbol, actor) {
+      if(actor) {
+         let menuItems = this._getMenuItems();
+         for(let pos in menuItems) {
+            if(menuItems[pos].contains(actor)) {
+               return menuItems[pos].isInBorder(symbol, actor);
+            }
+         }
+      }
+      return false;
+   },
+
+   navegate: function(symbol, actor) {
+      if(actor) {
+         let menuItems = this._getMenuItems();
+         for(let pos in menuItems) {
+            if(menuItems[pos].contains(actor)) {
+               return menuItems[pos].navegate(symbol, actor);
+            }
+         }
+      }
+      return null;
    }
 };
 
@@ -4732,6 +4812,39 @@ ConfigurableGridSection.prototype = {
       else
          this.actor.add_actor(this.box);
       this._relayoutBlocked = false;
+   },
+
+   setVisibleItems: function (visibleItems) {
+      let [viewPortWidth, viewPortHeight, viewPortPosition] = this._getViewPortSize();
+      this._visibleItems = [];
+      if(viewPortPosition == 0) {
+         this._currentVisibleItems = visibleItems;
+         let nRows = Math.floor(viewPortHeight/this._getItemHeight());
+         let nColumns = Math.floor(viewPortWidth/this._getItemWidth());
+         let size = Math.min(nColumns*nRows + 1, visibleItems.length);
+         for (let i = 0; i < size; i++) {
+            this._visibleItems.push(visibleItems[i]);
+         }
+         Mainloop.idle_add(Lang.bind(this, this._setVisibleInternal, visibleItems, size));
+         this._visibleItemsChange = true;
+         this.queueRelayout(true);
+      } else {
+         for (let i = 0; i < visibleItems; i++) {
+            this._visibleItems.push(visibleItems[i]);
+         }
+         this.queueRelayout(true);
+      }
+   },
+
+   _setVisibleInternal: function (visibleItems, number) {
+      if(this._currentVisibleItems) {
+         for (let i = number; i < this._currentVisibleItems.length; i++) {
+            this._visibleItems.push(this._currentVisibleItems[i]);
+         }
+         this._currentVisibleItems = null;
+         this._visibleItemsChange = true;
+         this.queueRelayout(true);
+      }
    },
 
    _onMapped: function() {
@@ -4903,7 +5016,26 @@ ConfigurableGridSection.prototype = {
    },
 
    _getViewPortSize: function(availWidth) {
-      return [null, null];
+      if(this._viewPort) {
+         let viewPortAllocation = this._viewPort.actor.allocation;
+         let vscroll = this._viewPort.scroll.get_vscroll_bar();
+         let position = vscroll.get_adjustment().get_value();
+         if(!this._scrollStartId) {
+            this._scrollStartId = vscroll.connect('scroll-start', Lang.bind(this, function() {
+               this._isInScroll = true;
+               this._allocateMore();
+            }));
+            this._scrollStopId = vscroll.connect('scroll-stop', Lang.bind(this, function() {
+               this._isInScroll = false;
+            }));
+         }
+         return [viewPortAllocation.x2 - viewPortAllocation.x1, viewPortAllocation.y2 - viewPortAllocation.y1, position];
+      }
+      return [null, null, null];
+   },
+
+   _getViewPortSize: function(availWidth) {
+      return [null, null, null];
       if(this.viewPort) {
          let viewPortAllocation = this.viewPort.actor.allocation;
          let vscroll = this.viewPort.scroll.get_vscroll_bar();
@@ -4917,9 +5049,9 @@ ConfigurableGridSection.prototype = {
          //      this._isInScroll = false;
          //   }));
          //}
-         return [viewPortAllocation.y2 - viewPortAllocation.y1, position];
+         return [viewPortAllocation.x2 - viewPortAllocation.x1, viewPortAllocation.y2 - viewPortAllocation.y1, position];
       }
-      return [null, null];
+      return [null, null, null];
    },
 
    _updateSpace: function(availWidth) {
@@ -5234,8 +5366,9 @@ ConfigurableGridSection.prototype = {
       //this.activate = false;
       this._menuItems = [];
       this._visibleItems = [];
+      this._currentVisibleItems = null;
       this._visibleItemsChange = false;
-      this._relayoutBlocked = false;
+      this._relayoutBlocked = true;
       this._viewPort = null;
 
       this.box = new Cinnamon.GenericContainer();
@@ -5265,6 +5398,43 @@ ConfigurableGridSection.prototype = {
       //this.actor.visible = false;
    },
 
+   setVisibleItems: function (visibleItems) {
+      let [viewPortWidth, viewPortHeight, viewPortPosition] = this._getViewPortSize();
+      for (let i = 0; i < this._menuItems.length; i++) {
+         this._menuItems[i].actor.hide();
+      }
+      this._visibleItems = [];
+      if(viewPortPosition == 0) {
+         this._currentVisibleItems = visibleItems;
+         let nRows = Math.floor(viewPortHeight/this._getItemHeight());
+         let nColumns = Math.floor(viewPortWidth/this._getItemWidth());
+         let size = Math.min(nColumns*nRows + 1, visibleItems.length);
+         for (let i = 0; i < size; i++) {
+            visibleItems[i].actor.show();
+         }
+         Mainloop.idle_add(Lang.bind(this, this._setVisibleInternal, visibleItems, size));
+         this._visibleItemsChange = true;
+      } else {
+         for (let i = 0; i < visibleItems; i++) {
+            visibleItems[i].actor.show();
+         }
+      }
+   },
+
+   _setVisibleInternal: function (visibleItems, number) {
+      if(this._currentVisibleItems) {
+         for (let i = number; i < this._currentVisibleItems.length; i++) {
+            this._currentVisibleItems[i].actor.show();
+         }
+         this._currentVisibleItems = null;
+         this._visibleItemsChange = true;
+      }
+   },
+
+   _onScrollEvent: function () {
+      Main.notify("scroll");
+   },
+
    setActive: function (active) {
       if(active != this.active) {
          this.active = active;
@@ -5283,14 +5453,19 @@ ConfigurableGridSection.prototype = {
    },
 
    _onMapped: function(actor, event) {
+      //this._topMenu = this._getTopMenu(this.actor.get_parent());
+      //this._topMenu.connect('resize-mode-changed',  Lang.bind(this, this._onResizeModeChanged));
       this._viewPort = this._getActorViewPort();
-      let children = this._getVisibleChildren();
-      this._maxActorWidth = 0;
-      this._maxActorHeight = 0;
-      this._updateActorMaxWidth(children);
-      this._updateActorMaxHeight(children);
+      //this._viewPort._panelWrapper.connect('scroll-event', Lang.bind(this, this._onScrollEvent));
+      this._relayoutBlocked = false;
    },
 
+   //_onResizeModeChanged: function(menu, resize) {
+   //   if(!resize) {
+   //      this.queueRelayout(true);
+   //   }
+   //},
+ 
    sortMenuItems: function(search, searchSorted, appsUsage) {
    },
 
@@ -5327,9 +5502,13 @@ ConfigurableGridSection.prototype = {
          index = this._menuItems.indexOf(actor._delegate);
          if(index != -1)
             this._menuItems.splice(index, 1);
+         this._updateActorMaxWidth(this._menuItems);
+         this._updateActorMaxHeight(this._visibleItems);
       }));
       if(menuItem.menu)
          this.box.set_skip_paint(menuItem.menu.actor, true);
+      this._updateActorMaxWidth(this._menuItems);
+      this._updateActorMaxHeight(this._visibleItems);
    },
 
    removeItem: function(menuItem) {
@@ -5344,6 +5523,8 @@ ConfigurableGridSection.prototype = {
          this._visibleItems.splice(index, 1);
       menuItem.disconnect(menuItem._showId);
       menuItem.disconnect(menuItem._hideId);
+      this._updateActorMaxWidth(this._menuItems);
+      this._updateActorMaxHeight(this._visibleItems);
    },
 
    // Override: We don't want add generic types of actors.
@@ -5366,7 +5547,6 @@ ConfigurableGridSection.prototype = {
    },
 
    _getMenuItems: function() {
-      Main.notify("call" + this._menuItems.length);
       return this._menuItems;//this._visibleItems;
    },   
 
@@ -5437,10 +5617,8 @@ ConfigurableGridSection.prototype = {
    },
 
    _getPreferredWidth: function(grid, forHeight, alloc) {
-      if(this._visibleItemsChange) {
-         let children = this._getVisibleChildren();
-         this._updateActorMaxWidth(children);
-      }
+      if(this._relayoutBlocked)
+         return;
       if (this._fillParent) {
          // Ignore all size requests of children and request a size of 0;
          // later we'll allocate as many children as fit the parent
@@ -5460,12 +5638,14 @@ ConfigurableGridSection.prototype = {
    },
 
    _getPreferredHeight: function(grid, forWidth, alloc) {
+      if(this._relayoutBlocked)
+         return;
       if (this._fillParent) {
          // Ignore all size requests of children and request a size of 0;
          // later we'll allocate as many children as fit the parent
          //return;
       }
-      let children = this._getVisibleChildren();
+      let children = this._currentVisibleItems ? this._currentVisibleItems : this._getVisibleChildren();
       let nColumns = children.length;
       if (forWidth >= 0)
          [nColumns, ] = this._computeColumnLayout(forWidth);
@@ -5490,14 +5670,15 @@ ConfigurableGridSection.prototype = {
    },
 
    _allocate: function(grid, box, flags) {
+      if(this._relayoutBlocked)
+         return;
       let children = this._getVisibleChildren();
-      //this._updateActorMaxWidth(children);
       //this._updateActorMaxHeight(children);
       let availWidth = box.x2 - box.x1;
       let availHeight = box.y2 - box.y1;
       let [nColumns, usedWidth] = this._computeColumnLayout(availWidth);
       this._nColumns = nColumns;
-      if(((this._visibleItemsChange)||(this._nColumns != nColumns))&&(!this._relayoutBlocked)) {
+     // if((this._visibleItemsChange)||(this._nColumns != nColumns)) {
          this._visibleItemsChange = false;
          if (this._fillParent) {
             // Reset the passed in box to fill the parent
@@ -5527,24 +5708,31 @@ ConfigurableGridSection.prototype = {
          let y = box.y1;
          let columnIndex = 0;
          let rowIndex = 0;
-         let [viewPortSize, viewPortPosition] = this._getViewPortSize();
-
+         //let [viewPortWidth, viewPortHeight, viewPortPosition] = this._getViewPortSize();
+         let [viewPortWidth, viewPortHeight, viewPortPosition] = [null, null, null];
          let colsHeight = [];
          for (let i = 0; i < nColumns; i++) {
             colsHeight.push(0);
          }
 
+         //let first = 20;
+         let first = children.length;
+
          for (let i = 0; i < children.length; i++) {
             let childBox = this._calculateChildBox(children[i].actor, x, colsHeight[columnIndex], box);
             children[i].actor.clip_to_allocation = true;
             if ((this._rowLimit && rowIndex >= this._rowLimit)
-                || (this._fillParent && childBox.y2 > availHeight)
-                || (viewPortSize && childBox.y2 > viewPortSize + viewPortPosition)) {
-               children[i].actor.allocate(childBox, flags);
+                || (this._fillParent && childBox.y2 > availHeight)) {
                this.box.set_skip_paint(children[i].actor, true);
-            } else {
+            } else if(viewPortHeight && (childBox.y2 > viewPortHeight + viewPortPosition)) {
+            //} else if(viewPortHeight && (i > first)) {
+               first = i;
+               this.box.set_skip_paint(children[i].actor, true);
                children[i].actor.allocate(childBox, flags);
+               colsHeight[columnIndex] += (childBox.y2 - childBox.y1) + spacing;
+            } else {
                this.box.set_skip_paint(children[i].actor, false);
+               children[i].actor.allocate(childBox, flags);
                colsHeight[columnIndex] += (childBox.y2 - childBox.y1) + spacing;
                if(children[i].menu && children[i].menu.isOpen) {
                   let childMenu = children[i].menu.actor;
@@ -5567,14 +5755,32 @@ ConfigurableGridSection.prototype = {
                x += this._getItemWidth() + spacing;
             }
          }
+         //Mainloop.idle_add(Lang.bind(this, this._setVisibleAllocation, first));
+         //Mainloop.idle_add(Lang.bind(this, this._setVisibleInternalAllocation, first));
+     // }
+   },
+
+   _setVisibleInternalAllocation: function(number) {
+      for (let i = number; i < this._visibleItems.length; i++) {
+         this.box.set_skip_paint(this._visibleItems[i].actor, false);
       }
    },
 
+   _setVisibleAllocation: function(number) {
+      //Main.notify("" + this._visibleItems + " " + number)
+      let newNumber = Math.min(20+number, this._visibleItems.length);
+      for (let i = number; i < newNumber; i++) {
+         this.box.set_skip_paint(this._visibleItems[i].actor, false);
+      }
+      if(20+number < this._visibleItems.length)
+         Mainloop.idle_add(Lang.bind(this, this._setVisibleAllocation, 20+number));
+      this._visibleItemsChange = true;
+   },
+
    _getViewPortSize: function(availWidth) {
-      return [null, null];
-      if(this.viewPort) {
-         let viewPortAllocation = this.viewPort.actor.allocation;
-         let vscroll = this.viewPort.scroll.get_vscroll_bar();
+      if(this._viewPort) {
+         let viewPortAllocation = this._viewPort.actor.allocation;
+         let vscroll = this._viewPort.scroll.get_vscroll_bar();
          let position = vscroll.get_adjustment().get_value();
          if(!this._scrollStartId) {
             this._scrollStartId = vscroll.connect('scroll-start', Lang.bind(this, function() {
@@ -5585,22 +5791,22 @@ ConfigurableGridSection.prototype = {
                this._isInScroll = false;
             }));
          }
-         return [viewPortAllocation.y2 - viewPortAllocation.y1, position];
+         return [viewPortAllocation.x2 - viewPortAllocation.x1, viewPortAllocation.y2 - viewPortAllocation.y1, position];
       }
-      return [null, null];
+      return [null, null, null];
    },
 
    _allocateMore: function() {
       if(this._isInScroll) {
          //this.box.queue_relayout();
          let children = this._getVisibleChildren();
-         let [viewPortSize, viewPortPosition] = this._getViewPortSize();
+         //let [viewPortWidth, viewPortHeight, viewPortPosition] = this._getViewPortSize();
          for (let i = 0; i < children.length; i++) {
-            if (viewPortSize && children[i].actor.allocation.y2 > viewPortSize + viewPortPosition) {
+            //if (viewPortHeight && children[i].actor.allocation.y2 > viewPortHeight + viewPortPosition) {
                this.box.set_skip_paint(children[i].actor, false);
-            }
+            //}
          }
-         Mainloop.timeout_add(50, Lang.bind(this, this._allocateMore));
+         //Mainloop.timeout_add(50, Lang.bind(this, this._allocateMore));
       }
    },
 
@@ -5683,6 +5889,17 @@ ConfigurableGridSection.prototype = {
       this.box.queue_relayout();
    },
 
+   contains: function(actor) {
+      if(this.actor.contains(actor))
+         return true;
+      let menuItems = this._getMenuItems();
+      for(let pos in menuItems) {
+         if(menuItems[pos].contains && menuItems[pos].contains(actor))
+            return true;
+      }
+      return false;
+   },
+
    getFirstVisible: function() {
       let children = this._getVisibleChildren();
       if(children.length > 0)
@@ -5722,21 +5939,25 @@ ConfigurableGridSection.prototype = {
             let posY = Math.floor(index/this._nColumns);
             switch(symbol) {
                case Clutter.KEY_Up:
-                  posY = (posY == 0) ? nRows - 1 : posY - 1;
+                  posY = posY - 1;
                   break;
                case Clutter.KEY_Down:
-                  posY = (posY == nRows - 1) ? 0 : posY + 1;
+                  posY = posY + 1;
                   break;
                case Clutter.KEY_Right:
-                  posX = (posX == this._nColumns - 1) ? 0 : posX + 1;
+                  posX = posX + 1;
                   break;
                case Clutter.KEY_Left:
-                  posX = (posX == 0) ? this._nColumns - 1 : posX - 1;
+                  posX = posX - 1;
                   break;
             }
-            //Main.notify("bbbb " + index + " " + posX + " " + posY  + " " + this._nColumns + " " + nRows + " " + num);
-            if(posY*this._nColumns + posX < num)
-               nextItem = children[posY*this._nColumns + posX];
+            if(posY < 0) posY = nRows - 1;
+            if(posY > nRows) posY = 0;
+            if(posX < 0) posX = this._nColumns - 1;
+            if(posX > this._nColumns - 1) posX = 0;
+            let foundIndex = posY*this._nColumns + posX;
+            if(foundIndex > -1 && foundIndex < num)
+               nextItem = children[foundIndex];
          }
       }
       if(!nextItem && num > 0)

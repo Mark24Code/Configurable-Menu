@@ -876,7 +876,7 @@ GenericApplicationButton.prototype = {
                this.menu.addMenuItem(menuItem);
             }
             if((this instanceof FavoritesButton)&&(this.parentScroll != this.parent.favoritesScrollBox)) {
-               if(this.nameEntry.visible) {
+               if(this.nameEntry && this.nameEntry.visible) {
                   menuItem = new ApplicationContextMenuItem(this, "save_name", _("Save name"));
                   this.menu.addMenuItem(menuItem);
                } else {
@@ -1440,7 +1440,7 @@ RecentButton.prototype = {
       this.labelName.realize();
       this.labelDesc.realize();
 
-      this.menu = new PopupMenu.PopupSubMenu(this.actor);
+      this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
       this.menu.actor.set_style_class_name('menu-context-menu');
       this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
    },
