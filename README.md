@@ -1,6 +1,6 @@
-Cinnamon Applet: Configurable Menu Version: v1.7-Beta
+Cinnamon Applet: Configurable Menu Version: v1.8-Beta
 
-Last version release date: 31 May 2015
+Last version release date: 26 Nov 2016
 
 Contact: lestcape@gmail.com
 
@@ -33,6 +33,8 @@ Author of language translation:
 - Italian(it_IT):    [davcri](https://github.com/davcri)
 - Bulgarian(Bg):     Peyu Yovev (spacy01) (spacy00001@gmail.com)
 - Ukraine(uk):       mik (mik_09@ukr.net)
+- Croatian(hr):      [muzena](https://github.com/davcri) (trebelnik2@gmail.com)
+- Japanese(ja_JP):   BALLOON a.k.a. Fu-sen. (Keiichi SHIGA) (mint@shigakeiichi.com)
 
 Description
 --------------
@@ -77,6 +79,11 @@ You can found more information about Cinnamon Installer on the [Cinnamon Install
 Change log
 --------------
 See a complete [Change log](https://github.com/lestcape/Configurable-Menu/wiki/Change-Log).
+
+1.8-Beta
+   - Was added Croatian language(hr) thanks muzena
+   - Was added Japanese language(ja_JP) language  BALLOON a.k.a. Fu-sen.
+   - Make it work on recently cinnamon versions 
 
 1.7-Beta
    - Added support for Cinnamon 2.6.

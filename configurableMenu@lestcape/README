@@ -1,31 +1,41 @@
-Cinnamon Applet: Configurable Menu Version: v1.6-Beta
+Cinnamon Applet: Configurable Menu Version: v1.8-Beta
 
-Last version release date: 07 december 2014
-***
-Authors: Lester Carballo Pérez (https://github.com/lestcape) and Garibaldo (https://github.com/Garibaldo).
+Last version release date: 26 Nov 2016
+
 Contact: lestcape@gmail.com
-***
-Special thanks to:
-
-- Bernard              (https://github.com/zagortenay333) Help adding support to the Cinnamon themes.
-- Eliermi Cunha Junior (jpegrande@gmail.com)              Help finding errors, promotion and several more things.
-- mtwebster            (https://github.com/mtwebster)     Help increasing the speed of Configurable Menu in Cinnamon 2.2.
 
 --------------
+![](https://raw.github.com/wiki/lestcape/Configurable-Menu/img/Capture.png)
+--------------
+
+Authors:
+--------------
+- [Lester Carballo Pérez](https://github.com/lestcape)
+- [Garibaldo](https://github.com/Garibaldo).
+
+Special thanks to:
+--------------
+- [Bernard](https://github.com/zagortenay333) (Help adding support to the Cinnamon themes).
+- Eliermi Cunha Junior(jpegrande@gmail.com) (Help finding errors, promotion and several more things).
+- [mtwebster](https://github.com/mtwebster)  (Help increasing the speed of Configurable Menu in Cinnamon 2.2).
+
+
 Author of language translation:
 --------------
-- English(En):      Garibaldo (https://github.com/Garibaldo) and Lester Carballo Pérez(lestcape@gmail.com)
-- Spanish(Es):      Lester Carballo Pérez(lestcape@gmail.com)
-- Portugese(Pt_Br): Eliermi Cunha Junior(jpegrande@gmail.com)
-- French(Fr):       Dupo(dupop35@yahoo.fr)
-- Chinese(Zh_Cn):   Highwind(highwindmx@126.com)
-- Czech(Cs_Cz):     Satapouch(http://www.linux-mint-czech.cz/)
-- Slovak(sk_SK):    Benji(http://sk.gravatar.com/sawwer/)
-- German(de_DE):    Uli(email@kiot.eu)
-- Italian(it_IT)    davcri(https://github.com/davcri)
-- Bulgarian(Bg):    Peyu Yovev (spacy01) (spacy00001@gmail.com)
+- English(En):       [Garibaldo](https://github.com/Garibaldo) and [Lester Carballo Pérez](https://github.com/lestcape)
+- Spanish(Es):       [Lester Carballo Pérez](https://github.com/lestcape)
+- Portugese(Pt_Br):  Eliermi Cunha Junior(jpegrande@gmail.com)
+- French(Fr):        Dupo(dupop35@yahoo.fr)
+- Chinese(Zh_Cn):    Highwind(highwindmx@126.com)
+- Czech(Cs_Cz):      Satapouch(http://www.linux-mint-czech.cz/)
+- Slovak(sk_SK):     Benji(http://sk.gravatar.com/sawwer/)
+- German(de_DE):     Uli(email@kiot.eu)
+- Italian(it_IT):    [davcri](https://github.com/davcri)
+- Bulgarian(Bg):     Peyu Yovev (spacy01) (spacy00001@gmail.com)
+- Ukraine(uk):       mik (mik_09@ukr.net)
+- Croatian(hr):      [muzena](https://github.com/davcri) (trebelnik2@gmail.com)
+- Japanese(ja_JP):   BALLOON a.k.a. Fu-sen. (Keiichi SHIGA) (mint@shigakeiichi.com)
 
---------------
 Description
 --------------
 Configurable Menu is a fork of the Cinnamon stock menu applet. It has much more features and is extremely configurable.
@@ -39,43 +49,45 @@ This latest version brings a lot of cool new stuff, like:
 - Two different modes of viewing the menu entrys with multiple columns.
 - New drag & drop options.
 - Handle removable drives.
-- Handle web search options.
 - Can Install, uninstall, and search for packages.
 
-A more detail list can be found on https://github.com/lestcape/Configurable-Menu/wiki/Some-features.
+A more detail list can be found [here](https://github.com/lestcape/Configurable-Menu/wiki/Some-features).
 And much more coming...
-
-Help
---------------
-Here you can find interesting information about Configurable Menu.
-   - Layouts                 : https://github.com/lestcape/Configurable-Menu/wiki/Menu-layouts
-   - Components              : https://github.com/lestcape/Configurable-Menu/wiki/Menu-components
-   - Settings                : https://github.com/lestcape/Configurable-Menu/wiki/Settings
-   - Cinnamon themes support : https://github.com/lestcape/Configurable-Menu/wiki/Theme-Support
-   - New languages           : https://github.com/lestcape/Configurable-Menu/wiki/Add-new-languages
-   - Install nightly build   : https://github.com/lestcape/Configurable-Menu/wiki/Install-Nightly-Build
 
 Warning:
 --------------
 After install Configurable Menu 1.1 or higher and if you have installed an older version, please delete the file, /home/USER/.cinnamon/configs/configurableMenu@lestcape  and then restart cinnamon, to allow display correctly the system buttons. This only a thing that need to be done when some key was changed, not always. Sorry for the inconvenients.
 
+Help
+--------------
+Here you can find interesting information about Configurable Menu.
+   - [Layouts](https://github.com/lestcape/Configurable-Menu/wiki/Menu-layouts)
+   - [Components](https://github.com/lestcape/Configurable-Menu/wiki/Menu-components)
+   - [Settings](https://github.com/lestcape/Configurable-Menu/wiki/Settings)
+   - [Cinnamon themes support](https://github.com/lestcape/Configurable-Menu/wiki/Theme-Support)
+   - [New languages](https://github.com/lestcape/Configurable-Menu/wiki/Add-new-languages)
+   - [Install nightly build](https://github.com/lestcape/Configurable-Menu/wiki/Install-Nightly-Build)
+
 Cinnamon Installer
 --------------
-Configurable Menu is a applet of the Cinnamon desktop.
-This desktop can be installed on different Linux distributions and therefore managing the packages
-that Configurable Menu makes, needs the help of the Cinnamon Installer tool.
+Configurable Menu is a applet of the Cinnamon desktop. This desktop can be installed on different Linux distributions and therefore managing the packages that Configurable Menu makes, needs the help of the Cinnamon Installer tool.
 
-The main objective of Cinnamon Installer is that it may be implemented in most of the distributions.
-However this is far from happening for now.
-Any help will be well received.
+The main objective of Cinnamon Installer is that it may be implemented in most of the distributions. However this is far from happening for now. Any help will be well received.
 
-You can found more information about Cinnamon Installer on the Cinnamon Installer website:
-https://github.com/lestcape/Cinnamon-Installer
-
+You can found more information about Cinnamon Installer on the [Cinnamon Installer website](https://github.com/lestcape/Cinnamon-Installer).
 
 Change log
 --------------
-See a complete Change log : https://github.com/lestcape/Configurable-Menu/wiki/Change-Log.
+See a complete [Change log](https://github.com/lestcape/Configurable-Menu/wiki/Change-Log).
+
+1.8-Beta
+   - Was added Croatian language(hr) thanks muzena
+   - Was added Japanese language(ja_JP) language  BALLOON a.k.a. Fu-sen.
+   - Make it work on recently cinnamon versions 
+
+1.7-Beta
+   - Added support for Cinnamon 2.6.
+   - Fix the applications search.
 
 1.6-Beta
    - Was added Italian language(IT_IT) thanks Davcri.
@@ -84,13 +96,13 @@ See a complete Change log : https://github.com/lestcape/Configurable-Menu/wiki/C
    - Added a limit to the number of packages for not blocking Cinnamon on search.
    - Added support for the new general Cinnamon way of used launchers.
    - Fixed several critical errors and warnings.
-   - Added support for Cinnamon 2.3 and 2.4.
+   - Added support for Cinnamon 2.3 on general.
    - Configurable Menu not depend any more of the Cinnamon Menu code.
    - Added "open with" on right click in the recent apps.
 
 1.5-Beta
    - Fixed an error that do not allow start the menu.
-   - Removed some new warnings in Cinnnamon 2.3
+   - Removed some new warnings in Cinnnamon 2.3.
 
 1.4-Beta
    - Was added German language(DE_DE) thanks Uli.
@@ -138,8 +150,8 @@ See a complete Change log : https://github.com/lestcape/Configurable-Menu/wiki/C
 
 1.0-Beta
    - The menu was improved to working more faster on cinnamon 2.2.
-   - The way to prevent accidental category change when you try to access the applications was  redefined.
-   - Several Internal change to support cinnamon 2.0 and cinnamon 2.2 at the same time with good performance.
+   - The way to prevent accidental category change when you try to access the applications was redefined.
+   - Several internal change to support cinnamon 2.0 and cinnamon 2.2 at the same time with good performance.
    - Horizontal, dragons and gnomenu layous working now a little more faster.
    - Was added French language(Fr) thanks Dupo.
    - In multimonitor system was fixed a bug to displayed the menu.
@@ -174,11 +186,13 @@ See a complete Change log : https://github.com/lestcape/Configurable-Menu/wiki/C
 
 This program is free software:
 --------------
-You can redistribute it and/or modify it under the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+You can redistribute it and/or modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
-warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with this program.
 If not, see http://www.gnu.org/licenses/.
