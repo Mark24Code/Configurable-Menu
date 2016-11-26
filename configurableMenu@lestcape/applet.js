@@ -12978,7 +12978,7 @@ MyApplet.prototype = {
            this.vector_update_loop = null;
         }
         if(this.isInsideVectorBox())
-           this.vector_update_loop = Mainloop.timeout_add(35, Lang.bind(this, this.updateVectorBox));
+           this.vector_update_loop = Mainloop.timeout_add(100, Lang.bind(this, this.updateVectorBox));
         else {
            this.updateVectorBox();
         }
