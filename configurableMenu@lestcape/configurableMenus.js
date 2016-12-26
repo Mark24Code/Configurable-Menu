@@ -2128,12 +2128,12 @@ function ConfigurablePopupSubMenuMenuItem() {
 ConfigurablePopupSubMenuMenuItem.prototype = {
    __proto__: ConfigurableBasicPopupMenuItem.prototype,
 
-   _init: function(text, hide_expander, params) {
+   _init: function(text, withMenu, hideExpander, params) {
       ConfigurableBasicPopupMenuItem.prototype._init.call(this, text, params);
       this.actor._delegate = this;
       this.actor.add_style_class_name('popup-submenu-menu-item');
       this._arrowSide = St.Side.LEFT;
-      this._hide_expander = (hide_expander == true);
+      this._hide_expander = (hideExpander == true);
       this._triangle = new St.Icon({ 
           icon_name: "media-playback-start",
           icon_type: St.IconType.SYMBOLIC,
@@ -2146,10 +2146,41 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       this.actor.add(this._triangle, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
       this._vectorBlocker = null;
       this._openMenuOnActivation = false;
-
-      this.menu = new ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
-      this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
       this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
+      this._withMenu = withMenu;
+      if(this._withMenu) {
+         let menu = new ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
+         this.setMenu(menu);
+      }
+   },
+
+   setMenu: function(menu) {
+      if(this.menu != menu) {
+         if(this.menu && this._menuOpenId) {
+            this.menu.disconnect(this._menuOpenId);
+            this._menuOpenId = null;
+         }
+         let oldMenu = this.menu;
+         this.menu = menu;
+         if(this.menu) {
+            this._menuOpenId = this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
+            if(this.actor.mapped)
+               this._onMapped();
+         }
+         this.emit('menu-changed', oldMenu, this.menu);
+         if(oldMenu && this._withMenu)
+            oldMenu.destroy();
+      }
+   },
+
+   _onKeyFocusInit: function (actor) {
+      if(this.menu && !this.menu.IsOpen && this.menu.isInFloatingState())
+         this.setActive(true);
+   },
+
+   _onKeyFocusOut: function (actor) {
+      if(this.menu && this.menu.IsOpen && this.menu.isInFloatingState())
+         this.setActive(false);
    },
 
    preservedSelection: function(preserve) {
@@ -2307,6 +2338,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
          this.actor.remove_style_pseudo_class('open');
          this._triangle.rotation_angle_z = 0;
       }
+      this.emit('open-state-changed', menu, open);
    },
 
    _getClutterOrientation: function() {
@@ -2335,7 +2367,8 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       /*if((!this.menu.isOpen)&&(this.menu._floating)) {
          this.menu.repositionActor(this.actor);
       }*/
-      this.menu.open(true);
+      if(this.menu)
+         this.menu.open(true);
    },
 
    _onKeyFocusInit: function (actor) {
@@ -2380,65 +2413,18 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
 
    destroy: function() {
       if(this.actor) {
-         this.menu.destroy();
+         if(this.menu && (this._menuOpenId != 0)) {
+            this.menu.disconnect(this._menuOpenId);
+            this._menuOpenId = 0;
+         }
+         if(this._withMenu)
+            this.menu.destroy();
          ConfigurableBasicPopupMenuItem.prototype.destroy.call(this);
          this.actor = null;
       }
    }
 };
-
-
-function ConfigurableDinamicPopupSubMenuMenuItem() {
-   this._init.apply(this, arguments);
-}
-
-ConfigurableDinamicPopupSubMenuMenuItem.prototype = {
-   __proto__: ConfigurablePopupSubMenuMenuItem.prototype,
-
-   _init: function (text, hide_expander, menu, params) {
-      ConfigurablePopupSubMenuMenuItem.prototype._init.call(this, text, hide_expander, params);
-      this.actor._delegate = this;
-      this.menu = menu;
-   },
-
-   setMenu: function(menu) {
-      if(this.menu != menu) {
-         if(this.menu && this._menuOpenId != 0) {
-            try {
-               this.menu.disconnect(this._menuOpenId);
-            } catch(e){}
-            this._menuOpenId = 0;
-         }
-         this.menu = menu;
-         if(this.menu) {
-            this._menuOpenId = this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
-            if(this.actor.mapped)
-               this._onMapped();
-         }
-      }
-   },
-
-   _onKeyFocusInit: function (actor) {
-      if(this.menu && !this.menu.IsOpen && this.menu.isInFloatingState())
-         this.setActive(true);
-   },
-
-   _onKeyFocusOut: function (actor) {
-      if(this.menu && this.menu.IsOpen && this.menu.isInFloatingState())
-         this.setActive(false);
-   },
-
-   destroy: function() {
-      if(this.actor) {
-         if(this._menuOpenId != 0) {
-            this.menu.disconnect(this._menuOpenId);
-            this._menuOpenId = 0;
-         }
-         ConfigurablePopupBaseMenuItem.prototype.destroy.call(this);
-         this.actor = null;
-      }
-   }
-};
+Signals.addSignalMethods(ConfigurablePopupSubMenuMenuItem.prototype);
 
 /**
  * ConfigurableMenuManager
@@ -3141,16 +3127,8 @@ ConfigurablePopupMenuBase.prototype = {
             this.length--;
          }));
       } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if (before_item == null)
-            this.box.add(menuItem.menu.actor);
-         else
-            this.box.insert_child_below(menuItem.menu.actor, before_item);
-         this._connectSubMenuSignals(menuItem, menuItem.menu);
-         this._connectItemSignals(menuItem);
-         menuItem._closingId = this.connect('open-state-changed', function(self, open) {
-            if (!open)
-            menuItem.menu.close(false);
-         });
+         menuItem.connect('menu-changed', Lang.bind(this, function(menuItem, oldMenu) { this._onMenuChanged(menuItem, oldMenu); }));
+         this._onMenuChanged(menuItem, menuItem.menu);
       } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
          this._connectItemSignals(menuItem);
          this.connect('open-state-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
@@ -3161,6 +3139,23 @@ ConfigurablePopupMenuBase.prototype = {
          throw TypeError("Invalid argument to ConfigurablePopupMenuBase.addMenuItem()");
 
       this.length++;
+   },
+
+   _onMenuChanged: function(menuItem, oldMenu) {
+      if(oldMenu) {
+         this._disconnectSubMenuSignals(menuItem, oldMenu);
+         if(oldMenu.actor.get_parent() == this.box)
+            this.box.remove_actor(oldMenu.actor);
+      }
+      if(menuItem.menu) {
+         this.box.insert_before(menuItem.menu.actor, menuItem.actor);
+         this._connectSubMenuSignals(menuItem, menuItem.menu);
+         this._connectItemSignals(menuItem);
+         menuItem._closingId = this.connect('open-state-changed', function(self, open) {
+            if (!open && menuItem.menu)
+               menuItem.menu.close(false);
+         });
+      }
    },
 
    getColumnWidths: function() {
@@ -3635,14 +3630,14 @@ ConfigurableMenu.prototype = {
    },
 
    _setMenuInPosition: function(menuItem) {
-      if((!menuItem.menu.isInFloatingState) || (!menuItem.menu.isInFloatingState())) {
+      if(menuItem.menu && (!menuItem.menu.isInFloatingState || !menuItem.menu.isInFloatingState())) {
          this.box.insert_before(menuItem.menu.actor, menuItem.actor);
       }
    },
 
    _setDesaturateItemIcon: function(menuItem) {
       if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu.desaturateItemIcon)
+         if(menuItem.menu && menuItem.menu.desaturateItemIcon)
              menuItem.menu.desaturateItemIcon(this._desaturateItemIcon);
       }
       if(menuItem.desaturateItemIcon)
@@ -3651,7 +3646,7 @@ ConfigurableMenu.prototype = {
 
    _setShowItemIcon: function(menuItem) {
       if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu.setShowItemIcon)
+         if(menuItem.menu && menuItem.menu.setShowItemIcon)
              menuItem.menu.setShowItemIcon(this._showItemIcon);
       }
       if(menuItem.setShowItemIcon)
@@ -4260,15 +4255,8 @@ ConfigurableMenu.prototype = {
             this.length--;
          }));
       } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu) {
-            if(!this._isFloating(menuItem.menu)) {
-               if (before_item == null)
-                  this.box.add(menuItem.menu.actor);
-               else
-                  this.box.insert_before(menuItem.menu.actor, before_item);
-            }
-            this._connectSubMenuSignals(menuItem, menuItem.menu);
-         }
+         menuItem.connect('menu-changed', Lang.bind(this, function(menuItem, oldMenu) { this._onMenuChanged(menuItem, oldMenu); }));
+         this._onMenuChanged(menuItem, menuItem.menu);
          menuItem._closingMenuId = this.connect('open-state-changed', function(self, open) {
             if (!open && menuItem.menu)
                menuItem.menu.close(false);
@@ -4289,6 +4277,19 @@ ConfigurableMenu.prototype = {
          throw TypeError("Invalid argument to ConfigurablePopupMenuBase.addMenuItem()");
 
       this.length++;
+   },
+
+   _onMenuChanged: function(menuItem, oldMenu) {
+      if(oldMenu) {
+         this._disconnectSubMenuSignals(menuItem, oldMenu);
+         if(oldMenu.actor.get_parent() == this.box)
+            this.box.remove_actor(oldMenu.actor);
+      }
+      if(menuItem.menu) {
+         if(!this._isFloating(menuItem.menu))
+            this.box.insert_before(menuItem.menu.actor, menuItem.actor);
+         this._connectSubMenuSignals(menuItem, menuItem.menu);
+      }
    },
 
    _connectItemSignals: function(menuItem) {
@@ -4377,8 +4378,14 @@ ConfigurableMenu.prototype = {
    },
 
    _disconnectSubMenuSignals: function(object, menu) {
-      menu.disconnect(object._subMenuActivateId);
-      menu.disconnect(object._subMenuActiveChangeId);
+      if(object._subMenuActivateId) {
+         menu.disconnect(object._subMenuActivateId);
+         object._subMenuActivateId = null;
+      }
+      if(object._subMenuActiveChangeId) {
+         menu.disconnect(object._subMenuActiveChangeId);
+         object._subMenuActiveChangeId = null;
+      }
    },
 
    addChildMenu: function(menu) {
@@ -4726,15 +4733,8 @@ ConfigurablePopupMenuSection.prototype = {
             this.length--;
          }));
       } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu) {
-            if(!this._isFloating(menuItem.menu)) {
-               if (before_item == null)
-                  this.box.add(menuItem.menu.actor);
-               else
-                  this.box.insert_before(menuItem.menu.actor, before_item);
-            }
-            this._connectSubMenuSignals(menuItem, menuItem.menu);
-         }
+         menuItem.connect('menu-changed', Lang.bind(this, function(menuItem, oldMenu) { this._onMenuChanged(menuItem, oldMenu); }));
+         this._onMenuChanged(menuItem, menuItem.menu);
          menuItem._closingMenuId = this.connect('open-state-changed', function(self, open) {
             if (!open && menuItem.menu)
                menuItem.menu.close(false);
@@ -4754,6 +4754,19 @@ ConfigurablePopupMenuSection.prototype = {
          throw TypeError("Invalid argument to ConfigurablePopupMenuBase.addMenuItem()");
 
       this.length++;
+   },
+
+   _onMenuChanged: function(menuItem, oldMenu) {
+      if(oldMenu) {
+         this._disconnectSubMenuSignals(menuItem, oldMenu);
+         if(oldMenu.actor.get_parent() == this.box)
+            this.box.remove_actor(oldMenu.actor);
+      }
+      if(menuItem.menu) {
+         if(!this._isFloating(menuItem.menu))
+            this.box.insert_before(menuItem.menu.actor, menuItem.actor);
+         this._connectSubMenuSignals(menuItem, menuItem.menu);
+      }
    },
 
    _connectItemSignals: function(menuItem) {
@@ -4835,8 +4848,14 @@ ConfigurablePopupMenuSection.prototype = {
    },
 
    _disconnectSubMenuSignals: function(object, menu) {
-      menu.disconnect(object._subMenuActivateId);
-      menu.disconnect(object._subMenuActiveChangeId);
+      if(object._subMenuActivateId) {
+         menu.disconnect(object._subMenuActivateId);
+         object._subMenuActivateId = null;
+      }
+      if(object._subMenuActiveChangeId) {
+         menu.disconnect(object._subMenuActiveChangeId);
+         object._subMenuActiveChangeId = null;
+      }
    },
 
    clearAll: function() {
@@ -4895,7 +4914,7 @@ ConfigurablePopupMenuSection.prototype = {
 
    _setDesaturateItemIcon: function(menuItem) {
       if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu.desaturateItemIcon)
+         if(menuItem.menu && menuItem.menu.desaturateItemIcon)
              menuItem.menu.desaturateItemIcon(this._desaturateItemIcon);
       }
       if(menuItem.desaturateItemIcon)
@@ -4904,7 +4923,7 @@ ConfigurablePopupMenuSection.prototype = {
 
    _setShowItemIcon: function(menuItem) {
       if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu.setShowItemIcon)
+         if(menuItem.menu && menuItem.menu.setShowItemIcon)
              menuItem.menu.setShowItemIcon(this._showItemIcon);
       }
       if(menuItem.setShowItemIcon)
@@ -6882,7 +6901,8 @@ ConfigurableMenuApplet.prototype = {
          if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
             this._setMenuInPosition(menuItem);
             this._setShowItemIcon(menuItem);
-            menuItem.menu.fixToCorner(menuItem.menu.fixCorner);
+            if(menuItem.menu)
+               menuItem.menu.fixToCorner(menuItem.menu.fixCorner);
          }
       }
    },
@@ -6949,7 +6969,7 @@ ConfigurableMenuApplet.prototype = {
             let menuItem = null;
             for(let pos in items) {
                menuItem = items[pos];
-               if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+               if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) && menuItem.menu) {
                   menuItem.menu.open(animate);
                   break;
                }
@@ -6969,7 +6989,7 @@ ConfigurableMenuApplet.prototype = {
             let items = this._getMenuItems();
             for(let pos in items) {
                let menuItem = items[pos];
-               if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+               if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) && menuItem.menu) {
                   menuItem.menu.close(animate);
                }
             }
@@ -7046,14 +7066,13 @@ ConfigurableMenuApplet.prototype = {
             } else
                this.box.add(menuItem.actor);
          }
-         if(menuItem.menu) {
-            this._connectSubMenuSignals(menuItem, menuItem.menu);
-            menuItem.menu._stateId = menuItem.menu.connect('open-state-changed', Lang.bind(this, function(self, open) {
-               if((!open) && (this._isSubMenuOpen)) {
-                  this._isSubMenuOpen = false;
-               }
-            }));
-         }
+         menuItem.connect('menu-changed', Lang.bind(this, function(menuItem, oldMenu) { this._onMenuChanged(menuItem, oldMenu); }));
+         this._onMenuChanged(menuItem, menuItem.menu);
+         menuItem._stateId = menuItem.connect('open-state-changed', Lang.bind(this, function(self, menu, open) {
+            if((!open) && (this._isSubMenuOpen)) {
+               this._isSubMenuOpen = false;
+            }
+         }));
          menuItem._closingMenuId = this.connect('open-state-changed', function(self, open) {
             if(!open && menuItem.menu)
                menuItem.menu.close(false);
@@ -7062,7 +7081,8 @@ ConfigurableMenuApplet.prototype = {
          this._setMenuInPosition(menuItem);
          this._setShowItemIcon(menuItem);
          this._setDesaturateItemIcon(menuItem);
-         this.addChildMenu(menuItem.menu);
+         if(menuItem.menu)
+            this.addChildMenu(menuItem.menu);
          menuItem._pressId = menuItem.actor.connect('button-press-event', Lang.bind(this, this._onButtonPressEvent));
          menuItem._notifyHoverId = menuItem.actor.connect('notify::hover', Lang.bind(this, this._onMenuItemHoverChanged));
       } else {
@@ -7070,14 +7090,21 @@ ConfigurableMenuApplet.prototype = {
       }
    },
 
+   _onMenuChanged: function(menuItem, oldMenu) {
+      if(oldMenu)
+         this._disconnectSubMenuSignals(menuItem, oldMenu);
+      if(menuItem.menu)
+         this._connectSubMenuSignals(menuItem, menuItem.menu);
+   },
+
    removeItem: function(menuItem) {
       if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu)
-            menuItem.menu.disconnect(item.menu._stateId);
+         if(menuItem.menu && menuItem._stateId != 0)
+            menuItem.disconnect(menuItem._stateId);
          menuItem.actor.disconnect(menuItem._pressId);
          menuItem.actor.disconnect(menuItem._notifyHoverId);
       }
-      ConfigurableMenu.prototype.removeItem.call(this, item);
+      ConfigurableMenu.prototype.removeItem.call(this, menuItem);
    },
 
    _onMenuItemHoverChanged: function(actor) {
@@ -7162,7 +7189,7 @@ ConfigurableMenuApplet.prototype = {
 
    _setDesaturateItemIcon: function(menuItem) {
       if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu.desaturateItemIcon)
+         if(menuItem.menu && menuItem.menu.desaturateItemIcon)
              menuItem.menu.desaturateItemIcon(this._desaturateItemIcon);
       }
       if(menuItem.desaturateItemIcon)
@@ -7171,7 +7198,7 @@ ConfigurableMenuApplet.prototype = {
 
    _setShowItemIcon: function(menuItem) {
       if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu.setShowItemIcon)
+         if(menuItem.menu && menuItem.menu.setShowItemIcon)
              menuItem.menu.setShowItemIcon(this._showItemIcon);
          if(menuItem.setShowItemIcon)
              menuItem.setShowItemIcon((this._showItemIcon)&&(this._floating));
@@ -7181,13 +7208,15 @@ ConfigurableMenuApplet.prototype = {
 
    _setMenuInPosition: function(menuItem) {
       if(this._floating) {
-         menuItem.menu.setArrowSide(St.Side.LEFT);
+         if(menuItem.menu)
+            menuItem.menu.setArrowSide(St.Side.LEFT);
          menuItem._triangle.show();
          menuItem.label.set_style_class_name('');
          menuItem.actor.set_style_class_name('popup-menu-item');
          menuItem.actor.add_style_class_name('popup-submenu-menu-item');
       } else {
-         menuItem.menu.setArrowSide(this._arrowSide);
+         if(menuItem.menu)
+            menuItem.menu.setArrowSide(this._arrowSide);
          menuItem._triangle.hide();
          menuItem._icon.hide();
          menuItem.label.set_style_class_name('applet-label');
@@ -7914,7 +7943,7 @@ MenuFactory.prototype = {
       if(itemType == FactoryClassTypes.RootMenuClass)
          shellItem = new ConfigurableMenuApplet(launcher, orientation, menuManager);
       if(itemType == FactoryClassTypes.SubMenuMenuItemClass)
-         shellItem = new ConfigurablePopupSubMenuMenuItem("FIXME");
+         shellItem = new ConfigurablePopupSubMenuMenuItem("FIXME", true);
       else if(itemType == FactoryClassTypes.MenuSectionMenuItemClass)
          shellItem = new ConfigurablePopupMenuSection();
       else if(itemType == FactoryClassTypes.SeparatorMenuItemClass)

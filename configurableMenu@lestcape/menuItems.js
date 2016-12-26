@@ -2669,7 +2669,7 @@ HoverIconBox.prototype = {
    __proto__: ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype,
     
    _init: function(parent, iconSize) {
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false, focusOnHover: false });
+      ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype._init.call(this, "", true, true, { hover: false, focusOnHover: false });
       try {
          this.actor._delegate = this;
          this.parent = parent;
@@ -2680,13 +2680,13 @@ HoverIconBox.prototype = {
 
          this.container.set_height(this.iconSize);
          this._userIcon = new St.Icon({ icon_size: this.iconSize });
-         this.icon = new St.Icon({ icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR });
-         
-         this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
-        /* this.menu = new PopupMenu.PopupSubMenu(this.actor);
+
+         this._icon.set_icon_size(this.iconSize);
+         this._icon.set_icon_type(St.IconType.FULLCOLOR);
+         this._icon.get_parent().remove_actor(this._icon);
+
          this.actor.add_actor(this.menu.actor);
          this.menu.actor.set_style_class_name('menu-context-menu');
-         this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));*/
 
          this._user = AccountsService.UserManager.get_default().get_user(GLib.get_user_name());
          this._userLoadedId = this._user.connect('notify::is_loaded', Lang.bind(this, this._onUserChanged));
@@ -2694,13 +2694,15 @@ HoverIconBox.prototype = {
 
          let menuItem;
          let userBox = new St.BoxLayout({ style_class: 'user-box', vertical: false });
-         this.userLabel = new St.Label();//{ style_class: 'user-label' });
-         userBox.add(this.userLabel, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
-         //this.menu.addActor(userBox);
+         this.label.set_style_class_name('user-label');
+         this.label.get_parent().remove_actor(this.label);
+
+         userBox.add(this.label, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
+         this.menu.addActor(userBox);
 
          this.notificationsSwitch = new ConfigurablePopupSwitchMenuItem(_("Notifications"), null, null, this._toggleNotifications, { focusOnHover: false });
          this.notificationsSwitch.actor.style = "padding-top: "+(2)+"px;padding-bottom: "+(2)+"px;padding-left: "+(1)+"px;padding-right: "+(1)+"px;margin:auto;";
-         //this.menu.addMenuItem(this.notificationsSwitch);
+         this.menu.addMenuItem(this.notificationsSwitch);
          global.settings.connect('changed::display-notifications', Lang.bind(this, function() {
             this.notificationsSwitch.setToggleState(global.settings.get_boolean("display-notifications"));
          }));
@@ -2727,9 +2729,7 @@ HoverIconBox.prototype = {
    },
 
    destroy: function() {
-      //this.menu.destroy();
       ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype.destroy.call(this);
-      this.actor.destroy();
    },
 
    setSpecialColor: function(specialColor) {
@@ -2748,14 +2748,14 @@ HoverIconBox.prototype = {
 
    navegateHoverMenu: function(symbol, actor) {
       if((symbol == Clutter.KEY_Down)||(symbol == Clutter.KEY_Up)) {
-         /*if(this.account.active) {
+         if(this.account.active) {
             this.fav_actor = this.notificationsSwitch.actor;
             Mainloop.idle_add(Lang.bind(this, this._putFocus));
          }
          if(this.notificationsSwitch.active) {
             this.fav_actor = this.account.actor;
             Mainloop.idle_add(Lang.bind(this, this._putFocus));
-         }*/
+         }
       }
    },
 
@@ -2765,13 +2765,13 @@ HoverIconBox.prototype = {
       if(symbol == Clutter.KEY_Right) {
          this.toggleMenu();
          global.stage.set_key_focus(this.notificationsSwitch.actor);
-         //this.menu.actor.navigate_focus(null, Gtk.DirectionType.DOWN, false);
+         this.menu.actor.navigate_focus(null, Gtk.DirectionType.DOWN, false);
          return true;
-      } /*else if (symbol == Clutter.KEY_Left && this.menu.isOpen) {
+      } else if (symbol == Clutter.KEY_Left && this.menu.isOpen) {
          global.stage.set_key_focus(this.actor);
          this.toggleMenu();
          return true;
-      }*/
+      }
 
       return ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
     },
@@ -2784,8 +2784,8 @@ HoverIconBox.prototype = {
       this.iconSize = iconSize;
       if(this._userIcon)
          this._userIcon.set_icon_size(this.iconSize);
-      if(this.icon)
-         this.icon.set_icon_size(this.iconSize);
+      if(this._icon)
+         this._icon.set_icon_size(this.iconSize);
       if(this.lastApp)
          this.lastApp.set_icon_size(this.iconSize);
       this.container.set_height(this.iconSize);
@@ -2805,14 +2805,14 @@ HoverIconBox.prototype = {
    },
 
    _subMenuOpenStateChanged: function(menu, open) {
-      /* if(this.menu.isOpen) {
-          this.parent._updateSize();
+       if(this.menu.isOpen) {
+          //this.parent._updateSize();
           //this.menu.actor.can_focus = false;
        }
        else {
           //global.stage.set_key_focus(this.parent.searchEntry);
           //this.menu.actor.can_focus = true;
-       }*/
+       }
    },
     
    activate: function(event) {
@@ -2828,7 +2828,7 @@ HoverIconBox.prototype = {
    },
     
    toggleMenu: function() {
-      /*if(this.menu.isOpen) {
+      if(this.menu.isOpen) {
          this.menu.close(true);
          this.container.remove_style_pseudo_class('open');
          //this.menu.sourceActor._delegate.setActive(false);
@@ -2836,12 +2836,12 @@ HoverIconBox.prototype = {
          this.menu.open();
          this.container.add_style_pseudo_class('open');
          //this.menu.sourceActor._delegate.setActive(true);
-      }*/
+      }
    },
 
    _onUserChanged: function() {
       if(this._user.is_loaded) {
-         this.userLabel.set_text (this._user.get_real_name());
+         this.label.set_text (this._user.get_real_name());
          if(this._userIcon) {
 
             let iconFileName = this._user.get_icon_file();
@@ -2861,10 +2861,10 @@ HoverIconBox.prototype = {
 
    refresh: function (icon) {
       if(this.actor.visible) {
-         if((icon)&&(this.icon)) {
+         if((icon)&&(this._icon)) {
             this._removeIcon();
-            this.icon.set_icon_name(icon);
-            this.container.add_actor(this.icon, 0);
+            this._icon.set_icon_name(icon);
+            this.container.add_actor(this._icon, 0);
          } else
             this.refreshFace();
       }
@@ -2915,8 +2915,8 @@ HoverIconBox.prototype = {
          this.lastApp.destroy();
          this.lastApp = null;
       }
-      if((this.icon)&&(this.icon.get_parent() == this.container))
-         this.container.remove_actor(this.icon);
+      if((this._icon)&&(this._icon.get_parent() == this.container))
+         this.container.remove_actor(this._icon);
       if((this._userIcon)&&(this._userIcon.get_parent() == this.container))
          this.container.remove_actor(this._userIcon);
    }

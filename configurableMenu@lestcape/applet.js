@@ -2726,27 +2726,7 @@ MyApplet.prototype = {
          }));
       }
    },
-/*
-   finalizeContextMenu: function () {
-      Applet.Applet.prototype.finalizeContextMenu.call(this);
-      if(this.context_menu_item_configure) {
-         this.context_menu_item_configure.connect('activate', Lang.bind(this, function() {
-            Mainloop.idle_add(Lang.bind(this, function() {
-               if(this.menu.isOpen)
-                  this.menu.close();
-            }));
-         }));
-      }
-      if(this.context_menu_item_remove) {
-         this.context_menu_item_remove.connect('activate', Lang.bind(this, function() {
-            Mainloop.idle_add(Lang.bind(this, function() {
-               if(this.menu.isOpen)
-                  this.menu.close();
-            }));
-         }));
-      }
-   },
-*/
+
    _onMenuButtonRelease: function(actor, event) {
       try {
          if(event.get_button() == 3) {
