@@ -1856,6 +1856,56 @@ ConfigurablePopupBaseMenuItem.prototype = {
 };
 Signals.addSignalMethods(ConfigurablePopupBaseMenuItem.prototype);
 
+function ConfigurablePopupSwitchMenuItem() {
+    this._init.apply(this, arguments);
+}
+
+ConfigurablePopupSwitchMenuItem.prototype = {
+   __proto__: ConfigurablePopupBaseMenuItem.prototype,
+
+   _init: function(text, imageOn, imageOff, active, params) {
+      ConfigurablePopupBaseMenuItem.prototype._init.call(this, params);
+
+      this._imageOn = imageOn;
+      this._imageOff = imageOff;
+
+      let table = new St.Table({ homogeneous: false, reactive: true });
+
+      this.label = new St.Label({ text: text });
+      this.label.set_margin_left(6.0);
+
+      this._switch = new Switch(active);
+
+      if(active)
+         this.icon = new St.Icon({ icon_name: this._imageOn, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });
+      else
+         this.icon = new St.Icon({ icon_name: this._imageOff, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });
+
+      this._statusBin = new St.Bin({ x_align: St.Align.END });
+      this._statusBin.set_margin_left(6.0);
+      this._statusLabel = new St.Label({ text: '', style_class: 'popup-inactive-menu-item' });
+      this._statusBin.child = this._switch.actor;
+
+      table.add(this.icon, {row: 0, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START});
+      table.add(this.label, {row: 0, col: 1, col_span: 1, y_fill: false, y_expand: true, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE});
+      table.add(this._statusBin, {row: 0, col: 2, col_span: 1, x_expand: true, x_align: St.Align.END});
+
+      this.addActor(table, { expand: true, span: 1, align: St.Align.START});
+   },
+
+   setToggleState: function(state) {
+      if(state)
+         this.icon.set_icon_name(this._imageOn);
+      else
+         this.icon.set_icon_name(this._imageOff);
+      this._switch.setToggleState(state);
+   },
+
+   get_state: function() {
+      return this._switch.state;
+   }
+};
+
 function GradientLabelMenuItem() {
    this._init.apply(this, arguments);
 }
@@ -3008,19 +3058,23 @@ ConfigurablePopupMenuBase.prototype = {
       this.emit('child-menu-removed', menu);
    },
 
-   _connectSubMenuSignals: function(object, menu) {
-      object._subMenuActivateId = menu.connect('activate', Lang.bind(this, function(submenu, submenuItem, keepMenu) {
+   _connectSubMenuSignals: function(menuItem, menu) {
+      menuItem._subMenuActivateId = menu.connect('activate', Lang.bind(this, function(submenu, submenuItem, keepMenu) {
          this.emit('activate', submenuItem, keepMenu);
          if (!keepMenu) {
             this.close(true);
          }
       }));
-      object._subMenuActiveChangeId = menu.connect('active-changed', Lang.bind(this, function(submenu, submenuItem) {
+      menuItem._subMenuActiveChangeId = menu.connect('active-changed', Lang.bind(this, function(submenu, submenuItem) {
          if (this._activeMenuItem && this._activeMenuItem != submenuItem)
             this._activeMenuItem.setActive(false);
          this._activeMenuItem = submenuItem;
          this.emit('active-changed', submenuItem);
       }));
+      menuItem._closingMenuId = this.connect('open-state-changed', function(menu, open) {
+         if (!open && menuItem.menu)
+            menuItem.menu.close(false);
+      });
    },
 
    _connectItemSignals: function(menuItem) {
@@ -3050,7 +3104,7 @@ ConfigurablePopupMenuBase.prototype = {
              this.close(true);
          }
       }));
-      menuItem.connect('destroy', Lang.bind(this, function(emitter) {
+      menuItem._closingId = menuItem.connect('destroy', Lang.bind(this, function(emitter) {
          this._disconnectItemSignals(menuItem);
          if (menuItem.menu)
             this._disconnectSubMenuSignals(menuItem, menuItem.menu);
@@ -3144,10 +3198,15 @@ ConfigurablePopupMenuBase.prototype = {
       } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          menuItem.connect('menu-changed', Lang.bind(this, function(menuItem, oldMenu) { this._onMenuChanged(menuItem, oldMenu); }));
          this._onMenuChanged(menuItem, menuItem.menu);
+         this._connectItemSignals(menuItem);
       } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
          this._connectItemSignals(menuItem);
-         this.connect('open-state-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
-         this.box.connect('allocation-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
+         // updateSeparatorVisibility needs to get called any time the
+         // separator's adjacent siblings change visibility or position.
+         // open-state-changed isn't exactly that, but doing it in more
+         // precise ways would require a lot more bookkeeping.
+         menuItem._closingMenuId = this.connect('open-state-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
+         menuItem._allocationId = this.box.connect('allocation-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
       } else if (menuItem instanceof ConfigurablePopupBaseMenuItem)
          this._connectItemSignals(menuItem);
       else
@@ -3163,7 +3222,9 @@ ConfigurablePopupMenuBase.prototype = {
             this.box.remove_actor(oldMenu.actor);
       }
       if(menuItem.menu) {
-         this.box.insert_before(menuItem.menu.actor, menuItem.actor);
+         if(!this._isFloating(menuItem.menu))
+            this.box.insert_before(menuItem.menu.actor, menuItem.actor);
+         this._connectSubMenuSignals(menuItem, menuItem.menu);
          this._connectSubMenuSignals(menuItem, menuItem.menu);
          this._connectItemSignals(menuItem);
          menuItem._closingId = this.connect('open-state-changed', function(self, open) {
@@ -4251,97 +4312,7 @@ ConfigurableMenu.prototype = {
       this._setShowItemIcon(menuItem);
       this._setDesaturateItemIcon(menuItem);
       this._setVectorBox(menuItem);
-      let before_item = null;
-      if (position == undefined) {
-         this.box.add(menuItem.actor);
-      } else {
-         let items = this._getMenuItems();
-         if (position < items.length) {
-            before_item = items[position].actor;
-            this.box.insert_before(menuItem.actor, before_item);
-         } else
-            this.box.add(menuItem.actor);
-      }
-      if (menuItem instanceof ConfigurablePopupMenuSection) {
-         this._connectSubMenuSignals(menuItem, menuItem);
-         menuItem._destroyId = menuItem.connect('destroy', Lang.bind(this, function() {
-            this._disconnectSubMenuSignals(menuItem, menuItem);
-            this.length--;
-         }));
-      } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         menuItem.connect('menu-changed', Lang.bind(this, function(menuItem, oldMenu) { this._onMenuChanged(menuItem, oldMenu); }));
-         this._onMenuChanged(menuItem, menuItem.menu);
-         menuItem._closingMenuId = this.connect('open-state-changed', function(self, open) {
-            if (!open && menuItem.menu)
-               menuItem.menu.close(false);
-         });
-         this._connectItemSignals(menuItem);
-      } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
-         this._connectItemSignals(menuItem);
-         // updateSeparatorVisibility needs to get called any time the
-         // separator's adjacent siblings change visibility or position.
-         // open-state-changed isn't exactly that, but doing it in more
-         // precise ways would require a lot more bookkeeping.
-         menuItem._closingMenuId = this.connect('open-state-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
-         menuItem._allocationId = this.box.connect('allocation-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
-      //} else if ((menuItem instanceof ConfigurablePopupBaseMenuItem) || (menuItem instanceof PopupMenu.PopupBaseMenuItem)) {
-      } else if (menuItem instanceof ConfigurablePopupBaseMenuItem) {
-         this._connectItemSignals(menuItem);
-      } else
-         throw TypeError("Invalid argument to ConfigurablePopupMenuBase.addMenuItem()");
-
-      this.length++;
-   },
-
-   _onMenuChanged: function(menuItem, oldMenu) {
-      if(oldMenu) {
-         this._disconnectSubMenuSignals(menuItem, oldMenu);
-         if(oldMenu.actor.get_parent() == this.box)
-            this.box.remove_actor(oldMenu.actor);
-      }
-      if(menuItem.menu) {
-         if(!this._isFloating(menuItem.menu))
-            this.box.insert_before(menuItem.menu.actor, menuItem.actor);
-         this._connectSubMenuSignals(menuItem, menuItem.menu);
-      }
-   },
-
-   _connectItemSignals: function(menuItem) {
-      menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function (menuItem, active) {
-         if (active && this._activeMenuItem != menuItem) {
-            if (this._activeMenuItem)
-               this._activeMenuItem.setActive(false);
-            this._activeMenuItem = menuItem;
-            this.emit('active-changed', menuItem);
-         } else if (!active && this._activeMenuItem == menuItem) {
-            this._activeMenuItem = null;
-            this.emit('active-changed', null);
-         }
-      }));
-      menuItem._sensitiveChangeId = menuItem.connect('sensitive-changed', Lang.bind(this, function(menuItem, sensitive) {
-         if (!sensitive && this._activeMenuItem == menuItem) {
-            if (!this.actor.navigate_focus(menuItem.actor, Gtk.DirectionType.TAB_FORWARD, true))
-               this.actor.grab_key_focus();
-         } else if (sensitive && this._activeMenuItem == null) {
-            if (global.stage.get_key_focus() == this.actor)
-               menuItem.actor.grab_key_focus();
-         }
-      }));
-      menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function (menuItem, event, keepMenu) {
-         this.emit('activate', menuItem, keepMenu);
-         if (!keepMenu){
-             this.close(true);
-         }
-      }));
-      menuItem._closingId = menuItem.connect('destroy', Lang.bind(this, function(emitter) {
-         this._disconnectItemSignals(menuItem);
-         if (menuItem.menu) {
-            this._disconnectSubMenuSignals(menuItem, menuItem.menu);
-         }
-         if (menuItem == this._activeMenuItem)
-            this._activeMenuItem = null;
-         this.length--;
-      }));
+      ConfigurablePopupMenuBase.prototype.addMenuItem.call (this, menuItem, position);
    },
 
    removeItem: function(menuItem) {
@@ -4704,45 +4675,7 @@ ConfigurablePopupMenuSection.prototype = {
       this._setShowItemIcon(menuItem);
       this._setDesaturateItemIcon(menuItem);
       this._setVectorBox(menuItem);
-      let before_item = null;
-      if (position == undefined) {
-         this.box.add(menuItem.actor);
-      } else {
-         let items = this._getMenuItems();
-         if (position < items.length) {
-            before_item = items[position].actor;
-            this.box.insert_before(menuItem.actor, before_item);
-         } else
-            this.box.add(menuItem.actor);
-      }
-      if (menuItem instanceof ConfigurablePopupMenuSection) {
-         this._connectSubMenuSignals(menuItem, menuItem);
-         menuItem._destroyId = menuItem.connect('destroy', Lang.bind(this, function() {
-            this._disconnectSubMenuSignals(menuItem, menuItem);
-            this.length--;
-         }));
-      } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         menuItem.connect('menu-changed', Lang.bind(this, function(menuItem, oldMenu) { this._onMenuChanged(menuItem, oldMenu); }));
-         this._onMenuChanged(menuItem, menuItem.menu);
-         menuItem._closingMenuId = this.connect('open-state-changed', function(self, open) {
-            if (!open && menuItem.menu)
-               menuItem.menu.close(false);
-         });
-         this._connectItemSignals(menuItem);
-      } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
-         this._connectItemSignals(menuItem);
-         // updateSeparatorVisibility needs to get called any time the
-         // separator's adjacent siblings change visibility or position.
-         // open-state-changed isn't exactly that, but doing it in more
-         // precise ways would require a lot more bookkeeping.
-         menuItem._closingMenuId = this.connect('open-state-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
-         menuItem._allocationId = this.box.connect('allocation-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
-      } else if (menuItem instanceof ConfigurablePopupBaseMenuItem) {
-         this._connectItemSignals(menuItem);
-      } else
-         throw TypeError("Invalid argument to ConfigurablePopupMenuBase.addMenuItem()");
-
-      this.length++;
+      ConfigurablePopupMenuBase.prototype.addMenuItem.call(this, menuItem, position);
    },
 
    _onMenuChanged: function(menuItem, oldMenu) {
@@ -4756,43 +4689,6 @@ ConfigurablePopupMenuSection.prototype = {
             this.box.insert_before(menuItem.menu.actor, menuItem.actor);
          this._connectSubMenuSignals(menuItem, menuItem.menu);
       }
-   },
-
-   _connectItemSignals: function(menuItem) {
-      menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function (menuItem, active) {
-         if (active && this._activeMenuItem != menuItem) {
-            if (this._activeMenuItem)
-               this._activeMenuItem.setActive(false);
-            this._activeMenuItem = menuItem;
-            this.emit('active-changed', menuItem);
-         } else if (!active && this._activeMenuItem == menuItem) {
-            this._activeMenuItem = null;
-            this.emit('active-changed', null);
-         }
-      }));
-      menuItem._sensitiveChangeId = menuItem.connect('sensitive-changed', Lang.bind(this, function(menuItem, sensitive) {
-         if (!sensitive && this._activeMenuItem == menuItem) {
-            if (!this.actor.navigate_focus(menuItem.actor, Gtk.DirectionType.TAB_FORWARD, true))
-               this.actor.grab_key_focus();
-         } else if (sensitive && this._activeMenuItem == null) {
-            if (global.stage.get_key_focus() == this.actor)
-               menuItem.actor.grab_key_focus();
-         }
-      }));
-      menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function (menuItem, event, keepMenu) {
-         this.emit('activate', menuItem, keepMenu);
-         if (!keepMenu){
-             this.close(true);
-         }
-      }));
-      menuItem._closingId = menuItem.connect('destroy', Lang.bind(this, function(emitter) {
-         this._disconnectItemSignals(menuItem);
-         if (menuItem.menu)
-            this._disconnectSubMenuSignals(menuItem, menuItem.menu);
-         if (menuItem == this._activeMenuItem)
-            this._activeMenuItem = null;
-         this.length--;
-      }));
    },
 
    removeItem: function(menuItem) {

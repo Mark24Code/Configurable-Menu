@@ -2700,7 +2700,7 @@ HoverIconBox.prototype = {
          userBox.add(this.label, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
          this.menu.addActor(userBox);
 
-         this.notificationsSwitch = new ConfigurablePopupSwitchMenuItem(_("Notifications"), null, null, this._toggleNotifications, { focusOnHover: false });
+         this.notificationsSwitch = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Notifications"), null, null, this._toggleNotifications, { focusOnHover: false });
          this.notificationsSwitch.actor.style = "padding-top: "+(2)+"px;padding-bottom: "+(2)+"px;padding-left: "+(1)+"px;padding-right: "+(1)+"px;margin:auto;";
          this.menu.addMenuItem(this.notificationsSwitch);
          global.settings.connect('changed::display-notifications', Lang.bind(this, function() {
@@ -2774,7 +2774,7 @@ HoverIconBox.prototype = {
       }
 
       return ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
-    },
+   },
 
    _putFocus: function() {
       global.stage.set_key_focus(this.fav_actor);
@@ -2920,56 +2920,6 @@ HoverIconBox.prototype = {
       if((this._userIcon)&&(this._userIcon.get_parent() == this.container))
          this.container.remove_actor(this._userIcon);
    }
-};
-
-function ConfigurablePopupSwitchMenuItem() {
-    this._init.apply(this, arguments);
-}
-
-ConfigurablePopupSwitchMenuItem.prototype = {
-    __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
-
-    _init: function(text, imageOn, imageOff, active, params) {
-        ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, params);
-
-        this._imageOn = imageOn;
-        this._imageOff = imageOff;
-
-        let table = new St.Table({ homogeneous: false, reactive: true });
-
-        this.label = new St.Label({ text: text });
-        this.label.set_margin_left(6.0);
-
-        this._switch = new ConfigurableMenus.Switch(active);
-
-        if(active)
-           this.icon = new St.Icon({ icon_name: this._imageOn, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });
-        else
-           this.icon = new St.Icon({ icon_name: this._imageOff, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });
-
-        this._statusBin = new St.Bin({ x_align: St.Align.END });
-        this._statusBin.set_margin_left(6.0);
-        this._statusLabel = new St.Label({ text: '', style_class: 'popup-inactive-menu-item' });
-        this._statusBin.child = this._switch.actor;
-
-        table.add(this.icon, {row: 0, col: 0, col_span: 1, x_expand: false, x_align: St.Align.START});
-        table.add(this.label, {row: 0, col: 1, col_span: 1, y_fill: false, y_expand: true, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE});
-        table.add(this._statusBin, {row: 0, col: 2, col_span: 1, x_expand: true, x_align: St.Align.END});
-
-        this.addActor(table, { expand: true, span: 1, align: St.Align.START});
-    },
-
-    setToggleState: function(state) {
-        if(state)
-           this.icon.set_icon_name(this._imageOn);
-        else
-           this.icon.set_icon_name(this._imageOff);
-        this._switch.setToggleState(state);
-    },
-
-    get_state: function() {
-        return this._switch.state;
-    }
 };
 
 // This is only a clone for the dalcde update

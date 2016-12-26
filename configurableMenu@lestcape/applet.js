@@ -2625,7 +2625,7 @@ MyApplet.prototype = {
             this._applet_context_menu.addMenuItem(this.separatorResize);
          }
 
-         this.allowResize = new MenuItems.ConfigurablePopupSwitchMenuItem(_("Allow resizing"), 'changes-prevent', 'changes-allow', false);
+         this.allowResize = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Allow resizing"), 'changes-prevent', 'changes-allow', false);
          this.allowResize.connect('activate', Lang.bind(this, function() {
             Mainloop.idle_add(Lang.bind(this, function() {
                this.controlingSize = !this.controlingSize;
@@ -2636,7 +2636,7 @@ MyApplet.prototype = {
             this._applet_context_menu.addMenuItem(this.allowResize);
          }
 
-         this.fullScreenMenu = new MenuItems.ConfigurablePopupSwitchMenuItem(_("Full Screen"), 'view-restore', 'view-fullscreen', false);
+         this.fullScreenMenu = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Full Screen"), 'view-restore', 'view-fullscreen', false);
          this.fullScreenMenu.connect('activate', Lang.bind(this, function() {
             Mainloop.idle_add(Lang.bind(this, function() {
                this.fullScreen = !this.fullScreen;
