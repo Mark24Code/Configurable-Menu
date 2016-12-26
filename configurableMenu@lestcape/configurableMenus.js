@@ -2173,16 +2173,6 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       }
    },
 
-   _onKeyFocusInit: function (actor) {
-      if(this.menu && !this.menu.IsOpen && this.menu.isInFloatingState())
-         this.setActive(true);
-   },
-
-   _onKeyFocusOut: function (actor) {
-      if(this.menu && this.menu.IsOpen && this.menu.isInFloatingState())
-         this.setActive(false);
-   },
-
    preservedSelection: function(preserve) {
       this.preserveSelection = preserve;
    },
@@ -2372,11 +2362,13 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
    },
 
    _onKeyFocusInit: function (actor) {
-      this.setActive(true);
+      if(this.menu && !this.menu.IsOpen && this.menu.isInFloatingState())
+         this.setActive(true);
    },
 
    _onKeyFocusOut: function (actor) {
-      this.setActive(false);
+      if(this.menu && this.menu.IsOpen && this.menu.isInFloatingState())
+         this.setActive(false);
    },
 
    setActive: function(active) {
@@ -3059,18 +3051,43 @@ ConfigurablePopupMenuBase.prototype = {
          }
       }));
       menuItem.connect('destroy', Lang.bind(this, function(emitter) {
-         menuItem.disconnect(menuItem._activateId);
-         menuItem.disconnect(menuItem._activeChangeId);
-         menuItem.disconnect(menuItem._sensitiveChangeId);
-         if (menuItem.menu) {
-            menuItem.menu.disconnect(menuItem._subMenuActivateId);
-            menuItem.menu.disconnect(menuItem._subMenuActiveChangeId);
-            this.disconnect(menuItem._closingId);
-         }
+         this._disconnectItemSignals(menuItem);
+         if (menuItem.menu)
+            this._disconnectSubMenuSignals(menuItem, menuItem.menu);
          if (menuItem == this._activeMenuItem)
             this._activeMenuItem = null;
          this.length--;
       }));
+   },
+
+   _disconnectItemSignals: function(menuItem) {
+      if(menuItem._activeChangeId) {
+         menuItem.disconnect(menuItem._activeChangeId);
+         menuItem._activeChangeId = null;
+      }
+      if(menuItem._sensitiveChangeId) {
+         menuItem.disconnect(menuItem._sensitiveChangeId);
+         menuItem._sensitiveChangeId = null;
+      }
+      if(menuItem._activateId) {
+         menuItem.disconnect(menuItem._activateId);
+         menuItem._activateId = null;
+      }
+      if(menuItem._closingId) {
+         menuItem.disconnect(menuItem._closingId);
+         menuItem._closingId = null;
+      }
+   },
+
+   _disconnectSubMenuSignals: function(object, menu) {
+      if(object._subMenuActivateId) {
+         menu.disconnect(object._subMenuActivateId);
+         object._subMenuActivateId = null;
+      }
+      if(object._subMenuActiveChangeId) {
+         menu.disconnect(object._subMenuActiveChangeId);
+         object._subMenuActiveChangeId = null;
+      }
    },
 
    _updateSeparatorVisibility: function(menuItem) {
@@ -3121,9 +3138,7 @@ ConfigurablePopupMenuBase.prototype = {
       if (menuItem instanceof ConfigurablePopupMenuSection) {
          this._connectSubMenuSignals(menuItem, menuItem);
          menuItem.connect('destroy', Lang.bind(this, function() {
-            menuItem.disconnect(menuItem._subMenuActivateId);
-            menuItem.disconnect(menuItem._subMenuActiveChangeId);
-
+            this._disconnectSubMenuSignals(menuItem, menuItem);
             this.length--;
          }));
       } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
@@ -4250,8 +4265,7 @@ ConfigurableMenu.prototype = {
       if (menuItem instanceof ConfigurablePopupMenuSection) {
          this._connectSubMenuSignals(menuItem, menuItem);
          menuItem._destroyId = menuItem.connect('destroy', Lang.bind(this, function() {
-            menuItem.disconnect(menuItem._subMenuActivateId);
-            menuItem.disconnect(menuItem._subMenuActiveChangeId);
+            this._disconnectSubMenuSignals(menuItem, menuItem);
             this.length--;
          }));
       } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
@@ -4320,13 +4334,9 @@ ConfigurableMenu.prototype = {
          }
       }));
       menuItem._closingId = menuItem.connect('destroy', Lang.bind(this, function(emitter) {
-         menuItem.disconnect(menuItem._activateId);
-         menuItem.disconnect(menuItem._activeChangeId);
-         menuItem.disconnect(menuItem._sensitiveChangeId);
-         menuItem.disconnect(menuItem._closingId);
+         this._disconnectItemSignals(menuItem);
          if (menuItem.menu) {
-            menuItem.menu.disconnect(menuItem._subMenuActivateId);
-            menuItem.menu.disconnect(menuItem._subMenuActiveChangeId);
+            this._disconnectSubMenuSignals(menuItem, menuItem.menu);
          }
          if (menuItem == this._activeMenuItem)
             this._activeMenuItem = null;
@@ -4347,8 +4357,6 @@ ConfigurableMenu.prototype = {
       if (menuItem instanceof ConfigurablePopupMenuSection) {
          this._disconnectSubMenuSignals(menuItem, menuItem);
          menuItem.disconnect(menuItem._destroyId);
-         menuItem.disconnect(menuItem._subMenuActivateId);
-         menuItem.disconnect(menuItem._subMenuActiveChangeId);
       } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu)
             this._disconnectSubMenuSignals(menuItem, menuItem.menu);
@@ -4368,24 +4376,6 @@ ConfigurableMenu.prototype = {
       children.map(function(child) {
          this.removeItem(child);
       }, this);
-   },
-
-   _disconnectItemSignals: function(menuItem) {
-      menuItem.disconnect(menuItem._activeChangeId);
-      menuItem.disconnect(menuItem._sensitiveChangeId);
-      menuItem.disconnect(menuItem._activateId);
-      menuItem.disconnect(menuItem._closingId);
-   },
-
-   _disconnectSubMenuSignals: function(object, menu) {
-      if(object._subMenuActivateId) {
-         menu.disconnect(object._subMenuActivateId);
-         object._subMenuActivateId = null;
-      }
-      if(object._subMenuActiveChangeId) {
-         menu.disconnect(object._subMenuActiveChangeId);
-         object._subMenuActiveChangeId = null;
-      }
    },
 
    addChildMenu: function(menu) {
@@ -4728,8 +4718,7 @@ ConfigurablePopupMenuSection.prototype = {
       if (menuItem instanceof ConfigurablePopupMenuSection) {
          this._connectSubMenuSignals(menuItem, menuItem);
          menuItem._destroyId = menuItem.connect('destroy', Lang.bind(this, function() {
-            menuItem.disconnect(menuItem._subMenuActivateId);
-            menuItem.disconnect(menuItem._subMenuActiveChangeId);
+            this._disconnectSubMenuSignals(menuItem, menuItem);
             this.length--;
          }));
       } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
@@ -4797,14 +4786,9 @@ ConfigurablePopupMenuSection.prototype = {
          }
       }));
       menuItem._closingId = menuItem.connect('destroy', Lang.bind(this, function(emitter) {
-         menuItem.disconnect(menuItem._activateId);
-         menuItem.disconnect(menuItem._activeChangeId);
-         menuItem.disconnect(menuItem._sensitiveChangeId);
-         menuItem.disconnect(menuItem._closingId);
-         if (menuItem.menu) {
-            menuItem.menu.disconnect(menuItem._subMenuActivateId);
-            menuItem.menu.disconnect(menuItem._subMenuActiveChangeId);
-         }
+         this._disconnectItemSignals(menuItem);
+         if (menuItem.menu)
+            this._disconnectSubMenuSignals(menuItem, menuItem.menu);
          if (menuItem == this._activeMenuItem)
             this._activeMenuItem = null;
          this.length--;
@@ -4815,7 +4799,6 @@ ConfigurablePopupMenuSection.prototype = {
       let parent = menuItem.actor.get_parent();
       if(parent)
          parent.remove_actor(menuItem.actor);
-      index = this._visibleItems.indexOf(menuItem);
       if(menuItem.menu) {
          parent = menuItem.menu.actor.get_parent();
          if(parent)
@@ -4823,39 +4806,32 @@ ConfigurablePopupMenuSection.prototype = {
       }
       if (menuItem instanceof ConfigurablePopupMenuSection) {
          this._disconnectSubMenuSignals(menuItem, menuItem);
-         menuItem.disconnect(menuItem._destroyId);
-         menuItem.disconnect(menuItem._subMenuActivateId);
-         menuItem.disconnect(menuItem._subMenuActiveChangeId);
+         if(menuItem._destroyId) {
+            menuItem.disconnect(menuItem._destroyId);
+            menuItem._destroyId = null;
+         }
+         this._disconnectSubMenuSignals(menuItem, menuItem);
       } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu)
             this._disconnectSubMenuSignals(menuItem, menuItem.menu);
-         menuItem.disconnect(menuItem._closingMenuId);
+         if(menuItem._closingMenuId) {
+            menuItem.disconnect(menuItem._closingMenuId);
+            menuItem._closingMenuId = null;
+         }
          this._disconnectItemSignals(menuItem);
       } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
          this._disconnectItemSignals(menuItem);
-         menuItem.disconnect(menuItem._closingMenuId);
-         menuItem.disconnect(menuItem._allocationId);
+         if(menuItem._closingMenuId) {
+            menuItem.disconnect(menuItem._closingMenuId);
+            menuItem._closingMenuId = null;
+         }
+         if(menuItem._allocationId) {
+            menuItem.disconnect(menuItem._allocationId);
+            menuItem._allocationId = null;
+         }
       } else if (menuItem instanceof ConfigurablePopupBaseMenuItem)
          this._disconnectItemSignals(menuItem);
       this.length--;
-   },
-
-   _disconnectItemSignals: function(menuItem) {
-      menuItem.disconnect(menuItem._activeChangeId);
-      menuItem.disconnect(menuItem._sensitiveChangeId);
-      menuItem.disconnect(menuItem._activateId);
-      menuItem.disconnect(menuItem._closingId);
-   },
-
-   _disconnectSubMenuSignals: function(object, menu) {
-      if(object._subMenuActivateId) {
-         menu.disconnect(object._subMenuActivateId);
-         object._subMenuActivateId = null;
-      }
-      if(object._subMenuActiveChangeId) {
-         menu.disconnect(object._subMenuActiveChangeId);
-         object._subMenuActiveChangeId = null;
-      }
    },
 
    clearAll: function() {
@@ -5264,8 +5240,7 @@ ConfigurableGridSection.prototype = {
          menuItem.disconnect(menuItem._activeChangeId);
          menuItem.disconnect(menuItem._sensitiveChangeId);
          if (menuItem.menu) {
-            menuItem.menu.disconnect(menuItem._subMenuActivateId);
-            menuItem.menu.disconnect(menuItem._subMenuActiveChangeId);
+            this._disconnectSubMenuSignals(menuItem, menuItem.menu);
             menuItem.disconnect(menuItem._closingId);
          }
          if (menuItem == this._activeMenuItem)
@@ -6342,6 +6317,7 @@ ConfigurableGridSection.prototype = {
          this._visibleItemsChange = true;
       }
       index = this._visibleItems.indexOf(menuItem);
+
       if(index != -1)
          this._visibleItems.splice(index, 1);
       menuItem.disconnect(menuItem._showId);
