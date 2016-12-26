@@ -37,7 +37,6 @@ const ScreenSaver = imports.misc.screenSaver;
 const GnomeSession = imports.misc.gnomeSession;
 const St = imports.gi.St;
 const Gio = imports.gi.Gio;
-const PopupMenu = imports.ui.popupMenu;
 const Gtk = imports.gi.Gtk;
 const Mainloop = imports.mainloop;
 const Settings = imports.ui.settings;
@@ -170,7 +169,6 @@ MyApplet.prototype = {
          else
             this.actor.add_style_class_name('menu-applet-panel-bottom-box'); 
 
-         //this.menuManager = new PopupMenu.PopupMenuManager(this);
          this.menuManager = new ConfigurableMenus.ConfigurableMenuManager(this);
          this._updateMenuSection();
 
@@ -2622,7 +2620,7 @@ MyApplet.prototype = {
             this.gridView.setSensitive(!this.iconView);
          }
 
-         this.separatorResize = new PopupMenu.PopupSeparatorMenuItem();
+         this.separatorResize = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
          if(items.indexOf(this.separatorResize) == -1) {
             this._applet_context_menu.addMenuItem(this.separatorResize);
          }
@@ -2651,6 +2649,84 @@ MyApplet.prototype = {
       }
    },
 
+   openAbout: function() {
+      if(Applet.Applet.prototype.openAbout)
+         Applet.Applet.prototype.openAbout.call(this);
+      else
+         Main.notify("Missing reference to the About Dialog");
+   },
+
+   configureApplet: function() {
+      if(Applet.Applet.prototype.configureApplet)
+         Applet.Applet.prototype.configureApplet.call(this);
+      else
+         Util.spawnCommandLine("xlet-settings applet " + this._uuid + " " + this.instance_id);
+   },
+
+   finalizeContextMenu: function () {
+      // Add default context menus if we're in panel edit mode, ensure their removal if we're not       
+      let items = this._applet_context_menu._getMenuItems();
+
+      if (this.context_menu_item_remove == null) {
+         this.context_menu_item_remove = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Remove '%s'").format(_(this._meta.name)));
+         this.context_menu_item_remove.setIconName("edit-delete");
+         this.context_menu_item_remove.setShowItemIcon(true);
+         this.context_menu_item_remove.setIconType(St.IconType.SYMBOLIC);
+         this.context_menu_item_remove.connect('activate', Lang.bind(this, function() {
+            AppletManager._removeAppletFromPanel(this._uuid, this.instance_id);
+         }));
+      }
+      if (this.context_menu_item_about == null) {
+         this.context_menu_item_about = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("About..."));
+         this.context_menu_item_about.setIconName("dialog-question");
+         this.context_menu_item_about.setShowItemIcon(true);
+         this.context_menu_item_about.setIconType(St.IconType.SYMBOLIC);
+         this.context_menu_item_about.connect('activate', Lang.bind(this, this.openAbout));
+      }
+
+      if (this.context_menu_separator == null) {
+         this.context_menu_separator = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      }
+
+      if (items.indexOf(this.context_menu_item_about) == -1) {
+         this._applet_context_menu.addMenuItem(this.context_menu_item_about);
+      }
+
+      if (!this._meta["hide-configuration"] && GLib.file_test(this._meta["path"] + "/settings-schema.json", GLib.FileTest.EXISTS)) {
+         if (this.context_menu_item_configure == null) {            
+             this.context_menu_item_configure = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Configure..."));
+             this.context_menu_item_configure.setIconName("system-run");
+             this.context_menu_item_configure.setShowItemIcon(true);
+             this.context_menu_item_configure.setIconType(St.IconType.SYMBOLIC);
+             this.context_menu_item_configure.connect('activate', Lang.bind(this, this.configureApplet));
+         }
+         if (items.indexOf(this.context_menu_item_configure) == -1) {
+             this._applet_context_menu.addMenuItem(this.context_menu_item_configure);
+         }
+      }
+
+      if (items.indexOf(this.context_menu_item_remove) == -1) {
+         this._applet_context_menu.addMenuItem(this.context_menu_item_remove);
+      }
+
+      if(this.context_menu_item_configure) {
+         this.context_menu_item_configure.connect('activate', Lang.bind(this, function() {
+            Mainloop.idle_add(Lang.bind(this, function() {
+               if(this.menu.isOpen)
+                  this.menu.close();
+            }));
+         }));
+      }
+      if(this.context_menu_item_remove) {
+         this.context_menu_item_remove.connect('activate', Lang.bind(this, function() {
+            Mainloop.idle_add(Lang.bind(this, function() {
+               if(this.menu.isOpen)
+                  this.menu.close();
+            }));
+         }));
+      }
+   },
+/*
    finalizeContextMenu: function () {
       Applet.Applet.prototype.finalizeContextMenu.call(this);
       if(this.context_menu_item_configure) {
@@ -2670,7 +2746,7 @@ MyApplet.prototype = {
          }));
       }
    },
-
+*/
    _onMenuButtonRelease: function(actor, event) {
       try {
          if(event.get_button() == 3) {
@@ -2862,8 +2938,8 @@ MyApplet.prototype = {
       this.standarAppGrid = new ConfigurableMenus.ConfigurableGridSection({ style_class: 'popup-menu-item' });
       this.searchAppGrid = new ConfigurableMenus.ConfigurableGridSection({ style_class: 'popup-menu-item' });
       this.packageAppGrid = new ConfigurableMenus.ConfigurableGridSection({ style_class: 'popup-menu-item' });
-      this.searchAppSeparator = new PopupMenu.PopupSeparatorMenuItem();
-      this.packageAppSeparator = new PopupMenu.PopupSeparatorMenuItem();
+      this.searchAppSeparator = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      this.packageAppSeparator = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
       this.endVerticalBox = new St.BoxLayout({ vertical: true });
       this.endHorizontalBox = new St.BoxLayout({ vertical: false });
       this.selectedAppBox = new MenuBox.SelectedAppBox(this, this.showTimeDate);
@@ -2872,8 +2948,8 @@ MyApplet.prototype = {
       this.operativePanelExpanded = new St.BoxLayout({ vertical: true});
       this.mainBox = new St.BoxLayout({ vertical: false });
       this.menuBox = new St.BoxLayout({ vertical: false, style_class: 'menu-main-box'});
-      this.section = new PopupMenu.PopupMenuSection();
-      this.flotingSection = new PopupMenu.PopupMenuSection();
+      this.section = new ConfigurableMenus.ConfigurablePopupMenuSection();
+      this.flotingSection = new ConfigurableMenus.ConfigurablePopupMenuSection();
       this.extendedBox = new St.BoxLayout({ vertical: true });
       this.separatorTop = new MenuBox.SeparatorBox(this.showSeparatorLine, this.separatorSize);
       this.separatorMiddle = new MenuBox.SeparatorBox(this.showSeparatorLine, this.separatorSize);
@@ -4523,7 +4599,7 @@ MyApplet.prototype = {
          for(let i = 0; i < this._searchItems.length; i++) {
             this._searchItems[i].actor.visible = true;
             this._searchItems[i].actor.style_class = "menu-application-button";
-            if(!(this._searchItems[i] instanceof PopupMenu.PopupSeparatorMenuItem))
+            if(!(this._searchItems[i] instanceof ConfigurableMenus.ConfigurableSeparatorMenuItem))
                this._searchItems[i].setString(search);
          }
          if(this._searchItems.length > 0) {

@@ -31,7 +31,7 @@ const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const Tweener = imports.ui.tweener;
 const DND = imports.ui.dnd;
-const PopupMenu = imports.ui.popupMenu;
+//const PopupMenu = imports.ui.popupMenu;
 const Main = imports.ui.main;
 const AppFavorites = imports.ui.appFavorites;
 const FileUtils = imports.misc.fileUtils;
@@ -715,7 +715,6 @@ GenericApplicationButton.prototype = {
       if((app)&&(searchTexts == null))
          searchTexts = [app.get_name(), app.get_description(), app.get_id()];
       if(this.withMenu) {
-         //this.menu = new PopupMenu.PopupSubMenu(this.actor);
          this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
          this.menu.actor.set_style_class_name('menu-context-menu');
          this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
@@ -1498,7 +1497,6 @@ RecentButton.prototype = {
                                                               appCinMime[app].create_icon_texture(20), appCinMime[app].get_id());
             this.menu.addMenuItem(menuItem);
          }
-         //this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
       }
       this.menu.toggle();
    },
@@ -2684,10 +2682,11 @@ HoverIconBox.prototype = {
          this._userIcon = new St.Icon({ icon_size: this.iconSize });
          this.icon = new St.Icon({ icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR });
          
-         this.menu = new PopupMenu.PopupSubMenu(this.actor);
+         this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
+        /* this.menu = new PopupMenu.PopupSubMenu(this.actor);
          this.actor.add_actor(this.menu.actor);
          this.menu.actor.set_style_class_name('menu-context-menu');
-         this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
+         this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));*/
 
          this._user = AccountsService.UserManager.get_default().get_user(GLib.get_user_name());
          this._userLoadedId = this._user.connect('notify::is_loaded', Lang.bind(this, this._onUserChanged));
@@ -2697,11 +2696,11 @@ HoverIconBox.prototype = {
          let userBox = new St.BoxLayout({ style_class: 'user-box', vertical: false });
          this.userLabel = new St.Label();//{ style_class: 'user-label' });
          userBox.add(this.userLabel, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
-         this.menu.addActor(userBox);
+         //this.menu.addActor(userBox);
 
-         this.notificationsSwitch = new PopupMenu.PopupSwitchMenuItem(_("Notifications"), this._toggleNotifications, { focusOnHover: false });
+         this.notificationsSwitch = new ConfigurablePopupSwitchMenuItem(_("Notifications"), null, null, this._toggleNotifications, { focusOnHover: false });
          this.notificationsSwitch.actor.style = "padding-top: "+(2)+"px;padding-bottom: "+(2)+"px;padding-left: "+(1)+"px;padding-right: "+(1)+"px;margin:auto;";
-         this.menu.addMenuItem(this.notificationsSwitch);
+         //this.menu.addMenuItem(this.notificationsSwitch);
          global.settings.connect('changed::display-notifications', Lang.bind(this, function() {
             this.notificationsSwitch.setToggleState(global.settings.get_boolean("display-notifications"));
          }));
@@ -2709,12 +2708,12 @@ HoverIconBox.prototype = {
             global.settings.set_boolean("display-notifications", this.notificationsSwitch.state);
          }));
 
-         this.account = new PopupMenu.PopupMenuItem(_("Account Details"), { focusOnHover: false });
+         /*this.account = new PopupMenu.PopupMenuItem(_("Account Details"), { focusOnHover: false });
          this.account.actor.style = "padding-top: "+(2)+"px;padding-bottom: "+(2)+"px;padding-left: "+(1)+"px;padding-right: "+(1)+"px;margin:auto;";
          this.menu.addMenuItem(this.account);
          this.account.connect('activate', Lang.bind(this, function() {
             Util.spawnCommandLine("cinnamon-settings user");
-         }));
+         }));*/
 
          this._onUserChanged();
          this.refreshFace();
@@ -2728,8 +2727,8 @@ HoverIconBox.prototype = {
    },
 
    destroy: function() {
-      this.menu.destroy();
-      PopupMenu.PopupSubMenuMenuItem.prototype.destroy.call(this);
+      //this.menu.destroy();
+      ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype.destroy.call(this);
       this.actor.destroy();
    },
 
@@ -2749,14 +2748,14 @@ HoverIconBox.prototype = {
 
    navegateHoverMenu: function(symbol, actor) {
       if((symbol == Clutter.KEY_Down)||(symbol == Clutter.KEY_Up)) {
-         if(this.account.active) {
+         /*if(this.account.active) {
             this.fav_actor = this.notificationsSwitch.actor;
             Mainloop.idle_add(Lang.bind(this, this._putFocus));
          }
          if(this.notificationsSwitch.active) {
             this.fav_actor = this.account.actor;
             Mainloop.idle_add(Lang.bind(this, this._putFocus));
-         }
+         }*/
       }
    },
 
@@ -2768,13 +2767,13 @@ HoverIconBox.prototype = {
          global.stage.set_key_focus(this.notificationsSwitch.actor);
          //this.menu.actor.navigate_focus(null, Gtk.DirectionType.DOWN, false);
          return true;
-      } else if (symbol == Clutter.KEY_Left && this.menu.isOpen) {
+      } /*else if (symbol == Clutter.KEY_Left && this.menu.isOpen) {
          global.stage.set_key_focus(this.actor);
          this.toggleMenu();
          return true;
-      }
+      }*/
 
-      return PopupMenu.PopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
+      return ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
     },
 
    _putFocus: function() {
@@ -2806,14 +2805,14 @@ HoverIconBox.prototype = {
    },
 
    _subMenuOpenStateChanged: function(menu, open) {
-       if(this.menu.isOpen) {
+      /* if(this.menu.isOpen) {
           this.parent._updateSize();
           //this.menu.actor.can_focus = false;
        }
        else {
           //global.stage.set_key_focus(this.parent.searchEntry);
           //this.menu.actor.can_focus = true;
-       }
+       }*/
    },
     
    activate: function(event) {
@@ -2823,13 +2822,13 @@ HoverIconBox.prototype = {
    },
 
    closeMenu: function() {
-      this.menu.close(true);
+      //this.menu.close(true);
       this.setActive(false);
       this.container.remove_style_pseudo_class('open');
    },
     
    toggleMenu: function() {
-      if(this.menu.isOpen) {
+      /*if(this.menu.isOpen) {
          this.menu.close(true);
          this.container.remove_style_pseudo_class('open');
          //this.menu.sourceActor._delegate.setActive(false);
@@ -2837,7 +2836,7 @@ HoverIconBox.prototype = {
          this.menu.open();
          this.container.add_style_pseudo_class('open');
          //this.menu.sourceActor._delegate.setActive(true);
-      }
+      }*/
    },
 
    _onUserChanged: function() {
@@ -2941,7 +2940,7 @@ ConfigurablePopupSwitchMenuItem.prototype = {
         this.label = new St.Label({ text: text });
         this.label.set_margin_left(6.0);
 
-        this._switch = new PopupMenu.Switch(active);
+        this._switch = new ConfigurableMenus.Switch(active);
 
         if(active)
            this.icon = new St.Icon({ icon_name: this._imageOn, icon_type: St.IconType.FULLCOLOR, style_class: 'popup-menu-icon' });

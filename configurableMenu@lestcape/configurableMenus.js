@@ -16,7 +16,7 @@
 
 const Cinnamon = imports.gi.Cinnamon;
 const Applet = imports.ui.applet;
-const PopupMenu = imports.ui.popupMenu;
+const AppletManager = imports.ui.appletManager;
 const Clutter = imports.gi.Clutter;
 const Gtk = imports.gi.Gtk;
 const Pango = imports.gi.Pango;
@@ -33,7 +33,7 @@ const DND = imports.ui.dnd;
 
 const POPUP_ANIMATION_TIME = 0.15;
 
-const OrnamentType = PopupMenu.Ornament ? PopupMenu.Ornament : {
+const OrnamentType = {
    NONE:  0,
    CHECK: 1,
    DOT:   2,
@@ -91,7 +91,7 @@ ScrollItemsBox.prototype = {
 
    _getTopMenu: function(actor) {
       while(actor) {
-         if((actor._delegate) && (actor._delegate instanceof PopupMenu.PopupMenu))
+         if((actor._delegate) && (actor._delegate instanceof ConfigurableMenu))
             return actor._delegate;
          actor = actor.get_parent();
       }
@@ -295,9 +295,9 @@ ScrollItemsBox.prototype = {
 
    setScrollVisible: function(visible) {
       this.visible = visible;
-      if(this.actor.get_vertical()) {
+      if(this.actor.get_vertical())
          this.scroll.get_vscroll_bar().visible = visible;
-      } else {
+      else {
          if((visible)&&(this.idSignalAlloc == 0))
             this.idSignalAlloc = this.actor.connect('allocation_changed', Lang.bind(this, this._onAllocationChanged));
          else if(this.idSignalAlloc > 0) {
@@ -1015,7 +1015,7 @@ ConfigurablePointer.prototype = {
 
    _getTopMenu: function(actor) {
       while(actor) {
-         if((actor._delegate) && (actor._delegate instanceof PopupMenu.PopupMenu))
+         if((actor._delegate) && (actor._delegate instanceof ConfigurableMenu))
             return actor._delegate;
          actor = actor.get_parent();
       }
@@ -1856,7 +1856,6 @@ ConfigurablePopupBaseMenuItem.prototype = {
 };
 Signals.addSignalMethods(ConfigurablePopupBaseMenuItem.prototype);
 
-
 function GradientLabelMenuItem() {
    this._init.apply(this, arguments);
 }
@@ -1869,6 +1868,7 @@ GradientLabelMenuItem.prototype = {
       this._text = text;
       this._size = size;
       this.margin = 2;
+      this.textDegradation = false;
       this.actor.set_style_class_name('gradient-label-menu-item');
 
       this._drawingArea = new St.DrawingArea({ style_class: 'applet-label' });
@@ -1881,6 +1881,10 @@ GradientLabelMenuItem.prototype = {
    setText: function(text) {
       this._text = text;
       this._updateSize();
+   },
+
+   setTextDegradation: function(degradate) {
+      this.textDegradation = degradate;
    },
 
    setSize: function(size) {
@@ -1898,9 +1902,12 @@ GradientLabelMenuItem.prototype = {
          let font    = this.themeNode.get_font();
          let context = this._drawingArea.get_pango_context();
          let metrics = context.get_metrics(font, context.get_language());
-         let width   = Math.min(this._size, this._text.length) * metrics.get_approximate_char_width() / Pango.SCALE;
+         let digit_width = metrics.get_approximate_digit_width() / Pango.SCALE;
+         let char_width = metrics.get_approximate_char_width() / Pango.SCALE;
+         let width   = Math.min(this._size, this._text.length) * (4*char_width + digit_width)/5;
+
          let height  =  font.get_size() / Pango.SCALE;
-         this._drawingArea.set_width(width);
+         this._drawingArea.set_width(width + 2*this.margin);
          this._drawingArea.set_height(height + 2*this.margin);
          this._drawingArea.queue_repaint();
       }
@@ -1910,38 +1917,43 @@ GradientLabelMenuItem.prototype = {
       try {
          let cr = area.get_context();
          let [width, height] = area.get_surface_size();
-
          let resultText = this._text.substring(0, Math.min(this._size, this._text.length));
 
          let font = this.themeNode.get_font();
          let context = this._drawingArea.get_pango_context();
          let metrics = context.get_metrics(font, context.get_language());
-         let fontSize = height - 2*this.margin;
+         let fontSize = font.get_size()/Pango.SCALE;
          let startColor = this.themeNode.get_color('color');
 
          let weight = Cairo.FontWeight.NORMAL;
          if(font.get_weight() >= 700)
             weight = Cairo.FontWeight.BOLD;
          cr.selectFontFace(font.get_family(), Cairo.FontSlant.NORMAL, weight);
-         cr.moveTo(0, height/2 + (metrics.get_descent()/Pango.SCALE) + 1);
          cr.setFontSize(fontSize);
+         cr.moveTo(this.margin, (height/2) + (metrics.get_descent()/Pango.SCALE));
 
-         let shadowPattern = new Cairo.LinearGradient(0, 0, width, height);
-         shadowPattern.addColorStopRGBA(0, 0, 0, 0, 1);
-         shadowPattern.addColorStopRGBA(1, 0, 0, 0, 0);
-         cr.setSource(shadowPattern);
+         if(this.textDegradation) {
+            let shadowPattern = new Cairo.LinearGradient(0, 0, width, height);
+            shadowPattern.addColorStopRGBA(0, 0, 0, 0, 1);
+            shadowPattern.addColorStopRGBA(1, 0, 0, 0, 0);
+            cr.setSource(shadowPattern);
+         }
 
          cr.showText(resultText);
          cr.fill();
 
-         cr.moveTo(1, height/2 + (metrics.get_descent()/Pango.SCALE) + 1);
          cr.setFontSize(fontSize);
-         let realPattern = new Cairo.LinearGradient(0, 0, width, height);
-         realPattern.addColorStopRGBA(0, startColor.red / 255, startColor.green / 255, startColor.blue / 255, startColor.alpha / 255);
-         realPattern.addColorStopRGBA(0.5, startColor.red / 255, startColor.green / 255, startColor.blue / 255, startColor.alpha / 255);
-         realPattern.addColorStopRGBA(1, startColor.red / 255, startColor.green / 255, startColor.blue / 255, 0);
-         cr.setSource(realPattern);
+         cr.moveTo(this.margin + 1, (height/2) + (metrics.get_descent()/Pango.SCALE));
 
+         if(this.textDegradation) {
+            let realPattern = new Cairo.LinearGradient(0, 0, width, height);
+            realPattern.addColorStopRGBA(0, startColor.red / 255, startColor.green / 255, startColor.blue / 255, startColor.alpha / 255);
+            realPattern.addColorStopRGBA(0.4, startColor.red / 255, startColor.green / 255, startColor.blue / 255, startColor.alpha / 255);
+            realPattern.addColorStopRGBA(1, startColor.red / 255, startColor.green / 255, startColor.blue / 255, 0);
+            cr.setSource(realPattern);
+         } else {
+            Clutter.cairo_set_source_color(cr, startColor);
+         }
          cr.showText(resultText);
          cr.fill();
          cr.stroke();
@@ -2004,6 +2016,10 @@ ConfigurableBasicPopupMenuItem.prototype = {
    setIconName: function(name) {
       this._icon.visible = ((this._displayIcon) && (name && name != ""));
       this._icon.icon_name = name;
+   },
+
+   setIconType: function(type) {
+      this._icon.set_icon_type(type);
    },
 
    desaturateItemIcon: function(desaturate) {
@@ -2574,10 +2590,9 @@ ConfigurableMenuManager.prototype = {
          if(this._activeMenu && this._activeMenu.isChildMenu(menu)) {
             this._menuStack.push(this._activeMenu);
          } else if((!focus || !menu.actor.contains(focus))) {
+            menu.actor.grab_key_focus();
             if(menu.sourceActor)
                menu.sourceActor.grab_key_focus();
-            else
-               menu.actor.grab_key_focus();
          }
          this._activeMenu = menu;
       } else if(this._menuStack.length > 0) {
@@ -2635,6 +2650,7 @@ ConfigurableMenuManager.prototype = {
             let oldMenu = this._activeMenu;
             this._activeMenu = null;
             oldMenu.close(false);
+            this.emit('close-menu', this.oldMenu);
          }
          newMenu.open(true);
       } else {
@@ -2729,8 +2745,10 @@ ConfigurableMenuManager.prototype = {
       if(eventType == Clutter.EventType.BUTTON_PRESS ||
          eventType == Clutter.EventType.BUTTON_RELEASE) {
          for(let i = this._menuStack.length; i > -1; i--) {
-            if(this._activeMenu)
+            if(this._activeMenu) {
                this._activeMenu.close(false);
+               this.emit('close-menu', this._activeMenu);
+            }
          }
          return false;
       }
@@ -2738,8 +2756,10 @@ ConfigurableMenuManager.prototype = {
    },
 
    _closeMenu: function() {
-      if(this._activeMenu != null)
+      if(this._activeMenu != null) {
          this._activeMenu.close(true);
+         this.emit('close-menu', this._activeMenu);
+      }
    },
 
    setEffect: function(effect) {
@@ -2874,7 +2894,7 @@ ConfigurableMenuManager.prototype = {
 
    _getTopMenu: function(actor) {
       while(actor) {
-         if((actor._delegate) && (actor._delegate instanceof PopupMenu.PopupMenu))
+         if((actor._delegate) && (actor._delegate instanceof ConfigurableMenu))
             return actor._delegate;
          actor = actor.get_parent();
       }
@@ -2916,6 +2936,7 @@ ConfigurableMenuManager.prototype = {
          let oldMenu = this._activeMenu;
          this._activeMenu = null;
          oldMenu.close(false);
+         this.emit('close-menu', oldMenu);
          if(!hadFocus)
             focus.grab_key_focus();
       }
@@ -2937,6 +2958,294 @@ ConfigurableMenuManager.prototype = {
       return false;
    }
 };
+Signals.addSignalMethods(ConfigurableMenuManager.prototype);
+
+function ConfigurablePopupMenuBase() {
+   throw new TypeError('Trying to instantiate abstract class ConfigurablePopupMenuBase');
+}
+
+ConfigurablePopupMenuBase.prototype = {
+   _init: function(sourceActor, styleClass) {
+      this.sourceActor = sourceActor;
+
+      if (styleClass !== undefined) {
+         this.box = new St.BoxLayout({ style_class: styleClass, vertical: true });
+      } else {
+         this.box = new St.BoxLayout({ vertical: true });
+      }
+      this.box.connect_after('queue-relayout', Lang.bind(this, this._menuQueueRelayout));
+      this.length = 0;
+
+      this.isOpen = false;
+      this.blockSourceEvents = false;
+      this.passEvents = false;
+
+      this._activeMenuItem = null;
+      this._childMenus = [];
+   },
+
+   addAction: function(title, callback) {
+      let menuItem = new ConfigurablePopupMenuItem(title);
+      this.addMenuItem(menuItem);
+      menuItem.connect('activate', Lang.bind(this, function (menuItem, event) {
+         callback(event);
+      }));
+
+      return menuItem;
+   },
+
+   addSettingsAction: function(title, module) {
+      let menuItem = this.addAction(title, function() {
+         Util.spawnCommandLine("cinnamon-settings " + module);
+      });
+      return menuItem;
+   },
+
+   addCommandlineAction: function(title, cmd) {
+      let menuItem = this.addAction(title, function() {
+         Util.spawnCommandLine(cmd);
+      });
+      return menuItem
+   },
+
+   isChildMenu: function(menu) {
+      return this._childMenus.indexOf(menu) != -1;
+   },
+
+   addChildMenu: function(menu) {
+      if (this.isChildMenu(menu))
+         return;
+
+      this._childMenus.push(menu);
+      this.emit('child-menu-added', menu);
+   },
+
+   removeChildMenu: function(menu) {
+      let index = this._childMenus.indexOf(menu);
+
+      if (index == -1)
+         return;
+
+      this._childMenus.splice(index, 1);
+      this.emit('child-menu-removed', menu);
+   },
+
+   _connectSubMenuSignals: function(object, menu) {
+      object._subMenuActivateId = menu.connect('activate', Lang.bind(this, function(submenu, submenuItem, keepMenu) {
+         this.emit('activate', submenuItem, keepMenu);
+         if (!keepMenu) {
+            this.close(true);
+         }
+      }));
+      object._subMenuActiveChangeId = menu.connect('active-changed', Lang.bind(this, function(submenu, submenuItem) {
+         if (this._activeMenuItem && this._activeMenuItem != submenuItem)
+            this._activeMenuItem.setActive(false);
+         this._activeMenuItem = submenuItem;
+         this.emit('active-changed', submenuItem);
+      }));
+   },
+
+   _connectItemSignals: function(menuItem) {
+      menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function (menuItem, active) {
+         if (active && this._activeMenuItem != menuItem) {
+            if (this._activeMenuItem)
+               this._activeMenuItem.setActive(false);
+            this._activeMenuItem = menuItem;
+            this.emit('active-changed', menuItem);
+         } else if (!active && this._activeMenuItem == menuItem) {
+            this._activeMenuItem = null;
+            this.emit('active-changed', null);
+         }
+      }));
+      menuItem._sensitiveChangeId = menuItem.connect('sensitive-changed', Lang.bind(this, function(menuItem, sensitive) {
+         if (!sensitive && this._activeMenuItem == menuItem) {
+            if (!this.actor.navigate_focus(menuItem.actor, Gtk.DirectionType.TAB_FORWARD, true))
+               this.actor.grab_key_focus();
+         } else if (sensitive && this._activeMenuItem == null) {
+            if (global.stage.get_key_focus() == this.actor)
+               menuItem.actor.grab_key_focus();
+         }
+      }));
+      menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function (menuItem, event, keepMenu) {
+         this.emit('activate', menuItem, keepMenu);
+         if (!keepMenu) {
+             this.close(true);
+         }
+      }));
+      menuItem.connect('destroy', Lang.bind(this, function(emitter) {
+         menuItem.disconnect(menuItem._activateId);
+         menuItem.disconnect(menuItem._activeChangeId);
+         menuItem.disconnect(menuItem._sensitiveChangeId);
+         if (menuItem.menu) {
+            menuItem.menu.disconnect(menuItem._subMenuActivateId);
+            menuItem.menu.disconnect(menuItem._subMenuActiveChangeId);
+            this.disconnect(menuItem._closingId);
+         }
+         if (menuItem == this._activeMenuItem)
+            this._activeMenuItem = null;
+         this.length--;
+      }));
+   },
+
+   _updateSeparatorVisibility: function(menuItem) {
+      let children = this.box.get_children();
+
+      let index = children.indexOf(menuItem.actor);
+
+      if (index < 0)
+         return;
+
+      let childBeforeIndex = index - 1;
+
+      while (childBeforeIndex >= 0 && !children[childBeforeIndex].visible)
+         childBeforeIndex--;
+
+      if (childBeforeIndex < 0
+          || children[childBeforeIndex]._delegate instanceof ConfigurableSeparatorMenuItem) {
+         menuItem.actor.hide();
+         return;
+      }
+
+      let childAfterIndex = index + 1;
+
+      while (childAfterIndex < children.length && !children[childAfterIndex].visible)
+         childAfterIndex++;
+
+      if (childAfterIndex >= children.length
+          || children[childAfterIndex]._delegate instanceof ConfigurableSeparatorMenuItem) {
+         menuItem.actor.hide();
+         return;
+      }
+
+      menuItem.actor.show();
+   },
+
+   addMenuItem: function(menuItem, position) {
+      let before_item = null;
+      if (position == undefined) {
+         this.box.add(menuItem.actor);
+      } else {
+         let items = this._getMenuItems();
+         if (position < items.length) {
+            before_item = items[position].actor;
+            this.box.insert_child_below(menuItem.actor, before_item);
+         } else
+            this.box.add(menuItem.actor);
+      }
+      if (menuItem instanceof ConfigurablePopupMenuSection) {
+         this._connectSubMenuSignals(menuItem, menuItem);
+         menuItem.connect('destroy', Lang.bind(this, function() {
+            menuItem.disconnect(menuItem._subMenuActivateId);
+            menuItem.disconnect(menuItem._subMenuActiveChangeId);
+
+            this.length--;
+         }));
+      } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+         if (before_item == null)
+            this.box.add(menuItem.menu.actor);
+         else
+            this.box.insert_child_below(menuItem.menu.actor, before_item);
+         this._connectSubMenuSignals(menuItem, menuItem.menu);
+         this._connectItemSignals(menuItem);
+         menuItem._closingId = this.connect('open-state-changed', function(self, open) {
+            if (!open)
+            menuItem.menu.close(false);
+         });
+      } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
+         this._connectItemSignals(menuItem);
+         this.connect('open-state-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
+         this.box.connect('allocation-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
+      } else if (menuItem instanceof ConfigurablePopupBaseMenuItem)
+         this._connectItemSignals(menuItem);
+      else
+         throw TypeError("Invalid argument to ConfigurablePopupMenuBase.addMenuItem()");
+
+      this.length++;
+   },
+
+   getColumnWidths: function() {
+      let columnWidths = [];
+      let items = this.box.get_children();
+      for (let i = 0; i < items.length; i++) {
+         if (!items[i].visible)
+            continue;
+         if (items[i]._delegate instanceof ConfigurablePopupBaseMenuItem || items[i]._delegate instanceof ConfigurablePopupMenuBase) {
+            let itemColumnWidths = items[i]._delegate.getColumnWidths();
+            for (let j = 0; j < itemColumnWidths.length; j++) {
+               if (j >= columnWidths.length || itemColumnWidths[j] > columnWidths[j])
+                  columnWidths[j] = itemColumnWidths[j];
+            }
+         }
+      }
+      return columnWidths;
+   },
+
+   setColumnWidths: function(widths) {
+      let items = this.box.get_children();
+      for (let i = 0; i < items.length; i++) {
+         if (items[i]._delegate instanceof ConfigurablePopupBaseMenuItem || items[i]._delegate instanceof ConfigurablePopupMenuBase)
+            items[i]._delegate.setColumnWidths(widths);
+      }
+   },
+
+   _menuQueueRelayout: function() {
+      this.box.get_children().map(function (actor) { actor.queue_relayout(); });
+   },
+
+   addActor: function(actor) {
+      this.box.add(actor);
+   },
+
+   _getMenuItems: function() {
+      return this.box.get_children().map(function (actor) {
+         return actor._delegate;
+      }).filter(function(item) {
+         return item instanceof ConfigurablePopupBaseMenuItem || item instanceof ConfigurablePopupMenuSection;
+      });
+   },
+
+   get firstMenuItem() {
+      let items = this._getMenuItems();
+      if (items.length)
+         return items[0];
+      else
+         return null;
+   },
+
+   get numMenuItems() {
+      return this._getMenuItems().length;
+   },
+
+   removeAll: function() {
+      let children = this._getMenuItems();
+      for (let i = 0; i < children.length; i++) {
+         let item = children[i];
+         item.destroy();
+      }
+   },
+
+   toggle: function() {
+      if (this.isOpen)
+         this.close(true);
+      else
+         this.open(true);
+   },
+
+   toggle_with_options: function (animate, onComplete) {
+      if (this.isOpen) {
+         this.close(animate, onComplete);
+      } else {
+         this.open(animate, onComplete);
+      }
+   },
+
+   destroy: function() {
+      this.removeAll();
+      this.actor.destroy();
+      this.emit('destroy');
+   }
+};
+Signals.addSignalMethods(ConfigurablePopupMenuBase.prototype);
 
 /**
  * ConfigurableMenu
@@ -2948,11 +3257,10 @@ function ConfigurableMenu() {
 }
 
 ConfigurableMenu.prototype = {
-   // Compatibility reasons
-   __proto__: PopupMenu.PopupMenu.prototype,
+   __proto__: ConfigurablePopupMenuBase.prototype,
 
    _init: function(launcher, arrowAlignment, orientation, floating) {
-      PopupMenu.PopupMenuBase.prototype._init.call (this, (launcher ? launcher.actor: null), 'popup-menu-content');
+      ConfigurablePopupMenuBase.prototype._init.call (this, (launcher ? launcher.actor: null), 'popup-menu-content');
       try {
          this._arrowAlignment = arrowAlignment;
          this._arrowSide = orientation;
@@ -3049,9 +3357,7 @@ ConfigurableMenu.prototype = {
       return this.box.get_children().map(function (actor) {
          return actor._delegate;
       }).filter(function(item) {
-         return item instanceof PopupMenu.PopupBaseMenuItem ||
-                item instanceof PopupMenu.PopupMenuSection ||
-                item instanceof ConfigurablePopupBaseMenuItem ||
+         return item instanceof ConfigurablePopupBaseMenuItem ||
                 item instanceof ConfigurablePopupMenuSection;
       });
    },
@@ -3299,7 +3605,7 @@ ConfigurableMenu.prototype = {
          if((box)&&(box != parent)) {
             if(parent)
                parent.remove_actor(this.actor);
-            if((box._delegate)&&(box._delegate instanceof PopupMenu.PopupMenuBase)) {
+            if((box._delegate)&&(box._delegate instanceof ConfigurablePopupMenuBase)) {
                 let items = box._delegate._getMenuItems();
                 let position = items.indexOf(this.launcher) + 1;
                 if((position != 0) && (position < items.length)) {
@@ -3335,7 +3641,7 @@ ConfigurableMenu.prototype = {
    },
 
    _setDesaturateItemIcon: function(menuItem) {
-      if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu.desaturateItemIcon)
              menuItem.menu.desaturateItemIcon(this._desaturateItemIcon);
       }
@@ -3344,7 +3650,7 @@ ConfigurableMenu.prototype = {
    },
 
    _setShowItemIcon: function(menuItem) {
-      if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu.setShowItemIcon)
              menuItem.menu.setShowItemIcon(this._showItemIcon);
       }
@@ -3466,8 +3772,7 @@ ConfigurableMenu.prototype = {
             if(result)
                return result;
          } else if((items[pos].actor.visible)&&(items[pos].sensitive)&&
-                   (!((items[pos] instanceof PopupMenu.PopupSeparatorMenuItem) ||
-                      (items[pos] instanceof ConfigurableSeparatorMenuItem)))) {
+                   (!(items[pos] instanceof ConfigurableSeparatorMenuItem))) {
             return items[pos];
          }
       }
@@ -3482,19 +3787,30 @@ ConfigurableMenu.prototype = {
             if(result)
                return result;
          } else if((items[pos].actor.visible)&&(items[pos].sensitive)&&
-                   (!((items[pos] instanceof PopupMenu.PopupSeparatorMenuItem) ||
-                      (items[pos] instanceof ConfigurableSeparatorMenuItem)))) {
+                   (!(items[pos] instanceof ConfigurableSeparatorMenuItem))) {
             return items[pos];
          }
       }
       return null;
    },
 
-
    _getAllMenuItems: function() {
       return this.box.get_children().map(function (actor) {
          return actor._delegate;
       });
+   },
+
+   _updatePanelVisibility: function() {
+      if(Main.panelManager) {
+         if(Main.panelManager.updatePanelsVisibility)
+            Main.panelManager.updatePanelsVisibility();
+         else {
+            for(let i in Main.panelManager.panels) {
+               if(Main.panelManager.panels[i])
+                  Main.panelManager.panels[i]._hidePanel();
+            }
+         }
+      }
    },
 
    _openClean: function(animate) {
@@ -3554,7 +3870,9 @@ ConfigurableMenu.prototype = {
                   Main.panelManager.panels[i]._hidePanel();
             }
          }
-         global.menuStackLength -= 1;
+         if(global.menuStackLength > 0)
+            global.menuStackLength -= 1;
+         this._updatePanelVisibility();
       } else {
          this.actor.hide();
       }
@@ -3803,7 +4121,7 @@ ConfigurableMenu.prototype = {
        if(this.launcher) {
          let actor = this.launcher.actor;
          while(actor) {
-            if((actor._delegate) && (actor._delegate instanceof PopupMenu.PopupMenu)) {
+            if((actor._delegate) && (actor._delegate instanceof ConfigurableMenu)) {
                this._topMenu = actor._delegate;
                break;
             }
@@ -3934,14 +4252,14 @@ ConfigurableMenu.prototype = {
          } else
             this.box.add(menuItem.actor);
       }
-      if (menuItem instanceof PopupMenu.PopupMenuSection) {
+      if (menuItem instanceof ConfigurablePopupMenuSection) {
          this._connectSubMenuSignals(menuItem, menuItem);
          menuItem._destroyId = menuItem.connect('destroy', Lang.bind(this, function() {
             menuItem.disconnect(menuItem._subMenuActivateId);
             menuItem.disconnect(menuItem._subMenuActiveChangeId);
             this.length--;
          }));
-      } else if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu) {
             if(!this._isFloating(menuItem.menu)) {
                if (before_item == null)
@@ -3956,7 +4274,7 @@ ConfigurableMenu.prototype = {
                menuItem.menu.close(false);
          });
          this._connectItemSignals(menuItem);
-      } else if ((menuItem instanceof ConfigurableSeparatorMenuItem) || (menuItem instanceof PopupMenu.PopupSeparatorMenuItem)) {
+      } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
          this._connectItemSignals(menuItem);
          // updateSeparatorVisibility needs to get called any time the
          // separator's adjacent siblings change visibility or position.
@@ -3964,10 +4282,11 @@ ConfigurableMenu.prototype = {
          // precise ways would require a lot more bookkeeping.
          menuItem._closingMenuId = this.connect('open-state-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
          menuItem._allocationId = this.box.connect('allocation-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
-      } else if ((menuItem instanceof ConfigurablePopupBaseMenuItem) || (menuItem instanceof PopupMenu.PopupBaseMenuItem)) {
+      //} else if ((menuItem instanceof ConfigurablePopupBaseMenuItem) || (menuItem instanceof PopupMenu.PopupBaseMenuItem)) {
+      } else if (menuItem instanceof ConfigurablePopupBaseMenuItem) {
          this._connectItemSignals(menuItem);
       } else
-         throw TypeError("Invalid argument to PopupMenuBase.addMenuItem()");
+         throw TypeError("Invalid argument to ConfigurablePopupMenuBase.addMenuItem()");
 
       this.length++;
    },
@@ -4024,21 +4343,21 @@ ConfigurableMenu.prototype = {
          if(parent)
             parent.remove_actor(menuItem.menu.actor);
       }
-      if (menuItem instanceof PopupMenu.PopupMenuSection) {
+      if (menuItem instanceof ConfigurablePopupMenuSection) {
          this._disconnectSubMenuSignals(menuItem, menuItem);
          menuItem.disconnect(menuItem._destroyId);
          menuItem.disconnect(menuItem._subMenuActivateId);
          menuItem.disconnect(menuItem._subMenuActiveChangeId);
-      } else if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu)
             this._disconnectSubMenuSignals(menuItem, menuItem.menu);
          menuItem.disconnect(menuItem._closingMenuId);
          this._disconnectItemSignals(menuItem);
-      } else if ((menuItem instanceof ConfigurableSeparatorMenuItem) || (menuItem instanceof PopupMenu.PopupSeparatorMenuItem)) {
+      } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
          this._disconnectItemSignals(menuItem);
          menuItem.disconnect(menuItem._closingMenuId);
          menuItem.disconnect(menuItem._allocationId);
-      } else if ((menuItem instanceof ConfigurablePopupBaseMenuItem) || (menuItem instanceof PopupMenu.PopupBaseMenuItem))
+      } else if (menuItem instanceof ConfigurablePopupBaseMenuItem)
          this._disconnectItemSignals(menuItem);
       this.length--;
    },
@@ -4302,7 +4621,7 @@ ConfigurableMenu.prototype = {
             this._vectorBlocker.release();
             this._vectorBlocker = null;
          }
-         PopupMenu.PopupMenuBase.prototype.destroy.call(this);
+         ConfigurablePopupMenuBase.prototype.destroy.call(this);
          this.actor = null;
       }
    }
@@ -4319,11 +4638,13 @@ function ConfigurablePopupMenuSection() {
 }
 
 ConfigurablePopupMenuSection.prototype = {
-   __proto__: PopupMenu.PopupMenuSection.prototype,
+   __proto__: ConfigurablePopupMenuBase.prototype,
 
    _init: function() {
-      PopupMenu.PopupMenuSection.prototype._init.call(this);
+      ConfigurablePopupMenuBase.prototype._init.call(this);
+      this.actor = this.box;
       this.actor._delegate = this;
+      this.isOpen = true;
       this._showItemIcon = true;
       this._desaturateItemIcon = false;
       this._vectorBlocker = null;
@@ -4334,9 +4655,17 @@ ConfigurablePopupMenuSection.prototype = {
       this._topMenu = this._getTopMenu(this.actor.get_parent());
    },
 
+   // deliberately ignore any attempt to open() or close()
+   open: function(animate) { },
+   close: function() { },
+
+   setVertical: function (vertical) {
+      this.box.set_vertical(vertical);
+   },
+
    _getTopMenu: function(actor) {
       while(actor) {
-         if((actor._delegate) && (actor._delegate instanceof PopupMenu.PopupMenu))
+         if((actor._delegate) && (actor._delegate instanceof ConfigurableMenu))
             return actor._delegate;
          actor = actor.get_parent();
       }
@@ -4347,19 +4676,13 @@ ConfigurablePopupMenuSection.prototype = {
       return this.box.get_children().map(function (actor) {
          return actor._delegate;
       }).filter(function(item) {
-         return item instanceof PopupMenu.PopupBaseMenuItem ||
-                item instanceof PopupMenu.PopupMenuSection ||
-                item instanceof ConfigurablePopupBaseMenuItem ||
+         return item instanceof ConfigurablePopupBaseMenuItem ||
                 item instanceof ConfigurablePopupMenuSection;
       });
    },
 
    getTopMenu: function() {
       return this._topMenu;
-   },
-
-   setVertical: function (vertical) {
-      this.box.set_vertical(vertical);
    },
 
    setActive: function (active) {
@@ -4395,14 +4718,14 @@ ConfigurablePopupMenuSection.prototype = {
          } else
             this.box.add(menuItem.actor);
       }
-      if (menuItem instanceof PopupMenu.PopupMenuSection) {
+      if (menuItem instanceof ConfigurablePopupMenuSection) {
          this._connectSubMenuSignals(menuItem, menuItem);
          menuItem._destroyId = menuItem.connect('destroy', Lang.bind(this, function() {
             menuItem.disconnect(menuItem._subMenuActivateId);
             menuItem.disconnect(menuItem._subMenuActiveChangeId);
             this.length--;
          }));
-      } else if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu) {
             if(!this._isFloating(menuItem.menu)) {
                if (before_item == null)
@@ -4417,7 +4740,7 @@ ConfigurablePopupMenuSection.prototype = {
                menuItem.menu.close(false);
          });
          this._connectItemSignals(menuItem);
-      } else if ((menuItem instanceof ConfigurableSeparatorMenuItem) || (menuItem instanceof PopupMenu.PopupSeparatorMenuItem)) {
+      } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
          this._connectItemSignals(menuItem);
          // updateSeparatorVisibility needs to get called any time the
          // separator's adjacent siblings change visibility or position.
@@ -4425,10 +4748,10 @@ ConfigurablePopupMenuSection.prototype = {
          // precise ways would require a lot more bookkeeping.
          menuItem._closingMenuId = this.connect('open-state-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
          menuItem._allocationId = this.box.connect('allocation-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
-      } else if ((menuItem instanceof ConfigurablePopupBaseMenuItem) || (menuItem instanceof PopupMenu.PopupBaseMenuItem)) {
+      } else if (menuItem instanceof ConfigurablePopupBaseMenuItem) {
          this._connectItemSignals(menuItem);
       } else
-         throw TypeError("Invalid argument to PopupMenuBase.addMenuItem()");
+         throw TypeError("Invalid argument to ConfigurablePopupMenuBase.addMenuItem()");
 
       this.length++;
    },
@@ -4479,24 +4802,27 @@ ConfigurablePopupMenuSection.prototype = {
       let parent = menuItem.actor.get_parent();
       if(parent)
          parent.remove_actor(menuItem.actor);
+      index = this._visibleItems.indexOf(menuItem);
       if(menuItem.menu) {
          parent = menuItem.menu.actor.get_parent();
          if(parent)
             parent.remove_actor(menuItem.menu.actor);
       }
-      if (menuItem instanceof PopupMenu.PopupMenuSection) {
+      if (menuItem instanceof ConfigurablePopupMenuSection) {
          this._disconnectSubMenuSignals(menuItem, menuItem);
          menuItem.disconnect(menuItem._destroyId);
-      } else if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+         menuItem.disconnect(menuItem._subMenuActivateId);
+         menuItem.disconnect(menuItem._subMenuActiveChangeId);
+      } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu)
             this._disconnectSubMenuSignals(menuItem, menuItem.menu);
          menuItem.disconnect(menuItem._closingMenuId);
          this._disconnectItemSignals(menuItem);
-      } else if ((menuItem instanceof ConfigurableSeparatorMenuItem) || (menuItem instanceof PopupMenu.PopupSeparatorMenuItem)) {
+      } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
          this._disconnectItemSignals(menuItem);
          menuItem.disconnect(menuItem._closingMenuId);
          menuItem.disconnect(menuItem._allocationId);
-      } else if ((menuItem instanceof ConfigurablePopupBaseMenuItem) || (menuItem instanceof PopupMenu.PopupBaseMenuItem))
+      } else if (menuItem instanceof ConfigurablePopupBaseMenuItem)
          this._disconnectItemSignals(menuItem);
       this.length--;
    },
@@ -4506,17 +4832,11 @@ ConfigurablePopupMenuSection.prototype = {
       menuItem.disconnect(menuItem._sensitiveChangeId);
       menuItem.disconnect(menuItem._activateId);
       menuItem.disconnect(menuItem._closingId);
-      //menuItem._activeChangeId = null;
-      //menuItem._sensitiveChangeId = null;
-      //menuItem._activateId = null;
-      //menuItem._closingId = null;
    },
 
    _disconnectSubMenuSignals: function(object, menu) {
       menu.disconnect(object._subMenuActivateId);
       menu.disconnect(object._subMenuActiveChangeId);
-      //object._subMenuActivateId = null;
-      //object._subMenuActiveChangeId = null;
    },
 
    clearAll: function() {
@@ -4574,7 +4894,7 @@ ConfigurablePopupMenuSection.prototype = {
    },
 
    _setDesaturateItemIcon: function(menuItem) {
-      if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu.desaturateItemIcon)
              menuItem.menu.desaturateItemIcon(this._desaturateItemIcon);
       }
@@ -4583,7 +4903,7 @@ ConfigurablePopupMenuSection.prototype = {
    },
 
    _setShowItemIcon: function(menuItem) {
-      if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu.setShowItemIcon)
              menuItem.menu.setShowItemIcon(this._showItemIcon);
       }
@@ -4593,7 +4913,7 @@ ConfigurablePopupMenuSection.prototype = {
 
    destroy: function() {
       if(this.actor) {
-         PopupMenu.PopupMenuSection.prototype.destroy.call(this);
+         ConfigurablePopupMenuBase.prototype.destroy.call(this);
          this.actor = null;
       }
    }
@@ -4684,8 +5004,7 @@ ArrayBoxLayout.prototype = {
 
    _getVisibleChildren: function() {
       return this.box.get_focus_chain().filter(x =>
-             !((x._delegate instanceof PopupMenu.PopupSeparatorMenuItem) ||
-             (x._delegate instanceof PopupMenu.PopupSeparatorMenuItem)));
+             !(x._delegate instanceof ConfigurableSeparatorMenuItem));
    },
 
    setActive: function (active) {
@@ -4814,39 +5133,6 @@ ConfigurableGridSection.prototype = {
       this._relayoutBlocked = false;
    },
 
-   setVisibleItems: function (visibleItems) {
-      let [viewPortWidth, viewPortHeight, viewPortPosition] = this._getViewPortSize();
-      this._visibleItems = [];
-      if(viewPortPosition == 0) {
-         this._currentVisibleItems = visibleItems;
-         let nRows = Math.floor(viewPortHeight/this._getItemHeight());
-         let nColumns = Math.floor(viewPortWidth/this._getItemWidth());
-         let size = Math.min(nColumns*nRows + 1, visibleItems.length);
-         for (let i = 0; i < size; i++) {
-            this._visibleItems.push(visibleItems[i]);
-         }
-         Mainloop.idle_add(Lang.bind(this, this._setVisibleInternal, visibleItems, size));
-         this._visibleItemsChange = true;
-         this.queueRelayout(true);
-      } else {
-         for (let i = 0; i < visibleItems; i++) {
-            this._visibleItems.push(visibleItems[i]);
-         }
-         this.queueRelayout(true);
-      }
-   },
-
-   _setVisibleInternal: function (visibleItems, number) {
-      if(this._currentVisibleItems) {
-         for (let i = number; i < this._currentVisibleItems.length; i++) {
-            this._visibleItems.push(this._currentVisibleItems[i]);
-         }
-         this._currentVisibleItems = null;
-         this._visibleItemsChange = true;
-         this.queueRelayout(true);
-      }
-   },
-
    _onMapped: function() {
       this._scrollViewPort = null;
       let actor = this.actor.get_parent();
@@ -4965,7 +5251,7 @@ ConfigurableGridSection.prototype = {
       //if(this._visibleItemsChange) {
       //   let children = this._menuItems;
       //   children = children.filter(function(menuItem) {
-      //      return (menuItem.actor.visible && !(menuItem instanceof PopupMenu.PopupSubMenu));
+      //      return (menuItem.actor.visible && !(menuItem instanceof ConfigurablePopupSubMenuMenuItem));
       //   });
       //   this._visibleItems = children;
       //   return this._visibleItems;
@@ -5016,26 +5302,7 @@ ConfigurableGridSection.prototype = {
    },
 
    _getViewPortSize: function(availWidth) {
-      if(this._viewPort) {
-         let viewPortAllocation = this._viewPort.actor.allocation;
-         let vscroll = this._viewPort.scroll.get_vscroll_bar();
-         let position = vscroll.get_adjustment().get_value();
-         if(!this._scrollStartId) {
-            this._scrollStartId = vscroll.connect('scroll-start', Lang.bind(this, function() {
-               this._isInScroll = true;
-               this._allocateMore();
-            }));
-            this._scrollStopId = vscroll.connect('scroll-stop', Lang.bind(this, function() {
-               this._isInScroll = false;
-            }));
-         }
-         return [viewPortAllocation.x2 - viewPortAllocation.x1, viewPortAllocation.y2 - viewPortAllocation.y1, position];
-      }
-      return [null, null, null];
-   },
-
-   _getViewPortSize: function(availWidth) {
-      return [null, null, null];
+      return [null, null];
       if(this.viewPort) {
          let viewPortAllocation = this.viewPort.actor.allocation;
          let vscroll = this.viewPort.scroll.get_vscroll_bar();
@@ -5049,9 +5316,9 @@ ConfigurableGridSection.prototype = {
          //      this._isInScroll = false;
          //   }));
          //}
-         return [viewPortAllocation.x2 - viewPortAllocation.x1, viewPortAllocation.y2 - viewPortAllocation.y1, position];
+         return [viewPortAllocation.y2 - viewPortAllocation.y1, position];
       }
-      return [null, null, null];
+      return [null, null];
    },
 
    _updateSpace: function(availWidth) {
@@ -5329,6 +5596,535 @@ ConfigurableGridSection.prototype = {
 };
 Signals.addSignalMethods(ConfigurableGridSection.prototype);*/
 
+/*
+function ConfigurableGridSection() {
+   this._init.apply(this, arguments);
+}
+
+ConfigurableGridSection.prototype = {
+   __proto__: ConfigurablePopupMenuSection.prototype,
+
+   _init: function(params) {
+      ConfigurablePopupMenuSection.prototype._init.call(this);
+      params = Params.parse(params, {
+         style_class: null,
+         vertical: true,
+         rowLimit: null,
+         columnLimit: null,
+         minRows: 1,
+         minColumns: 1,
+         maxItemWidth: -1,
+         maxItemHeight: -1,
+         itemSpacing: 0,
+         fillParent: true,
+         xAlign: St.Align.START
+      });
+      this._rowLimit = params.rowLimit;
+      this._colLimit = params.columnLimit;
+      this._minRows = params.minRows;
+      this._minColumns = params.minColumns;
+      this._xAlign = params.xAlign;
+      this._fillParent = params.fillParent;
+      this._maxItemWidth = params.maxItemWidth;
+      this._maxItemHeight = params.maxItemHeight;
+      this._spacing = params.itemSpacing;
+      this._maxActorWidth = 0;
+      this._maxActorHeight = 0;
+      this._nColumns = 0;
+      //this.activate = false;
+      this._menuItems = [];
+      this._visibleItems = [];
+      this._visibleItemsChange = false;
+      this._relayoutBlocked = false;
+
+      this.box = new Cinnamon.GenericContainer();
+      if(!this.box.insert_before) {
+         this.box.insert_before = Lang.bind(this, function(actor, beforeActor) {
+            let childs = this.box.get_children();
+            let position = childs.indexOf(beforeActor);
+            if(position != -1)
+               this.box.insert_child_at_index(actor, position);
+         });
+      }
+      if(!this.box.add) {
+         this.box.add = Lang.bind(this, function(actor, params) {
+            this.box.add_actor(actor);
+         });
+      }
+      this.box.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
+      this.box.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
+      this.box.connect('allocate', Lang.bind(this, this._allocate));
+      this.actor.set_style_class_name(params.style_class);
+      this.actor.set_vertical(params.vertical);
+      this.actor.add(this.box, { x_fill: true, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
+      this.actor.connect('style-changed', Lang.bind(this, this._onStyleChanged));
+      this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
+      this.actor._delegate = this;
+      this.counter = 0;
+      //this.actor.visible = false;
+   },
+
+   setActive: function (active) {
+      if(active != this.active) {
+         this.active = active;
+         if(this.active) {
+            for(let pos in this._menuItems) {
+               if(this._visibleItems[pos].setActive) {
+                  this._menuItems[pos].setActive(true);
+                  return this._menuItems[pos];
+               }
+            }
+         } else if(this._activeMenuItem) {
+            this._activeMenuItem.setActive(false);
+         }
+      }
+      return this._activeMenuItem;
+   },
+
+   _onMapped: function(actor, event) {
+      this.viewPort = this._getActorViewPort();
+      let children = this._getVisibleChildren();
+      this._maxActorWidth = 0;
+      this._maxActorHeight = 0;
+      this._updateActorMaxWidth(children);
+      this._updateActorMaxHeight(children);
+   },
+
+   sortMenuItems: function(search, searchSorted, appsUsage) {
+   },
+
+   addMenuItem: function(menuItem, position) {
+      ConfigurablePopupMenuSection.prototype.addMenuItem.call(this, menuItem, position);
+      if(this._maxActorWidth < menuItem.actor.width)
+         this._maxActorWidth = menuItem.actor.width;
+      if(this._maxActorHeight < menuItem.actor.height)
+         this._maxActorHeight = menuItem.actor.height;
+      if(menuItem.actor.visible) {
+         this._visibleItems.push(menuItem);
+         this._visibleItemsChange = true;
+      }
+      this._menuItems.push(menuItem);
+      menuItem._showId = menuItem.actor.connect('show', Lang.bind(this, function(actor, event) {//one
+         this._visibleItemsChange = true;
+         let index = 0;
+         for(let pos in this._menuItems) {
+            if((this._menuItems[pos].actor == actor) || (index >= this._visibleItems.length))
+               break;
+            if(this._menuItems[pos].actor == this._visibleItems[index].actor)
+               index++;
+         }
+         this._visibleItems.splice(index, 0, menuItem);
+      }));
+      menuItem._hideId = menuItem.actor.connect('hide', Lang.bind(this, function(actor, event) {//tow
+         let index = this._visibleItems.indexOf(menuItem);
+         this._visibleItems.splice(index, 1);
+      }));
+   },
+
+   removeItem: function(menuItem) {
+      ConfigurablePopupMenuSection.prototype.removeItem.call(this, menuItem);
+      let index = this._menuItems.indexOf(menuItem);
+      if(index != -1) {
+         this._menuItems.splice(index, 1);
+         this._visibleItemsChange = true;
+      }
+      index = this._visibleItems.indexOf(menuItem);
+      if(index != -1)
+         this._visibleItems.splice(index, 1);
+      menuItem.disconnect(menuItem._showId);
+      menuItem.disconnect(menuItem._hideId);
+   },
+
+   // Override: We don't want add generic types of actors.
+   addActor: function(actor) {
+      if(actor._delegate)
+         this.addMenuItem(actor._delegate);
+   },
+
+   // Override: We need to do a relayout when a popup menu is diaplayed
+   _connectSubMenuSignals: function(object, menu) {
+      ConfigurablePopupMenuSection.prototype._connectSubMenuSignals.call(this, object, menu);
+      object._subMenuOpenId = menu.connect('open-state-changed', Lang.bind(this, function(submenu, open) {
+         this._visibleItemsChange = true;
+         if(open)
+            this._openedSubMenu = submenu;
+         else
+            this._openedSubMenu = null;
+         this.box.queue_relayout();
+      }));
+   },
+
+   _getMenuItems: function() {
+      Main.notify("call" + this._menuItems.length);
+      return this._menuItems;//this._visibleItems;
+   },   
+
+   _getVisibleChildren: function() {
+      //if(this._visibleItemsChange) {
+      //   let children = this._menuItems;
+      //   children = children.filter(function(menuItem) {
+      //      return (menuItem.actor.visible && !(menuItem instanceof ConfigurablePopupSubMenuMenuItem));
+      //   });
+      //   this._visibleItemsChange = false;
+      //   this._visibleItems = children;
+      //   return this._visibleItems;
+      //}
+      return this._visibleItems;
+   },
+
+   _getActorViewPort: function() {
+      let actor = this.actor.get_parent();
+      while((actor) && (!(actor instanceof St.ScrollView))) {
+         actor = actor.get_parent();
+      }
+      if(actor && actor._delegate)
+         return actor._delegate;
+      return null;
+   },
+
+   _updateActorMaxWidth: function(visibleChildren) {
+      let maxWidth = 0;
+      visibleChildren.forEach(function(menuItem) {
+         let width = menuItem.actor.width;
+         if(maxWidth < width) {
+            maxWidth = width;
+         }
+      }, this);
+      if(maxWidth > 0)
+         this._maxActorWidth = maxWidth;
+   },
+
+   _updateActorMaxHeight: function(visibleChildren) {
+      let maxHeight = 0;
+      visibleChildren.forEach(function(menuItem) {
+         let height = menuItem.actor.height;
+         if(maxHeight < height)
+            maxHeight = height;
+      }, this);
+      if(maxHeight > 0)
+         this._maxActorHeight = maxHeight;
+   },
+
+   _getElementAtPos: function(visibleChildren, nColumns, x, y) {
+      //let nRows = Math.ceil(visibleChildren.length/nColumns);
+      let realPos = nColumns*y + x;
+      if(realPos > 0 && realPos < visibleChildren.length) {
+         return visibleChildren[realPos];
+      }
+      return null;
+   },
+
+   queueRelayout: function(force) {
+      if(force)
+         this._visibleItemsChange = true;
+      let box = this.actor.get_allocation_box();
+      let aviableWidth = box.x2 - box.x1;
+      let [nColumns, ] = this._computeColumnLayout(aviableWidth);
+      if(((this._visibleItemsChange)||(this._nColumns != nColumns))&&(!this._relayoutBlocked)) {
+         this.box.queue_relayout();
+      }
+   },
+
+   _getPreferredWidth: function(grid, forHeight, alloc) {
+      if(this._visibleItemsChange) {
+         let children = this._getVisibleChildren();
+         this._updateActorMaxWidth(children);
+      }
+      if (this._fillParent) {
+         // Ignore all size requests of children and request a size of 0;
+         // later we'll allocate as many children as fit the parent
+         alloc.min_size = this._getItemWidth();
+         alloc.natural_size = alloc.min_size;
+         return;
+      }
+
+      let nChildren = this.box.get_n_children();
+      let nColumns = this._colLimit ? Math.min(this._colLimit, nChildren) : nChildren;
+      let totalSpacing = Math.max(0, nColumns - 1) * this.getSpacing();
+      // Kind of a lie, but not really an issue right now.  If
+      // we wanted to support some sort of hidden/overflow that would
+      // need higher level design
+      alloc.min_size = this._getItemWidth();
+      alloc.natural_size = nColumns * this._getItemWidth() + totalSpacing;
+   },
+
+   _getPreferredHeight: function(grid, forWidth, alloc) {
+      if (this._fillParent) {
+         // Ignore all size requests of children and request a size of 0;
+         // later we'll allocate as many children as fit the parent
+         //return;
+      }
+      let children = this._getVisibleChildren();
+      let nColumns = children.length;
+      if (forWidth >= 0)
+         [nColumns, ] = this._computeColumnLayout(forWidth);
+      if(this._nColumns != nColumns)
+         this._visibleItemsChange = true;
+      let height = this._getPreferredAllocationHeight(nColumns, children);
+      alloc.min_size = height;
+      alloc.natural_size = height;
+   },
+
+   _getPreferredAllocationHeight: function(nColumns, children) {
+      let nRows = 0;
+      if (nColumns > 0)
+         nRows = Math.ceil(children.length / nColumns);
+      if (this._rowLimit)
+         nRows = Math.min(nRows, this._rowLimit);
+      let totalSpacing = Math.max(0, nRows - 1) * this.getSpacing();
+      let height = nRows * this._getItemHeight() + totalSpacing;
+      if(this._openedSubMenu)
+         height += this._openedSubMenu.actor.height;
+      return height;
+   },
+
+   _allocate: function(grid, box, flags) {
+      let children = this._getVisibleChildren();
+      //this._updateActorMaxWidth(children);
+      //this._updateActorMaxHeight(children);
+      let availWidth = box.x2 - box.x1;
+      let availHeight = box.y2 - box.y1;
+      let [nColumns, usedWidth] = this._computeColumnLayout(availWidth);
+      this._nColumns = nColumns;
+      if(((this._visibleItemsChange)||(this._nColumns != nColumns))&&(!this._relayoutBlocked)) {
+         this._visibleItemsChange = false;
+         if (this._fillParent) {
+            // Reset the passed in box to fill the parent
+            //let parentBox = this.actor.get_parent().allocation;
+            //let gridBox = this.actor.get_theme_node().get_content_box(parentBox);
+            //box = this.box.get_theme_node().get_content_box(gridBox);
+         }
+         //if(this.counter < 3)
+         //   this.counter += 1;
+         //else
+         //   Main.notify("allocate");
+         let spacing = this.getSpacing();
+
+         let leftEmptySpace;
+         switch(this._xAlign) {
+            case St.Align.START:
+               leftEmptySpace = 0;
+               break;
+            case St.Align.MIDDLE:
+               leftEmptySpace = Math.floor((availWidth - usedWidth) / 2);
+               break;
+            case St.Align.END:
+               leftEmptySpace = availWidth - usedWidth;
+         }
+
+         let x = box.x1 + leftEmptySpace;
+         let y = box.y1;
+         let columnIndex = 0;
+         let rowIndex = 0;
+         let [viewPortSize, viewPortPosition] = this._getViewPortSize();
+
+         let colsHeight = [];
+         for (let i = 0; i < nColumns; i++) {
+            colsHeight.push(0);
+         }
+
+         for (let i = 0; i < children.length; i++) {
+            let childBox = this._calculateChildBox(children[i].actor, x, colsHeight[columnIndex], box);
+            children[i].actor.clip_to_allocation = true;
+            if ((this._rowLimit && rowIndex >= this._rowLimit)
+                || (this._fillParent && childBox.y2 > availHeight)
+                || (viewPortSize && childBox.y2 > viewPortSize + viewPortPosition)) {
+               this.box.set_skip_paint(children[i].actor, true);
+            } else {
+               children[i].actor.allocate(childBox, flags);
+               this.box.set_skip_paint(children[i].actor, false);
+               colsHeight[columnIndex] += (childBox.y2 - childBox.y1) + spacing;
+               if(children[i].menu && children[i].menu.isOpen) {
+                  let childMenu = children[i].menu.actor;
+                  let childMenuBox = this._calculateChildBox(childMenu, x, colsHeight[columnIndex], box);
+                  childMenu.allocate(childMenuBox, flags);
+                  this.box.set_skip_paint(childMenu, false);
+                  colsHeight[columnIndex] += (childMenuBox.y2 - childMenuBox.y1);
+               }
+            }
+            //this._rowLimit = 0;
+            columnIndex++;
+            if (columnIndex == nColumns) {
+               columnIndex = 0;
+               rowIndex++;
+            }
+            if (columnIndex == 0) {
+               //y += (childBox.y2 - childBox.y1) + spacing;
+               x = box.x1 + leftEmptySpace;
+            } else {
+               x += this._getItemWidth() + spacing;
+            }
+         }
+      }
+   },
+
+   _getViewPortSize: function(availWidth) {
+      return [null, null];
+      if(this.viewPort) {
+         let viewPortAllocation = this.viewPort.actor.allocation;
+         let vscroll = this.viewPort.scroll.get_vscroll_bar();
+         let position = vscroll.get_adjustment().get_value();
+         //if(!this._scrollStartId) {
+         //   this._scrollStartId = vscroll.connect('scroll-start', Lang.bind(this, function() {
+         //      this._isInScroll = true;
+         //      this._allocateMore();
+         //   }));
+         //   this._scrollStopId = vscroll.connect('scroll-stop', Lang.bind(this, function() {
+         //      this._isInScroll = false;
+         //   }));
+         //}
+         return [viewPortAllocation.y2 - viewPortAllocation.y1, position];
+      }
+      return [null, null];
+   },
+
+   _allocateMore: function() {
+      if(this._isInScroll) {
+         this.box.queue_relayout();
+         Mainloop.timeout_add(50, Lang.bind(this, this._allocateMore));
+      }
+   },
+
+   _updateSpace: function(availWidth) {
+      //let estimateHeight = this._getPreferredAllocationHeight(availWidth);
+      //Main.notify("" + viewPortHeight);
+      //let portSize = 20;
+      //this._spaceActor.height = this._getPreferredAllocationHeight(availWidth) - portSize*50;
+      //return portSize;
+      let spaceBox = new Clutter.ActorBox();
+      x = box.x1 + leftEmptySpace;
+      let spaceBox = this._calculateSpaceBox(this._spaceActor, x, y, box);
+      this._spaceActor.allocate(spaceBox, flags);
+      this.box.set_skip_paint(this._spaceActor, false);
+      //Main.notify("" + spaceBox.y2 + "-" + spaceBox.y1 + "-" + spaceBox.x2 + "-" + spaceBox.x1);
+   },
+
+   _calculateSpaceBox: function(child, x, y, box) {
+      // Center the item in its allocation horizontally
+      let [,, natWidth, natHeight] = child.get_preferred_size();
+      let childBox = new Clutter.ActorBox();
+      if (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL)
+         childBox.x1 = Math.floor(box.x2 - (x + natWidth));
+      else
+         childBox.x1 = Math.floor(x);
+      childBox.y1 = Math.floor(y);
+      childBox.x2 = childBox.x1 + natWidth;
+      childBox.y2 = childBox.y1 + natHeight;
+      return childBox;
+   },
+
+   _getAllocatedChildSizeAndSpacing: function(child) {
+      let [,, natWidth, natHeight] = child.get_preferred_size();
+      let width = natWidth//Math.max(this._getItemWidth(), natWidth);
+      let xSpacing = Math.max(0, width - natWidth) / 2;
+      let height = Math.max(this._getItemHeight(), natHeight);
+      let ySpacing = Math.max(0, height - natHeight) / 2;
+      return [width, height, xSpacing, ySpacing];
+   },
+
+   _calculateChildBox: function(child, x, y, box) {
+      // Center the item in its allocation horizontally
+      let [width, height, childXSpacing, childYSpacing] =
+          this._getAllocatedChildSizeAndSpacing(child);
+
+      let childBox = new Clutter.ActorBox();
+      if (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL) {
+         let _x = box.x2 - (x + width);
+         childBox.x1 = Math.floor(_x - childXSpacing);
+      } else {
+         childBox.x1 = Math.floor(x + childXSpacing);
+      }
+      childBox.y1 = Math.floor(y + childYSpacing);
+      childBox.x2 = childBox.x1 + width;
+      childBox.y2 = childBox.y1 + height;
+      return childBox;
+   },
+
+   _computeColumnLayout: function (forWidth) {
+      let usedWidth = 0;
+      let spacing = this.getSpacing();
+      let nColumns = Math.floor(forWidth/(this._getItemWidth() + spacing));
+      nColumns = (this._colLimit != null) ? Math.min(this._colLimit, nColumns) : nColumns;
+      usedWidth = nColumns*(this._getItemWidth() + spacing);
+      //while ((this._colLimit == null || nColumns < this._colLimit) &&
+      //       (usedWidth + this._getItemWidth() <= forWidth)) {
+      //   usedWidth += this._getItemWidth() + spacing;
+      //   nColumns += 1;
+      //}
+      if (nColumns > 0)
+         usedWidth -= spacing;
+      return [nColumns, usedWidth];
+   },
+
+   _onStyleChanged: function() {
+      this.box.queue_relayout();
+   },
+
+   clearAll: function() {
+      this._menuItems.map(function(child) {
+         this.removeItem(child);
+      }, this);
+      this._menuItems = [];
+      this._visibleItems = [];
+      this._nColumns = 1;
+   },
+
+   removeAll: function() {
+      this._menuItems.map(function(child) {
+         child.destroy();
+      });
+      this._menuItems = [];
+      this._visibleItems = [];
+      this._nColumns = 1;
+   },
+
+   setSpacing: function(spacing) {
+      this._fixedSpacing = spacing;
+   },
+
+   getNumberOfColumns: function() {
+      return this._nColumns;
+   },
+
+   getSpacing: function() {
+      return this._fixedSpacing ? this._fixedSpacing : this._spacing;
+   },
+
+   _getItemWidth: function() {
+      return (this._maxItemWidth > 0) ? Math.max(this._maxItemWidth, this._maxActorWidth) : this._maxActorWidth;
+   },
+
+   _getItemHeight: function() {
+      return (this._maxItemHeight > 0) ? Math.max(this._maxItemHeight, this._maxActorHeight) : this._maxActorHeight;
+   },
+
+//   _updateSpacingForSize: function(availWidth, availHeight) {
+//      let maxEmptyVArea = availHeight - this._minRows * this._getItemHeight();
+//      let maxEmptyHArea = availWidth - this._minColumns * this._getItemWidth();
+//      let maxHSpacing, maxVSpacing;
+
+//      if (this._minRows <=  1)
+//         maxVSpacing = maxEmptyVArea;
+//      else
+//         maxVSpacing = Math.floor(maxEmptyVArea / (this._minRows - 1));
+
+//      if (this._minColumns <=  1)
+//         maxHSpacing = maxEmptyHArea;
+//      else
+//         maxHSpacing = Math.floor(maxEmptyHArea / (this._minColumns - 1));
+
+//      let maxSpacing = Math.min(maxHSpacing, maxVSpacing);
+      // Limit spacing to the item size
+//      maxSpacing = Math.min(maxSpacing, Math.min(this._getItemHeight(), this._getItemWidth()));
+      // The minimum spacing, regardless of whether it satisfies the row/columng minima,
+      // is the spacing we get from CSS.
+//      let spacing = Math.max(this._spacing, maxSpacing);
+//      this.setSpacing(spacing);
+//   }
+};
+Signals.addSignalMethods(ConfigurableGridSection.prototype);
+*/
+
 function ConfigurableGridSection() {
    this._init.apply(this, arguments);
 }
@@ -5554,7 +6350,7 @@ ConfigurableGridSection.prototype = {
       //if(this._visibleItemsChange) {
       //   let children = this._menuItems;
       //   children = children.filter(function(menuItem) {
-      //      return (menuItem.actor.visible && !(menuItem instanceof PopupMenu.PopupSubMenu));
+      //      return (menuItem.actor.visible && !(menuItem instanceof ConfigurablePopupSubMenuMenuItem));
       //   });
       //   this._visibleItemsChange = false;
       //   this._visibleItems = children;
@@ -6056,6 +6852,7 @@ ConfigurableMenuApplet.prototype = {
       this.actor.set_style_class_name('applet-container-box');
       this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
       this._menuManager.addMenu(this);
+      this._menuManager.connect('close-menu', Lang.bind(this, this._onSubMenuClosed));
 
       this.actor.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
       if(this.launcher._applet_tooltip) {
@@ -6077,16 +6874,49 @@ ConfigurableMenuApplet.prototype = {
          this.actor.set_style_class_name('applet-container-box');
          this.box.set_style_class_name('applet-menu-content');
          this.box.set_vertical(false);
+         this._scroll.set_style_class_name('');
       }
       let items = this._getMenuItems();
       for(let pos in items) {
          let menuItem = items[pos];
-         if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+         if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
             this._setMenuInPosition(menuItem);
             this._setShowItemIcon(menuItem);
             menuItem.menu.fixToCorner(menuItem.menu.fixCorner);
          }
       }
+   },
+
+   _updatePanelVisibility: function() {
+      if(Main.panelManager) {
+         let panel = null;
+         try {
+            panel = AppletManager.enabledAppletDefinitions.idMap[this.launcher.instance_id].panel;
+            panel._mouseEntered = false;
+         } catch(e) {
+            global.logError("Fail to update panel visibility: " + e);
+         }
+         if(this.isOpen && !this._floating && (global.menuStackLength == 0)) {
+            global.menuStackLength += 1;
+         }
+         if(Main.panelManager.updatePanelsVisibility) {
+            if(panel && (global.menuStackLength > 0))
+               panel._mouseEntered = true;
+            Main.panelManager.updatePanelsVisibility();
+         } else {
+            if(panel && (global.menuStackLength > 0))
+               panel._mouseEntered = true;
+            for(let i in Main.panelManager.panels) {
+               if(Main.panelManager.panels[i] && Main.panelManager.panels[i]._hidePanel)
+                  Main.panelManager.panels[i]._hidePanel();
+            }
+         }
+      }
+   },
+
+   _onSubMenuClosed: function() {
+      if(global.menuStackLength == 0)
+         this._updatePanelVisibility();
    },
 
    _onMapped: function() {
@@ -6119,7 +6949,7 @@ ConfigurableMenuApplet.prototype = {
             let menuItem = null;
             for(let pos in items) {
                menuItem = items[pos];
-               if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+               if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
                   menuItem.menu.open(animate);
                   break;
                }
@@ -6139,7 +6969,7 @@ ConfigurableMenuApplet.prototype = {
             let items = this._getMenuItems();
             for(let pos in items) {
                let menuItem = items[pos];
-               if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+               if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
                   menuItem.menu.close(animate);
                }
             }
@@ -6154,10 +6984,14 @@ ConfigurableMenuApplet.prototype = {
          if(this._childMenus.length > 0)
             ConfigurableMenu.prototype.open.call(this, false);
       } else if(!this.isOpen) {
+         if(global.menuStackLength == undefined)
+            global.menuStackLength = 0;
+         global.menuStackLength += 1;
          this.actor.show();
          this.isOpen = true;
          this.emit('open-state-changed', true);
       }
+      this._updatePanelVisibility();
    },
 
    close: function(animate, forced) {
@@ -6165,10 +6999,13 @@ ConfigurableMenuApplet.prototype = {
          ConfigurableMenu.prototype.close.call(this, false);
       } else if((forced)&&(this.isOpen)) {
          this.actor.hide();
+         if(global.menuStackLength > 0)
+             global.menuStackLength -= 1;
          this._activeSubMenuItem = null;
          this._isSubMenuOpen = false;
          this.isOpen = false;
-         this.emit('open-state-changed', false);
+         this._updatePanelVisibility();
+         this.emit('open-state-changed', true);
       }
    },
 
@@ -6197,7 +7034,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    addMenuItem: function(menuItem, position) {
-      if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          let beforeItem = null;
          if(position == undefined) {
             this.box.add(menuItem.actor);
@@ -6234,7 +7071,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    removeItem: function(menuItem) {
-      if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu)
             menuItem.menu.disconnect(item.menu._stateId);
          menuItem.actor.disconnect(menuItem._pressId);
@@ -6324,7 +7161,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    _setDesaturateItemIcon: function(menuItem) {
-      if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu.desaturateItemIcon)
              menuItem.menu.desaturateItemIcon(this._desaturateItemIcon);
       }
@@ -6333,7 +7170,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    _setShowItemIcon: function(menuItem) {
-      if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) || (menuItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu.setShowItemIcon)
              menuItem.menu.setShowItemIcon(this._showItemIcon);
          if(menuItem.setShowItemIcon)
@@ -6987,7 +7824,7 @@ PopupMenuAbstractFactory.prototype = {
       let child;
       for(let i in childs) {
          child = childs[i];
-         if(child instanceof PopupMenu.PopupMenuBase) {
+         if(child instanceof ConfigurablePopupMenuBase) {
             this._closeAllSubmenuChilds(child);
          }
          else if((child.menu)&&(child.menu.isOpen)) {
@@ -7000,7 +7837,7 @@ PopupMenuAbstractFactory.prototype = {
    _getTopMenu: function(shellItem) {
       let actor = shellItem.actor.get_parent();
       while (actor) {
-         if((actor._delegate) && ((actor._delegate instanceof PopupMenu.PopupMenu) ||
+         if((actor._delegate) && ((actor._delegate instanceof ConfigurableMenu) ||
              (actor._delegate instanceof PopupMenu.PopupSubMenu)))
             return actor._delegate;
          actor = actor.get_parent();
@@ -7075,15 +7912,15 @@ MenuFactory.prototype = {
       let shellItem = null;
       let itemType = factoryItem.getFactoryType();
       if(itemType == FactoryClassTypes.RootMenuClass)
-         shellItem = new Applet.PopupMenu(launcher, orientation);
+         shellItem = new ConfigurableMenuApplet(launcher, orientation, menuManager);
       if(itemType == FactoryClassTypes.SubMenuMenuItemClass)
-         shellItem = new PopupMenu.PopupSubMenuMenuItem("FIXME");
+         shellItem = new ConfigurablePopupSubMenuMenuItem("FIXME");
       else if(itemType == FactoryClassTypes.MenuSectionMenuItemClass)
-         shellItem = new PopupMenu.PopupMenuSection();
+         shellItem = new ConfigurablePopupMenuSection();
       else if(itemType == FactoryClassTypes.SeparatorMenuItemClass)
-         shellItem = new PopupMenu.PopupSeparatorMenuItem();
+         shellItem = new ConfigurableSeparatorMenuItem();
       else if(itemType == FactoryClassTypes.MenuItemClass)
-         shellItem = new PopupMenu.PopupMenuItem("FIXME");
+         shellItem = new ConfigurableApplicationMenuItem("FIXME");
       //else
       //    throw new TypeError('Trying to instantiate a shell item with an invalid factory type');
       return shellItem;
@@ -7212,7 +8049,6 @@ MenuFactory.prototype = {
       // Don't allow to override previusly preasigned items, destroy the shell item first.
       factoryItem.destroyShellItem();
       let shellItem = this._createShellItem(factoryItem);
-      this._hackShellItem(shellItem);
 
       // Initially create children on idle, to not stop cinnamon mainloop.
       Mainloop.idle_add(Lang.bind(this, this._createChildrens, factoryItem));
@@ -7229,13 +8065,13 @@ MenuFactory.prototype = {
    _createChildrens: function(factoryItem) {
       if(factoryItem) {
          let shellItem = factoryItem.getShellItem();
-         if((shellItem instanceof ConfigurablePopupSubMenuMenuItem) || (shellItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+         if(shellItem instanceof ConfigurablePopupSubMenuMenuItem) {
             let children = factoryItem.getChildren();
             for(let i = 0; i < children.length; ++i) {
                let chItem = this._createItem(children[i]);
                shellItem.menu.addMenuItem(chItem);
             }
-         } else if(shellItem instanceof PopupMenu.PopupMenuSection) {
+         } else if(shellItem instanceof ConfigurablePopupMenuSection) {
             let children = factoryItem.getChildren();
             for(let i = 0; i < children.length; ++i) {
                let chItem = this._createItem(children[i]);
@@ -7248,10 +8084,10 @@ MenuFactory.prototype = {
    _onChildAdded: function(factoryItem, child, position) {
       let shellItem = factoryItem.getShellItem();
       if(shellItem) {
-         if((shellItem instanceof ConfigurablePopupSubMenuMenuItem) || (shellItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+         if(shellItem instanceof ConfigurablePopupSubMenuMenuItem) {
             shellItem.menu.addMenuItem(this._createItem(child), position, "factor");
-         } else if((shellItem instanceof PopupMenu.PopupMenuSection) ||
-                    (shellItem instanceof PopupMenu.PopupMenu)) {
+         } else if((shellItem instanceof ConfigurablePopupMenuSection) ||
+                    (shellItem instanceof ConfigurableMenu)) {
             shellItem.addMenuItem(this._createItem(child), position);
          } else {
             global.logWarning("Tried to add a child to non-submenu item. Better recreate it as whole");
@@ -7265,10 +8101,10 @@ MenuFactory.prototype = {
    _onChildMoved: function(factoryItem, child, oldpos, newpos) {
       let shellItem = factoryItem.getShellItem();
       if(shellItem) {
-         if((shellItem instanceof ConfigurablePopupSubMenuMenuItem) || (shellItem instanceof PopupMenu.PopupSubMenuMenuItem)) {
+         if(shellItem instanceof ConfigurablePopupSubMenuMenuItem) {
             this._moveItemInMenu(shellItem.menu, child, newpos);
-         } else if((shellItem instanceof PopupMenu.PopupMenuSection) ||
-                    (shellItem instanceof PopupMenu.PopupMenu)) {
+         } else if((shellItem instanceof ConfigurablePopupMenuSection) ||
+                    (shellItem instanceof ConfigurableMenu)) {
             this._moveItemInMenu(shellItem, child, newpos);
          } else {
             global.logWarning("Tried to move a child in non-submenu item. Better recreate it as whole");
@@ -7288,7 +8124,7 @@ MenuFactory.prototype = {
       let parentMenu = null;
       if(factoryItemParent) {
          let shellItemParent = factoryItemParent.getShellItem();
-         if(shellItemParent instanceof PopupMenu.PopupMenuSection)
+         if(shellItemParent instanceof ConfigurablePopupMenuSection)
             parentMenu = shellItemParent;
          else
             parentMenu = shellItemParent.menu;
@@ -7336,39 +8172,6 @@ MenuFactory.prototype = {
             }
          }
       }
-   },
-
-   _hackShellItem: function(shellItem) {
-      if(shellItem instanceof PopupMenu.PopupMenuItem) {
-         if(!shellItem.setAccel) {
-            shellItem._accel = new St.Label();
-            if(shellItem.addActor) { //GS 3.8
-               shellItem.addActor(shellItem._accel);
-            } else { //GS >= 3.10
-               shellItem.actor.add_actor(shellItem._accel);
-            }
-         }
-
-         if(!shellItem._icon) {
-            shellItem._icon = new St.Icon({ style_class: 'popup-menu-icon', x_align: St.Align.END });
-            if(shellItem.addActor) { //GS 3.8
-               shellItem.addActor(shellItem._icon, { align: St.Align.END });
-            } else { //GS >= 3.10
-               shellItem.actor.add(shellItem._icon, { x_align: St.Align.END });
-               shellItem.label.get_parent().child_set(shellItem.label, { expand: true });
-            }
-         }
-
-         // GS3.8: emulate the ornament stuff.
-         // this is similar to how the setShowDot function works
-         if(!shellItem.setOrnament) {
-
-            shellItem._ornament = new St.Label();
-            shellItem.actor.add_actor(shellItem._ornament);
-            shellItem.setOrnament = this._setOrnamentPolyfill;
-            //GS doesn't disconnect that one, either
-            shellItem.actor.connect('allocate', Lang.bind(this, this._allocateOrnament, shellItem));
-         }
-      }
    }
 };
+

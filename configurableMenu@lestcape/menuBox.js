@@ -27,7 +27,6 @@ const Mainloop = imports.mainloop;
 const Signals = imports.signals;
 const DND = imports.ui.dnd;
 const Main = imports.ui.main;
-const PopupMenu = imports.ui.popupMenu;
 const AppFavorites = imports.ui.appFavorites;
 const Tweener = imports.ui.tweener;
 const GnomeSession = imports.misc.gnomeSession;
@@ -692,7 +691,7 @@ function SeparatorBox(haveLine, space) {
 SeparatorBox.prototype = {
    _init: function(haveLine, space) {
       this.actor = new St.BoxLayout({ vertical: true });
-      this.separatorLine = new PopupMenu.PopupSeparatorMenuItem();
+      this.separatorLine = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
       this.actor.add_actor(this.separatorLine.actor);
       this.setLineVisible(haveLine);
       this.setSpace(space);
@@ -765,7 +764,7 @@ CategoriesBox.prototype = {
    _getVisibleChildren: function() {
       return this.box.get_focus_chain();
       //return this.box.get_children();
-            //.filter(x => !(x._delegate instanceof PopupMenu.PopupSeparatorMenuItem));
+            //.filter(x => !(x._delegate instanceof ConfigurablePopupSubMenuMenuItem));
    },
 
    acceptDrop: function(source, actor, x, y, time) {
