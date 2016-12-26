@@ -1772,14 +1772,6 @@ ConfigurablePopupBaseMenuItem.prototype = {
       this.emit('sensitive-changed', sensitive);
    },
 
-   destroy: function() {
-      if(this.actor) {
-         this.actor.destroy();
-         this.emit('destroy');
-         this.actor = null;
-      }
-   },
-
    // adds an actor to the menu item; @params can contain %span
    // (column span; defaults to 1, -1 means "all the remaining width", 0 means "no new column after this actor"),
    // %expand (defaults to #false), and %align (defaults to
@@ -1852,7 +1844,15 @@ ConfigurablePopupBaseMenuItem.prototype = {
    },
 
    _allocate: function(actor, box, flags) {
-   }
+   },
+
+   destroy: function() {
+      if(this.actor) {
+         this.actor.destroy();
+         this.emit('destroy');
+         this.actor = null;
+      }
+   },
 };
 Signals.addSignalMethods(ConfigurablePopupBaseMenuItem.prototype);
 
@@ -4949,9 +4949,11 @@ ConfigurableSeparatorMenuItem.prototype = {
       ConfigurablePopupBaseMenuItem.prototype._init.call(this, { reactive: false });
       this._drawingArea = new St.DrawingArea({ style_class: 'popup-separator-menu-item' });
       this.addActor(this._drawingArea, { span: -1, expand: true });
+      this.separatorLine = this.actor;
+      this.actor = new St.BoxLayout({ vertical: true });
+      this.actor.add_actor(this.separatorLine);
       this._drawingArea.connect('repaint', Lang.bind(this, this._onRepaint));
-
-      this._haveLine = true;
+      this.space = -1;
       this.actor._delegate = this;
    },
 
@@ -4983,20 +4985,26 @@ ConfigurableSeparatorMenuItem.prototype = {
       }
    },
 
+   setStyleClass: function(style_class) { //FIXME: we want to support vertical separators.
+      this.actor.set_style_class_name('popup-separator-menu-item');
+      this.actor.add_style_class_name(style_class);
+   },
+
    setSpace: function(space) {
-      this.space = space;
-      if(this.actor.get_vertical()) {
-         this.actor.set_width(-1);
-         this.actor.set_height(space);
-      } else {
-         this.actor.set_width(space);
-         this.actor.set_height(-1);
+      if(this.space != space) {
+         this.space = space;
+         if(this.actor.get_vertical()) {
+            this.actor.set_width(-1);
+            this.actor.set_height(space);
+         } else {
+            this.actor.set_width(space);
+            this.actor.set_height(-1);
+         }
       }
    },
 
-   setLineVisible: function(show) {
-      this._haveLine = show;
-      this.separatorLine.actor.visible = show;
+   setVisible: function(show) {
+      this.actor.visible = show;
    }
 };
 

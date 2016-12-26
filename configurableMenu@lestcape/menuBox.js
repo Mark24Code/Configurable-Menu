@@ -79,12 +79,16 @@ PlacesGnomeBox.prototype = {
       this.specialPlaces = new St.BoxLayout({ vertical: true });
       this._addPlaces(this.specialPlaces, this.parent._listSpecialBookmarks());
       this.actor.add(this.specialPlaces, {x_fill: true, expand: true});
-      this.separator1 = new SeparatorBox(true, 20);
+      this.separator1 = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      this.separator1.setVisible(true);
+      this.separator1.setSpace(20);
       this.actor.add_actor(this.separator1.actor);
       this.bookmarksPlaces = new St.BoxLayout({ vertical: true });
       this._addPlaces(this.bookmarksPlaces, Main.placesManager.getBookmarks());
       this.actor.add(this.bookmarksPlaces, {x_fill: true, expand: true});
-      this.separator2 = new SeparatorBox(true, 20);
+      this.separator2 = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      this.separator2.setVisible(true);
+      this.separator2.setSpace(20);
       this.actor.add_actor(this.separator2.actor);
       this.removablePlaces = new St.BoxLayout({ vertical: true });
       this.actor.add(this.removablePlaces, {x_fill: true, expand: true});
@@ -684,41 +688,6 @@ FavoritesBoxExtended.prototype = {
    }
 };
 
-function SeparatorBox(haveLine, space) {
-   this._init(haveLine, space);
-}
-
-SeparatorBox.prototype = {
-   _init: function(haveLine, space) {
-      this.actor = new St.BoxLayout({ vertical: true });
-      this.separatorLine = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
-      this.actor.add_actor(this.separatorLine.actor);
-      this.setLineVisible(haveLine);
-      this.setSpace(space);
-   },
-
-   destroy: function() {
-     this.separatorLine.destroy();
-     this.actor.destroy();
-   },
-
-   setSpace: function(space) {
-      this.space = space;
-      if(this.actor.get_vertical()) {
-         this.actor.set_width(-1);
-         this.actor.set_height(space);
-      } else {
-         this.actor.set_width(space);
-         this.actor.set_height(-1);
-      }
-   },
-
-   setLineVisible: function(show) {
-      this.haveLine = show;
-      this.separatorLine.actor.visible = show;
-   }
-};
-
 function SystemBox() {
    this._init();
 }
@@ -1185,7 +1154,9 @@ PowerBox.prototype = {
          if(this._bttChanger)
             this._bttChanger.setActive(false);
       }));
-      this.separatorPower = new SeparatorBox(false, 0);
+      this.separatorPower = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      this.separatorPower.setVisible(false);
+      this.separatorPower.setSpace(20);
       //Lock screen "preferences-desktop-screensaver"
       let button = new MenuItems.SystemButton(this.parent, null, "system-lock-screen", _("Lock screen"), _("Lock the screen"), this.iconSize, false);
       button.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
@@ -1237,7 +1208,7 @@ PowerBox.prototype = {
    },
 
    setSeparatorLine: function(haveLine) {
-      this.separatorPower.setLineVisible(haveLine);
+      this.separatorPower.setVisible(haveLine);
    },
 
    refresh: function() {
@@ -1753,7 +1724,10 @@ GnoMenuBox.prototype = {
       this.actor.add_actor(this.hoverBox);
       this.itemsBox = new St.BoxLayout({ vertical: verticalPanel });
       this.scrollActor = new ConfigurableMenus.ScrollItemsBox(parent, this.itemsBox, verticalPanel, St.Align.START);
-      this.separatorTop = new SeparatorBox(false, 20);
+      this.separatorTop = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      this.separatorTop.setVisible(false);
+      this.separatorTop.setSpace(20);
+
       this.actor.add_actor(this.separatorTop.actor);
       this.actor.add(this.scrollActor.actor, { x_fill: true, y_fill: true, expand: false});
       this.actor.add(this.powerBox, { x_fill: true, y_fill: true, expand: true });
@@ -2315,12 +2289,17 @@ AccessibleBox.prototype = {
       this.itemsBox.add_actor(this.itemsPlaces);
       this.itemsBox.add_actor(this.itemsDevices);
       this.powerBoxItem = new St.BoxLayout({ vertical: true });
-      this.separatorMiddle = new SeparatorBox(false, 20);// St.BoxLayout({ vertical: false, height: 20 });
+      this.separatorMiddle = new ConfigurableMenus.ConfigurableSeparatorMenuItem();// St.BoxLayout({ vertical: false, height: 20 });
+      this.separatorMiddle.setVisible(false);
+      this.separatorMiddle.setSpace(20);
+
       this.itemsBox.add_actor(this.separatorMiddle.actor);
       this.itemsBox.add_actor(this.systemName);
       this.itemsBox.add_actor(this.itemsSystem);
       this.scrollActor = new ConfigurableMenus.ScrollItemsBox(parent, this.itemsBox, true, St.Align.START);
-      this.separatorTop = new SeparatorBox(false, 20);//St.BoxLayout({ vertical: false, height: 20 });
+      this.separatorTop = new ConfigurableMenus.ConfigurableSeparatorMenuItem();//St.BoxLayout({ vertical: false, height: 20 });
+      this.separatorTop.setVisible(false);
+      this.separatorTop.setSpace(20);
       this.internalBox.add_actor(this.separatorTop.actor);
       this.internalBox.add(this.scrollActor.actor, { y_fill: true, expand: true });
       this.internalBox.add(this.powerBoxItem, { y_fill: true, expand: true });
@@ -2419,8 +2398,8 @@ AccessibleBox.prototype = {
    },
 
    setSeparatorLine: function(haveLine) {
-      this.separatorMiddle.setLineVisible(haveLine);
-      this.separatorTop.setLineVisible(haveLine);
+      this.separatorMiddle.setVisible(haveLine);
+      this.separatorTop.setVisible(haveLine);
    },
 
    setNamesVisible: function(visible) {

@@ -1610,10 +1610,10 @@ MyApplet.prototype = {
 
    _updateSeparators: function() {
       if(this.separatorTop.actor.get_parent() != null) {
-         this.separatorTop.separatorLine.actor.connect('style_changed', Lang.bind(this, function() {
+         this.separatorTop.actor.connect('style_changed', Lang.bind(this, function() {
             Mainloop.idle_add(Lang.bind(this, function() {
                if(this.menu.isOpen) {
-                  let themeNode = this.separatorTop.separatorLine.actor.get_theme_node();
+                  let themeNode = this.separatorTop.actor.get_theme_node();
                   let [found, width] = themeNode.lookup_length('-remove-separator', false);
                   this.separatorTop.actor.visible = (!found || (width == 0));
                }
@@ -1621,10 +1621,10 @@ MyApplet.prototype = {
          }));
       }
       if(this.separatorMiddle.actor.get_parent() != null) {
-         this.separatorMiddle.separatorLine.actor.connect('style_changed', Lang.bind(this, function() {
+         this.separatorMiddle.actor.connect('style_changed', Lang.bind(this, function() {
             Mainloop.idle_add(Lang.bind(this, function() {
                if(this.menu.isOpen) {
-                  let themeNode = this.separatorMiddle.separatorLine.actor.get_theme_node();
+                  let themeNode = this.separatorMiddle.actor.get_theme_node();
                   let [found, width] = themeNode.lookup_length('-remove-separator', false);
                   this.separatorMiddle.actor.visible = (!found || (width == 0));
                }
@@ -1632,10 +1632,10 @@ MyApplet.prototype = {
          }));
       }
       if(this.separatorBottom.actor.get_parent() != null) {
-         this.separatorBottom.separatorLine.actor.connect('style_changed', Lang.bind(this, function() {
+         this.separatorBottom.actor.connect('style_changed', Lang.bind(this, function() {
             Mainloop.idle_add(Lang.bind(this, function() {
                if(this.menu.isOpen) {
-                  let themeNode = this.separatorBottom.separatorLine.actor.get_theme_node();
+                  let themeNode = this.separatorBottom.actor.get_theme_node();
                   let [found, width] = themeNode.lookup_length('-remove-separator', false);
                   this.separatorBottom.actor.visible = (!found || (width == 0));
                }
@@ -1935,11 +1935,11 @@ MyApplet.prototype = {
       if(this.accessibleBox)
          this.accessibleBox.setSeparatorLine(this.showSeparatorLine);
       if(this.separatorMiddle)
-         this.separatorMiddle.setLineVisible(this.showSeparatorLine);
+         this.separatorMiddle.setVisible(this.showSeparatorLine);
       if(this.separatorTop)
-         this.separatorTop.setLineVisible(this.showSeparatorLine);
+         this.separatorTop.setVisible(this.showSeparatorLine);
       if(this.separatorBottom)
-         this.separatorBottom.setLineVisible(this.showSeparatorLine);
+         this.separatorBottom.setVisible(this.showSeparatorLine);
       this._updateSize();
    },
 
@@ -2196,15 +2196,15 @@ MyApplet.prototype = {
          this.appMenu.setSize(this.subMenuWidth, this.subMenuHeight);
       }
       if(this.separatorMiddle) {
-         this.separatorMiddle.setLineVisible(this.showSeparatorLine);
+         this.separatorMiddle.setVisible(this.showSeparatorLine);
          this.separatorMiddle.setSpace(this.separatorSize);
       }
       if(this.separatorTop) {
-         this.separatorTop.setLineVisible(this.showSeparatorLine);
+         this.separatorTop.setVisible(this.showSeparatorLine);
          this.separatorTop.setSpace(this.separatorSize);
       }
       if(this.separatorBottom) {
-         this.separatorBottom.setLineVisible(this.showSeparatorLine);
+         this.separatorBottom.setVisible(this.showSeparatorLine);
          this.separatorBottom.setSpace(this.separatorSize);
       }
       if(this.appletMenu) {
@@ -2931,9 +2931,16 @@ MyApplet.prototype = {
       this.section = new ConfigurableMenus.ConfigurablePopupMenuSection();
       this.flotingSection = new ConfigurableMenus.ConfigurablePopupMenuSection();
       this.extendedBox = new St.BoxLayout({ vertical: true });
-      this.separatorTop = new MenuBox.SeparatorBox(this.showSeparatorLine, this.separatorSize);
-      this.separatorMiddle = new MenuBox.SeparatorBox(this.showSeparatorLine, this.separatorSize);
-      this.separatorBottom = new MenuBox.SeparatorBox(this.showSeparatorLine, this.separatorSize);
+      this.separatorTop = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      this.separatorMiddle = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      this.separatorBottom = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      this.separatorTop.setVisible(this.showSeparatorLine);
+      this.separatorTop.setSpace(this.separatorSize);
+      this.separatorMiddle.setVisible(this.showSeparatorLine);
+      this.separatorMiddle.setSpace(this.separatorSize);
+      this.separatorBottom.setVisible(this.showSeparatorLine);
+      this.separatorBottom.setSpace(this.separatorSize);
+
       this.powerBox = new MenuBox.PowerBox(this, this.powerTheme, this.iconPowerSize);
 //middle
 
@@ -3030,9 +3037,9 @@ MyApplet.prototype = {
 
          this.extendedBox.add(this.standardBox, { x_fill: true, y_fill: true, y_align: St.Align.START, expand: true}); 
 
-         this.separatorTop.separatorLine.actor.add_style_class_name('menu-separator-top-' + this.theme);
-         this.separatorMiddle.separatorLine.actor.add_style_class_name('menu-separator-center-' + this.theme);
-         this.separatorBottom.separatorLine.actor.add_style_class_name('menu-separator-bottom-' + this.theme);
+         this.separatorTop.setStyleClass('menu-separator-top-' + this.theme);
+         this.separatorMiddle.setStyleClass('menu-separator-center-' + this.theme);
+         this.separatorBottom.setStyleClass('menu-separator-bottom-' + this.theme);
 
          this.favoritesObj.actor.visible = true;
          this.favoritesObj.actor.set_style_class_name('menu-favorites-box');
