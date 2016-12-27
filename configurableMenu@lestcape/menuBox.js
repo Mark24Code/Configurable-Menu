@@ -45,12 +45,15 @@ function _(str) {
    return Gettext.gettext(str);
 };
 
-function PlacesGnomeBox(parent, selectedAppBox, hover, iconSize, iconView, scrollBox, textButtonWidth) {
-   this._init(parent, selectedAppBox, hover, iconSize, iconView, scrollBox, textButtonWidth);
+function PlacesGnomeBox() {
+   this._init.apply(this, arguments);
 }
 
 PlacesGnomeBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function(parent, selectedAppBox, hover, iconSize, iconView, scrollBox, textButtonWidth) {
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
       this.parent = parent;
       this.selectedAppBox = selectedAppBox;
       this.hover = hover;
@@ -59,7 +62,6 @@ PlacesGnomeBox.prototype = {
       this.textButtonWidh = textButtonWidth;
       this.appButtonDescription = this.appButtonDescription;
       this.scrollBox = scrollBox;
-      this.actor = new St.BoxLayout({ vertical: true });
       this._listPlaces = new Array();
       Main.placesManager.connect('mounts-updated', Lang.bind(this, this._refreshMount));
       this.refreshPlaces();
@@ -177,24 +179,23 @@ PlacesGnomeBox.prototype = {
    }
 };
 
-function FavoritesBoxLine(parentBox, vertical) {
-   this._init(parentBox, vertical);
+function FavoritesBoxLine() {
+   this._init.apply(this, arguments);
 }
 
 FavoritesBoxLine.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function(parentBox, vertical) {
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
       this.parentBox = parentBox;
       this.vertical = vertical;
-      this.actor = new St.BoxLayout({ vertical: vertical });
+      this.actor.vertical = vertical;
       this.actor._delegate = this;
         
       this._dragPlaceholder = null;
       this._dragPlaceholderPos = -1;
       this._animatingPlaceholdersCount = 0;
-   },
-
-   destroy: function() {
-      this.actor.destroy();
    },
     
    _clearDragPlaceholder: function() {
@@ -335,7 +336,7 @@ FavoritesBoxLine.prototype = {
             favPos = this.parentBox.getBeginPosAtLine(this, favPos);
          }
 
-         Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this, function () {
+         Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this, function() {
             Mainloop.idle_add(Lang.bind(this, function() {
                let appFavorites = AppFavorites.getAppFavorites();
                if(srcIsFavorite)
@@ -689,12 +690,14 @@ FavoritesBoxExtended.prototype = {
 };
 
 function SystemBox() {
-   this._init();
+   this._init.apply(this, arguments);
 }
 
 SystemBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function() {
-      this.actor = new St.BoxLayout();
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
       this.actor._delegate = this;
    },
 
@@ -857,15 +860,20 @@ CategoriesBox.prototype = {
    }
 };
 
-function ControlBox(parent, iconSize) {
-   this._init(parent, iconSize);
+function ControlBox() {
+   this._init.apply(this, arguments);
 }
 
 ControlBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function(parent, iconSize) {
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
+      this.actor.vertical = false;
+      this.actor.style_class = 'menu-control-buttons-box';
       this.parent = parent;
       this.iconSize = iconSize;
-      this.actor = new St.BoxLayout({ vertical: false, style_class: 'menu-control-buttons-box' });
+      //this.actor = new St.BoxLayout({ vertical: false, style_class: 'menu-control-buttons-box' });
 
       this.resizeBox = new St.BoxLayout({ vertical: false });
       this.bttFullScreen = this._createButton('view-fullscreen');
@@ -1084,7 +1092,7 @@ ControlBox.prototype = {
       return btt;
    },
 
-   setActive: function (actor, active) {
+   setActive: function(actor, active) {
       let activeChanged = active != this.active;
       if(activeChanged) {
          this.active = active;
@@ -1117,20 +1125,21 @@ ControlBox.prototype = {
    }
 };
 
-function PowerBox(parent, theme, iconSize) {
-   this._init(parent, theme, iconSize);
+function PowerBox() {
+   this._init.apply(this, arguments);
 }
 
 PowerBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function(parent, theme, iconSize) {
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
       this.parent = parent;
       this.iconSize = iconSize;
       this.signalKeyPowerID = 0;
       this.powerSelected = 0;
       this._session = new GnomeSession.SessionManager();
       this._screenSaverProxy = new ScreenSaver.ScreenSaverProxy();
-
-      this.actor = new St.BoxLayout();
       this._powerButtons = new Array();
       this.actor.connect('key-focus-in', Lang.bind(this, function(actor, event) {        
          if(this._powerButtons.length > 0) {
@@ -1556,12 +1565,15 @@ PowerBox.prototype = {
 };
 Signals.addSignalMethods(PowerBox.prototype);
 
-function SelectedAppBox(parent, activeDateTime) {
-   this._init(parent, activeDateTime);
+function SelectedAppBox() {
+   this._init.apply(this, arguments);
 }
 
 SelectedAppBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function(parent, activeDateTime) {
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
       this.dateFormat = "%A,%e %B";
       this.timeFormat = "%H:%M";
       this.appDescriptionSize = 6;
@@ -1712,13 +1724,18 @@ SelectedAppBox.prototype = {
    }
 };
 
-function GnoMenuBox(parent, hoverIcon, powerPanel, verticalPanel, iconSize, callBackFun) {
-   this._init(parent, hoverIcon, powerPanel, verticalPanel, iconSize, callBackFun);
+function GnoMenuBox() {
+   this._init.apply(this, arguments);
 }
 
 GnoMenuBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function(parent, hoverIcon, powerPanel, verticalPanel, iconSize, callBackFun) {
-      this.actor = new St.BoxLayout({ vertical: verticalPanel, reactive: true, track_hover: true });
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
+      this.setVertical(verticalPanel);
+      this.actor.reactive = true;
+      this.actor.track_hover = true;
       this.hoverBox = new St.BoxLayout({ vertical: false });
       this.powerBox = new St.BoxLayout({ vertical: verticalPanel });
       this.actor.add_actor(this.hoverBox);
@@ -1742,14 +1759,14 @@ GnoMenuBox.prototype = {
       this.callBackFun = callBackFun;
       this._createActionButtons();
       this._insertButtons(St.Align.MIDDLE);
-      this.actor.connect('key-focus-in', Lang.bind(this, function(actor, event) {
+  /*     this.actor.connect('key-focus-in', Lang.bind(this, function(actor, event) {
          this._gnoMenuSelected = 0;
          this._onEnterEvent(this._actionButtons[this._gnoMenuSelected].actor);
       }));
       this.actor.connect('key-focus-out', Lang.bind(this, function(actor, event) {
          this.disableSelected();
       }));
-      //this._onEnterEvent(this._actionButtons[this._gnoMenuSelected].actor);
+      //this._onEnterEvent(this._actionButtons[this._gnoMenuSelected].actor);*/
    },
 
    setVertical: function(vertical) {
@@ -2023,7 +2040,7 @@ GnoMenuBox.prototype = {
       }
    },
 
-   setIconSize: function (iconSize) {
+   setIconSize: function(iconSize) {
       this.iconSize = iconSize;
       for(let i = 0; i < this._actionButtons.length; i++) {
          this._actionButtons[i].setIconSize(iconSize);
@@ -2077,15 +2094,17 @@ GnoMenuBox.prototype = {
 };
 Signals.addSignalMethods(GnoMenuBox.prototype);
 
-function AccessibleDropBox(parent, place) {
-   this._init(parent, place);
+function AccessibleDropBox() {
+   this._init.apply(this, arguments);
 }
 
 AccessibleDropBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function(parent, place) {
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
       this.parent = parent;
       this.place = place;
-      this.actor = new St.BoxLayout({ vertical: true });
       this.actor._delegate = this;
 
       this._dragPlaceholder = null;
@@ -2238,7 +2257,7 @@ AccessibleDropBox.prototype = {
 //               itemPos++;
 //         }
 
-      Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this, function () {
+      Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this, function() {
          if(srcIsCurrentItem) {//moveFavoriteToPos
             currentObj.splice(currentObj.indexOf(app.get_id()), 1);
             currentObj.splice(itemPos, 0, id);
@@ -2261,13 +2280,15 @@ AccessibleDropBox.prototype = {
    }
 };
 
-function AccessibleBox(parent, hoverIcon, selectedAppBox, controlBox, powerBox, vertical, iconSize, showRemovable) {
-   this._init(parent, hoverIcon, selectedAppBox, controlBox, powerBox, vertical, iconSize, showRemovable);
+function AccessibleBox() {
+   this._init.apply(this, arguments);
 }
 
 AccessibleBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
    _init: function(parent, hoverIcon, selectedAppBox, controlBox, powerBox, vertical, iconSize, showRemovable) {
-      this.actor = new St.BoxLayout({ vertical: true });
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
       this.internalBox = new St.BoxLayout({ style_class: 'menu-accessible-panel', vertical: true });
       this.actor.add(this.internalBox, { y_fill: true, expand: true });
       
@@ -2559,7 +2580,7 @@ AccessibleBox.prototype = {
       }
    },
 
-   setIconSize: function (iconSize) {
+   setIconSize: function(iconSize) {
       this.iconSize = iconSize;
       for(let i = 0; i < this._staticButtons.length; i++) {
          this._staticButtons[i].setIconSize(iconSize);

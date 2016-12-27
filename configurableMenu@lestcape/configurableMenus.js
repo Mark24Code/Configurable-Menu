@@ -1906,6 +1906,157 @@ ConfigurablePopupSwitchMenuItem.prototype = {
    }
 };
 
+function ConfigurableEntryItem() {
+   this._init.apply(this, arguments);
+}
+
+ConfigurableEntryItem.prototype = {
+   __proto__: ConfigurablePopupBaseMenuItem.prototype,
+
+   _init: function (label, hintText) {
+      ConfigurablePopupBaseMenuItem.prototype._init.call(this, {
+         reactive: true,
+         activate: true,
+         hover: true,
+         sensitive: true,
+         style_class: 'popup-menu-entry',
+         focusOnHover: false,
+      });
+      this.actor.style_class = ''; //menu-search-box
+      this.label = new St.Label({ text: label, style_class: 'menu-selected-app-title' });
+      this.label.style = "font-size: " + 10 + "pt";
+      this.actor.label_actor = this.label;
+      this.searchEntry = new St.Entry({
+         name: 'menu-search-entry',
+         style_class: 'menu-search-entry',
+         hint_text: hintText,
+         track_hover: true,
+         can_focus: true
+      });
+
+      this._searchActiveIcon = new St.Icon({
+         style_class: 'menu-search-entry-icon',
+         icon_type: St.IconType.SYMBOLIC 
+      });
+      this._searchInactiveIcon = new St.Icon({
+         style_class: 'menu-search-entry-icon',
+         icon_type: St.IconType.SYMBOLIC
+      });
+      this._previousSearchPattern = "";
+
+      this.searchEntry.set_secondary_icon(this._searchInactiveIcon);
+      this.searchActive = false;
+      this.searchEntryText = this.searchEntry.clutter_text;
+      this.searchEntryText.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
+      this.searchEntryText.connect('text-changed', Lang.bind(this, this._onSearchTextChanged));
+      /*this.idSignalTextChange = 0;
+      this.searchEntry.clutter_text.connect('key-focus-in', Lang.bind(this, function(actor) {
+         if(this.idSignalTextChange == 0)
+            this.idSignalTextChange = this.searchEntry.clutter_text.connect('text-changed', Lang.bind(this, this._onSearchTextChanged));
+      }));
+      this.searchEntry.clutter_text.connect('key-focus-out', Lang.bind(this, function(actor) {
+         //this._disconnectSearch();
+      }));*/
+
+      this.actor.add(this.label, { x_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, y_fill: false , expand: false });
+      this.actor.add(this.searchEntry, { x_align: St.Align.START, y_align: St.Align.MIDDLE, x_fill: true, y_fill: false, expand: true });
+   },
+
+   setLabelVisible: function(visible) {
+      this.label.visible = visible;
+   },
+
+   setVisible: function(visible) {
+      this.actor.visible = visible;
+      this.setLabelVisible(this.showSearhEntry);
+   },
+
+   isActive: function() {
+      return this.searchActive;
+   },
+
+   setInactiveIcon: function (iconName) {
+      this._searchInactiveIcon.set_icon_name(iconName);
+   },
+
+   setActiveIcon: function (iconName) {
+      this._searchActiveIcon.set_icon_name(iconName);
+   },
+
+   resetText: function() {
+      this.searchEntry.set_text("");
+      this._previousSearchPattern = "";
+      this.searchActive = false;
+      this.emit('text-reset');
+   },
+
+/*
+   disconnectSearch: function() {
+      this.menuIsOpening = true;
+      if(this.idSignalTextChange > 0)
+         this.searchEntryText.disconnect(this.idSignalTextChange);
+      this.idSignalTextChange = 0;
+   },
+*/
+
+   _onKeyPressEvent: function (actor, event) {
+      this.emit('key-press-event', actor, event);
+      /*let symbol = event.get_key_symbol();
+      if (symbol == Clutter.KEY_space || symbol == Clutter.KEY_Return) {
+         this.activate(event);
+         return true;
+      }
+      return false;*/
+   },
+
+   _onSearchTextChanged: function (actor, event) {
+      this.searchActive = this.searchEntry.get_text() != '';
+      if(this.searchActive) {
+          this.searchEntry.set_secondary_icon(this._searchActiveIcon);
+          if(!this._searchIconClickedId) {
+             this._searchIconClickedId = this.searchEntry.connect('secondary-icon-clicked', Lang.bind(this, function() {
+                this.resetText();
+             }));
+          }
+          this.emit('text-changed', actor, event);
+          this._previousSearchPattern = this.getPattern();
+      } else {
+          this.searchEntry.set_secondary_icon(this._searchInactiveIcon);
+          if(this._searchIconClickedId) {
+             this.searchEntry.disconnect(this._searchIconClickedId);
+             this._searchIconClickedId = null;
+          }
+          this.emit('text-changed', actor, event);
+          this._previousSearchPattern = "";
+      }
+   },
+
+   getPattern: function() {
+      return this.getText().replace(/^\s+/g, '').replace(/\s+$/g, '').toLowerCase();
+   },
+
+   isPatternChange: function() {
+      return (this.getPattern() != this._previousSearchPattern);
+   },
+
+   setEntryWidth: function (width) {
+      this.searchEntry.set_width(width);
+   },
+   
+   setText: function(text) {
+      this.searchEntry.set_text(text);
+   },
+
+   getText: function() {
+      return this.searchEntry.get_text();//this.searchEntry.get_text();
+   },
+
+   grabKeyFocus: function() {
+      this.searchEntry.grab_key_focus();
+   },
+};
+Signals.addSignalMethods(ConfigurablePopupBaseMenuItem.prototype);
+
 function GradientLabelMenuItem() {
    this._init.apply(this, arguments);
 }
@@ -2032,6 +2183,18 @@ ConfigurablePopupMenuItem.prototype = {
       this.label = new St.Label({ text: text });
       this.actor.label_actor = this.label;
       this.actor.add(this.label, { y_align: St.Align.MIDDLE, y_fill:false, expand: true });
+   },
+
+   setLabelStyle: function(style) {
+      this.label.set_style_class_name(style);
+   },
+
+   setText: function(text) {
+      this.label.set_text(text);
+   },
+
+   setVisible: function(visible) {
+      this.actor.visible = visible;
    },
 };
 
@@ -3852,14 +4015,16 @@ ConfigurableMenu.prototype = {
 
    _getLastMenuItem: function(menu) {
       let items = menu._getAllMenuItems();
-      for(let pos = items.length - 1; pos > -1; pos--) {
-         if(items[pos]._getAllMenuItems) {
-            let result = this._getLastMenuItem(items[pos]);
-            if(result)
-               return result;
-         } else if((items[pos].actor.visible)&&(items[pos].sensitive)&&
-                   (!(items[pos] instanceof ConfigurableSeparatorMenuItem))) {
-            return items[pos];
+      if(items.length > 0) {
+         for(let pos = items.length - 1; pos > -1; pos--) {
+            if(items[pos]._getAllMenuItems) {
+               let result = this._getLastMenuItem(items[pos]);
+               if(result)
+                  return result;
+            } else if((items[pos].actor.visible)&&(items[pos].sensitive)&&
+                      (!(items[pos] instanceof ConfigurableSeparatorMenuItem))) {
+               return items[pos];
+            }
          }
       }
       return null;
