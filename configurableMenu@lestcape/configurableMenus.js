@@ -54,8 +54,8 @@ const FactoryEventTypes = {
    'clicked'   : "clicked"
 };
 
-function ScrollItemsBox(parent, panelToScroll, vertical, align) {
-   this._init(parent, panelToScroll, vertical, align);
+function ScrollItemsBox() {
+   this._init.apply(this, arguments);
 }
 
 ScrollItemsBox.prototype = {
@@ -316,17 +316,17 @@ ScrollItemsBox.prototype = {
                let box_height = this.actor.get_allocation_box().y2-this.actor.get_allocation_box().y1;
                let new_scroll_value = current_scroll_value;
                let hActor = this._getAllocationActor(actor, 0);
-               if (current_scroll_value > hActor-10) new_scroll_value = hActor-10;
-               if (box_height+current_scroll_value < hActor + actor.get_height()+10) new_scroll_value = hActor + actor.get_height()-box_height+10;
-               if (new_scroll_value!=current_scroll_value) this.scroll.get_vscroll_bar().get_adjustment().set_value(new_scroll_value);
+               if(current_scroll_value > hActor-10) new_scroll_value = hActor-10;
+               if(box_height+current_scroll_value < hActor + actor.get_height()+10) new_scroll_value = hActor + actor.get_height()-box_height+10;
+               if(new_scroll_value!=current_scroll_value) this.scroll.get_vscroll_bar().get_adjustment().set_value(new_scroll_value);
                // Main.notify("finish" + new_scroll_value);
             } else {
                let current_scroll_value = this.scroll.get_hscroll_bar().get_adjustment().get_value();
                let box_width = this.actor.get_allocation_box().x2-this.actor.get_allocation_box().x1;
                let new_scroll_value = current_scroll_value;
-               if (current_scroll_value > actor.get_allocation_box().x1-10) new_scroll_value = actor.get_allocation_box().x1-10;
-               if (box_width+current_scroll_value < actor.get_allocation_box().x2+40) new_scroll_value = actor.get_allocation_box().x2-box_width+40;
-               if (new_scroll_value!=current_scroll_value) this.scroll.get_hscroll_bar().get_adjustment().set_value(new_scroll_value);
+               if(current_scroll_value > actor.get_allocation_box().x1-10) new_scroll_value = actor.get_allocation_box().x1-10;
+               if(box_width+current_scroll_value < actor.get_allocation_box().x2+40) new_scroll_value = actor.get_allocation_box().x2-box_width+40;
+               if(new_scroll_value!=current_scroll_value) this.scroll.get_hscroll_bar().get_adjustment().set_value(new_scroll_value);
             }
          }
       } catch(e) {
@@ -388,7 +388,7 @@ BoxPointer.prototype = {
     show: function(animate, onComplete) {
         let themeNode = this.actor.get_theme_node();
         let rise = themeNode.get_length('-arrow-rise');
-        if (animate) {
+        if(animate) {
             this.opacity = 0;
             this.actor.show();
             switch (this._arrowSide) {
@@ -423,7 +423,7 @@ BoxPointer.prototype = {
         let themeNode = this.actor.get_theme_node();
         let rise = themeNode.get_length('-arrow-rise');
 
-        if (animate) {
+        if(animate) {
             switch (this._arrowSide) {
                 case St.Side.TOP:
                     yOffset = rise;
@@ -443,11 +443,11 @@ BoxPointer.prototype = {
                                      yOffset: yOffset,
                                      transition: 'linear',
                                      time: POPUP_ANIMATION_TIME,
-                                     onComplete: Lang.bind(this, function () {
+                                     onComplete: Lang.bind(this, function() {
                                          this.actor.hide();
                                          this.xOffset = 0;
                                          this.yOffset = 0;
-                                         if (onComplete)
+                                         if(onComplete)
                                              onComplete();
                                          })
                                      });
@@ -461,7 +461,7 @@ BoxPointer.prototype = {
      * @side (St.Side): The new side of the menu
      * 
      * Sets the arrow side of the menu. Note that the side is the side
-     * of the source actor, not the menu, e.g. If St.Side.TOP is set, 
+     * of the source actor, not the menu, e.g. if St.Side.TOP is set, 
      * then the menu will appear below the source actor (the source
      * actor will be on top of the menu)
      */
@@ -476,7 +476,7 @@ BoxPointer.prototype = {
         let borderWidth = themeNode.get_length('-arrow-border-width');
         alloc.min_size += borderWidth * 2;
         alloc.natural_size += borderWidth * 2;
-        if ((!isWidth && (this._arrowSide == St.Side.TOP || this._arrowSide == St.Side.BOTTOM))
+        if((!isWidth && (this._arrowSide == St.Side.TOP || this._arrowSide == St.Side.BOTTOM))
             || (isWidth && (this._arrowSide == St.Side.LEFT || this._arrowSide == St.Side.RIGHT))) {
             let rise = themeNode.get_length('-arrow-rise');
             alloc.min_size += rise;
@@ -532,7 +532,7 @@ BoxPointer.prototype = {
         }
         this.bin.allocate(childBox, flags);
 
-        if (this._sourceActor && this._sourceActor.mapped)
+        if(this._sourceActor && this._sourceActor.mapped)
             this._reposition(this._sourceActor, this._arrowAlignment);
     },
 
@@ -552,7 +552,7 @@ BoxPointer.prototype = {
 
         let [width, height] = area.get_surface_size();
         let [boxWidth, boxHeight] = [width, height];
-        if (this._arrowSide == St.Side.TOP || this._arrowSide == St.Side.BOTTOM) {
+        if(this._arrowSide == St.Side.TOP || this._arrowSide == St.Side.BOTTOM) {
             boxHeight -= rise;
         } else {
             boxWidth -= rise;
@@ -562,9 +562,9 @@ BoxPointer.prototype = {
 
         // Translate so that box goes from 0,0 to boxWidth,boxHeight,
         // with the arrow poking out of that
-        if (this._arrowSide == St.Side.TOP) {
+        if(this._arrowSide == St.Side.TOP) {
             cr.translate(0, rise);
-        } else if (this._arrowSide == St.Side.LEFT) {
+        } else if(this._arrowSide == St.Side.LEFT) {
             cr.translate(rise, 0);
         }
 
@@ -572,11 +572,11 @@ BoxPointer.prototype = {
         let [x2, y2] = [boxWidth - halfBorder, boxHeight - halfBorder];
 
         cr.moveTo(x1 + borderRadius, y1);
-        if (this._arrowSide == St.Side.TOP) {
-            if (this._arrowOrigin < (x1 + (borderRadius + halfBase))) {
+        if(this._arrowSide == St.Side.TOP) {
+            if(this._arrowOrigin < (x1 + (borderRadius + halfBase))) {
                 cr.lineTo(this._arrowOrigin, y1 - rise);
                 cr.lineTo(Math.max(x1 + borderRadius, this._arrowOrigin) + halfBase, y1);
-            } else if (this._arrowOrigin > (x2 - (borderRadius + halfBase))) {
+            } else if(this._arrowOrigin > (x2 - (borderRadius + halfBase))) {
                 cr.lineTo(Math.min(x2 - borderRadius, this._arrowOrigin) - halfBase, y1);
                 cr.lineTo(this._arrowOrigin, y1 - rise);
             } else {
@@ -592,11 +592,11 @@ BoxPointer.prototype = {
         cr.arc(x2 - borderRadius, y1 + borderRadius, borderRadius,
                3*Math.PI/2, Math.PI*2);
 
-        if (this._arrowSide == St.Side.RIGHT) {
-            if (this._arrowOrigin < (y1 + (borderRadius + halfBase))) {
+        if(this._arrowSide == St.Side.RIGHT) {
+            if(this._arrowOrigin < (y1 + (borderRadius + halfBase))) {
                 cr.lineTo(x2 + rise, this._arrowOrigin);
                 cr.lineTo(x2, Math.max(y1 + borderRadius, this._arrowOrigin) + halfBase);
-            } else if (this._arrowOrigin > (y2 - (borderRadius + halfBase))) {
+            } else if(this._arrowOrigin > (y2 - (borderRadius + halfBase))) {
                 cr.lineTo(x2, Math.min(y2 - borderRadius, this._arrowOrigin) - halfBase);
                 cr.lineTo(x2 + rise, this._arrowOrigin);
             } else {
@@ -612,11 +612,11 @@ BoxPointer.prototype = {
         cr.arc(x2 - borderRadius, y2 - borderRadius, borderRadius,
                0, Math.PI/2);
 
-        if (this._arrowSide == St.Side.BOTTOM) {
-            if (this._arrowOrigin < (x1 + (borderRadius + halfBase))) {
+        if(this._arrowSide == St.Side.BOTTOM) {
+            if(this._arrowOrigin < (x1 + (borderRadius + halfBase))) {
                 cr.lineTo(Math.max(x1 + borderRadius, this._arrowOrigin) + halfBase, y2);
                 cr.lineTo(this._arrowOrigin, y2 + rise);
-            } else if (this._arrowOrigin > (x2 - (borderRadius + halfBase))) {
+            } else if(this._arrowOrigin > (x2 - (borderRadius + halfBase))) {
                 cr.lineTo(this._arrowOrigin, y2 + rise);
                 cr.lineTo(Math.min(x2 - borderRadius, this._arrowOrigin) - halfBase, y2);
             } else {
@@ -632,11 +632,11 @@ BoxPointer.prototype = {
         cr.arc(x1 + borderRadius, y2 - borderRadius, borderRadius,
                Math.PI/2, Math.PI);
 
-        if (this._arrowSide == St.Side.LEFT) {
-            if (this._arrowOrigin < (y1 + (borderRadius + halfBase))) {
+        if(this._arrowSide == St.Side.LEFT) {
+            if(this._arrowOrigin < (y1 + (borderRadius + halfBase))) {
                 cr.lineTo(x1, Math.max(y1 + borderRadius, this._arrowOrigin) + halfBase);
                 cr.lineTo(x1 - rise, this._arrowOrigin);
-            } else if (this._arrowOrigin > (y2 - (borderRadius + halfBase))) {
+            } else if(this._arrowOrigin > (y2 - (borderRadius + halfBase))) {
                 cr.lineTo(x1 - rise, this._arrowOrigin);
                 cr.lineTo(x1, Math.min(y2 - borderRadius, this._arrowOrigin) - halfBase);
             } else {
@@ -675,7 +675,7 @@ BoxPointer.prototype = {
     setSourceAlignment: function(alignment) {
         this._sourceAlignment = alignment;
 
-        if (!this._sourceActor)
+        if(!this._sourceActor)
             return;
 
         // We need to show it now to force an allocation,
@@ -773,7 +773,7 @@ BoxPointer.prototype = {
     // the Y axis for St.Side.LEFT, St.Side.RIGHT from the top and X axis from
     // the left for St.Side.TOP and St.Side.BOTTOM.
     setArrowOrigin: function(origin) {
-        if (this._arrowOrigin != origin) {
+        if(this._arrowOrigin != origin) {
             this._arrowOrigin = origin;
             this._border.queue_repaint();
         }
@@ -1664,7 +1664,7 @@ function ConfigurablePopupBaseMenuItem() {
 
 ConfigurablePopupBaseMenuItem.prototype = {
 
-   _init: function (params) {
+   _init: function(params) {
       params = Params.parse (params, {
          reactive: true,
          activate: true,
@@ -1711,57 +1711,57 @@ ConfigurablePopupBaseMenuItem.prototype = {
       }
    },
 
-   _onStyleChanged: function (actor) {
+   _onStyleChanged: function(actor) {
       this._spacing = Math.round(actor.get_theme_node().get_length('spacing'));
    },
 
-   _onButtonReleaseEvent: function (actor, event) {
+   _onButtonReleaseEvent: function(actor, event) {
       this.activate(event, false);
       return true;
    },
 
-   _onKeyPressEvent: function (actor, event) {
+   _onKeyPressEvent: function(actor, event) {
       let symbol = event.get_key_symbol();
 
-      if (symbol == Clutter.KEY_space || symbol == Clutter.KEY_Return) {
+      if(symbol == Clutter.KEY_space || symbol == Clutter.KEY_Return) {
          this.activate(event);
          return true;
       }
       return false;
    },
 
-   _onKeyFocusIn: function (actor) {
+   _onKeyFocusIn: function(actor) {
       this.setActive(true);
    },
 
-   _onKeyFocusOut: function (actor) {
+   _onKeyFocusOut: function(actor) {
       this.setActive(false);
    },
 
-   _onHoverChanged: function (actor) {
+   _onHoverChanged: function(actor) {
       this.setActive(actor.hover);
    },
 
-   activate: function (event, keepMenu) {
+   activate: function(event, keepMenu) {
       this.emit('activate', event, keepMenu);
    },
 
-   setActive: function (active) {
+   setActive: function(active) {
       let activeChanged = active != this.active;
       
-      if (activeChanged) {
+      if(activeChanged) {
          this.active = active;
          this.actor.change_style_pseudo_class('active', active);
-         if (this.focusOnHover && this.active) this.actor.grab_key_focus();
+         if(this.focusOnHover && this.active) this.actor.grab_key_focus();
 
          this.emit('active-changed', active);
       }
    },
 
    setSensitive: function(sensitive) {
-      if (!this._activatable)
+      if(!this._activatable)
          return;
-      if (this.sensitive == sensitive)
+      if(this.sensitive == sensitive)
          return;
 
       this.sensitive = sensitive;
@@ -1785,7 +1785,7 @@ ConfigurablePopupBaseMenuItem.prototype = {
                     expand: params.expand,
                     x_fill: params.expand };
       }
-      this.actor.connect('destroy', Lang.bind(this, function () { this._removeChild(child); }));
+      this.actor.connect('destroy', Lang.bind(this, function() { this._removeChild(child); }));
       this.actor.add(child, params);
       if(params) {
          params.actor = child;
@@ -1794,8 +1794,8 @@ ConfigurablePopupBaseMenuItem.prototype = {
    },
 
    _removeChild: function(child) {
-      for (let i = 0; i < this._children.length; i++) {
-         if (this._children[i].actor == child) {
+      for(let i = 0; i < this._children.length; i++) {
+         if(this._children[i].actor == child) {
             this._children.splice(i, 1);
             return;
          }
@@ -1809,18 +1809,18 @@ ConfigurablePopupBaseMenuItem.prototype = {
 
    getColumnWidths: function() {
       let widths = [];
-      /* for (let i = 0, col = 0; i < this._children.length; i++) {
+      /* for(let i = 0, col = 0; i < this._children.length; i++) {
          let child = this._children[i];
          let [min, natural] = child.actor.get_preferred_width(-1);
 
-         if (widths[col])
+         if(widths[col])
             widths[col] += this._spacing + natural;
          else
             widths[col] = natural;
 
-         if (child.span > 0) {
+         if(child.span > 0) {
             col++;
-            for (let j = 1; j < child.span; j++)
+            for(let j = 1; j < child.span; j++)
                widths[col++] = 0;
          }
       }*/
@@ -1913,7 +1913,7 @@ function ConfigurableEntryItem() {
 ConfigurableEntryItem.prototype = {
    __proto__: ConfigurablePopupBaseMenuItem.prototype,
 
-   _init: function (label, hintText) {
+   _init: function(label, hintText) {
       ConfigurablePopupBaseMenuItem.prototype._init.call(this, {
          reactive: true,
          activate: true,
@@ -1975,11 +1975,11 @@ ConfigurableEntryItem.prototype = {
       return this.searchActive;
    },
 
-   setInactiveIcon: function (iconName) {
+   setInactiveIcon: function(iconName) {
       this._searchInactiveIcon.set_icon_name(iconName);
    },
 
-   setActiveIcon: function (iconName) {
+   setActiveIcon: function(iconName) {
       this._searchActiveIcon.set_icon_name(iconName);
    },
 
@@ -1999,17 +1999,17 @@ ConfigurableEntryItem.prototype = {
    },
 */
 
-   _onKeyPressEvent: function (actor, event) {
+   _onKeyPressEvent: function(actor, event) {
       this.emit('key-press-event', actor, event);
       /*let symbol = event.get_key_symbol();
-      if (symbol == Clutter.KEY_space || symbol == Clutter.KEY_Return) {
+      if(symbol == Clutter.KEY_space || symbol == Clutter.KEY_Return) {
          this.activate(event);
          return true;
       }
       return false;*/
    },
 
-   _onSearchTextChanged: function (actor, event) {
+   _onSearchTextChanged: function(actor, event) {
       this.searchActive = this.searchEntry.get_text() != '';
       if(this.searchActive) {
           this.searchEntry.set_secondary_icon(this._searchActiveIcon);
@@ -2039,7 +2039,7 @@ ConfigurableEntryItem.prototype = {
       return (this.getPattern() != this._previousSearchPattern);
    },
 
-   setEntryWidth: function (width) {
+   setEntryWidth: function(width) {
       this.searchEntry.set_width(width);
    },
    
@@ -2178,7 +2178,7 @@ function ConfigurablePopupMenuItem() {
 ConfigurablePopupMenuItem.prototype = {
    __proto__: ConfigurablePopupBaseMenuItem.prototype,
 
-   _init: function (text, params) {
+   _init: function(text, params) {
       ConfigurablePopupBaseMenuItem.prototype._init.call(this, params);
       this.label = new St.Label({ text: text });
       this.actor.label_actor = this.label;
@@ -2574,12 +2574,12 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
          this.menu.open(true);
    },
 
-   _onKeyFocusInit: function (actor) {
+   _onKeyFocusInit: function(actor) {
       if(this.menu && !this.menu.IsOpen && this.menu.isInFloatingState())
          this.setActive(true);
    },
 
-   _onKeyFocusOut: function (actor) {
+   _onKeyFocusOut: function(actor) {
       if(this.menu && this.menu.IsOpen && this.menu.isInFloatingState())
          this.setActive(false);
    },
@@ -2757,7 +2757,7 @@ ConfigurableMenuManager.prototype = {
    },
 
    _ungrab: function() {
-      if (!this.grabbed) {
+      if(!this.grabbed) {
          return;
       }
       global.stage.disconnect(this._eventCaptureId);
@@ -2908,9 +2908,9 @@ ConfigurableMenuManager.prototype = {
    },
 
    _findMenu: function(item) {
-      for (let i = 0; i < this._menus.length; i++) {
+      for(let i = 0; i < this._menus.length; i++) {
          let menudata = this._menus[i];
-         if (item == menudata.menu)
+         if(item == menudata.menu)
             return i;
       }
       return -1;
@@ -3058,7 +3058,7 @@ ConfigurableMenuManager.prototype = {
          focus: global.stage.get_key_focus(),
          destroyId: actorDestroyId
       };
-      if (record.focus != null) {
+      if(record.focus != null) {
          record.focusDestroyId = record.focus.connect('destroy', function() {
             record.focus = null;
             record.focusDestroyId = null;
@@ -3159,7 +3159,7 @@ ConfigurablePopupMenuBase.prototype = {
    _init: function(sourceActor, styleClass) {
       this.sourceActor = sourceActor;
 
-      if (styleClass !== undefined) {
+      if(styleClass !== undefined) {
          this.box = new St.BoxLayout({ style_class: styleClass, vertical: true });
       } else {
          this.box = new St.BoxLayout({ vertical: true });
@@ -3178,7 +3178,7 @@ ConfigurablePopupMenuBase.prototype = {
    addAction: function(title, callback) {
       let menuItem = new ConfigurablePopupMenuItem(title);
       this.addMenuItem(menuItem);
-      menuItem.connect('activate', Lang.bind(this, function (menuItem, event) {
+      menuItem.connect('activate', Lang.bind(this, function(menuItem, event) {
          callback(event);
       }));
 
@@ -3204,7 +3204,7 @@ ConfigurablePopupMenuBase.prototype = {
    },
 
    addChildMenu: function(menu) {
-      if (this.isChildMenu(menu))
+      if(this.isChildMenu(menu))
          return;
 
       this._childMenus.push(menu);
@@ -3214,7 +3214,7 @@ ConfigurablePopupMenuBase.prototype = {
    removeChildMenu: function(menu) {
       let index = this._childMenus.indexOf(menu);
 
-      if (index == -1)
+      if(index == -1)
          return;
 
       this._childMenus.splice(index, 1);
@@ -3224,54 +3224,54 @@ ConfigurablePopupMenuBase.prototype = {
    _connectSubMenuSignals: function(menuItem, menu) {
       menuItem._subMenuActivateId = menu.connect('activate', Lang.bind(this, function(submenu, submenuItem, keepMenu) {
          this.emit('activate', submenuItem, keepMenu);
-         if (!keepMenu) {
+         if(!keepMenu) {
             this.close(true);
          }
       }));
       menuItem._subMenuActiveChangeId = menu.connect('active-changed', Lang.bind(this, function(submenu, submenuItem) {
-         if (this._activeMenuItem && this._activeMenuItem != submenuItem)
+         if(this._activeMenuItem && this._activeMenuItem != submenuItem)
             this._activeMenuItem.setActive(false);
          this._activeMenuItem = submenuItem;
          this.emit('active-changed', submenuItem);
       }));
       menuItem._closingMenuId = this.connect('open-state-changed', function(menu, open) {
-         if (!open && menuItem.menu)
+         if(!open && menuItem.menu)
             menuItem.menu.close(false);
       });
    },
 
    _connectItemSignals: function(menuItem) {
-      menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function (menuItem, active) {
-         if (active && this._activeMenuItem != menuItem) {
-            if (this._activeMenuItem)
+      menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function(menuItem, active) {
+         if(active && this._activeMenuItem != menuItem) {
+            if(this._activeMenuItem)
                this._activeMenuItem.setActive(false);
             this._activeMenuItem = menuItem;
             this.emit('active-changed', menuItem);
-         } else if (!active && this._activeMenuItem == menuItem) {
+         } else if(!active && this._activeMenuItem == menuItem) {
             this._activeMenuItem = null;
             this.emit('active-changed', null);
          }
       }));
       menuItem._sensitiveChangeId = menuItem.connect('sensitive-changed', Lang.bind(this, function(menuItem, sensitive) {
-         if (!sensitive && this._activeMenuItem == menuItem) {
-            if (!this.actor.navigate_focus(menuItem.actor, Gtk.DirectionType.TAB_FORWARD, true))
+         if(!sensitive && this._activeMenuItem == menuItem) {
+            if(!this.actor.navigate_focus(menuItem.actor, Gtk.DirectionType.TAB_FORWARD, true))
                this.actor.grab_key_focus();
-         } else if (sensitive && this._activeMenuItem == null) {
-            if (global.stage.get_key_focus() == this.actor)
+         } else if(sensitive && this._activeMenuItem == null) {
+            if(global.stage.get_key_focus() == this.actor)
                menuItem.actor.grab_key_focus();
          }
       }));
-      menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function (menuItem, event, keepMenu) {
+      menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function(menuItem, event, keepMenu) {
          this.emit('activate', menuItem, keepMenu);
-         if (!keepMenu) {
+         if(!keepMenu) {
              this.close(true);
          }
       }));
       menuItem._closingId = menuItem.connect('destroy', Lang.bind(this, function(emitter) {
          this._disconnectItemSignals(menuItem);
-         if (menuItem.menu)
+         if(menuItem.menu)
             this._disconnectSubMenuSignals(menuItem, menuItem.menu);
-         if (menuItem == this._activeMenuItem)
+         if(menuItem == this._activeMenuItem)
             this._activeMenuItem = null;
          this.length--;
       }));
@@ -3312,7 +3312,7 @@ ConfigurablePopupMenuBase.prototype = {
 
       let index = children.indexOf(menuItem.actor);
 
-      if (index < 0)
+      if(index < 0)
          return;
 
       let childBeforeIndex = index - 1;
@@ -3320,7 +3320,7 @@ ConfigurablePopupMenuBase.prototype = {
       while (childBeforeIndex >= 0 && !children[childBeforeIndex].visible)
          childBeforeIndex--;
 
-      if (childBeforeIndex < 0
+      if(childBeforeIndex < 0
           || children[childBeforeIndex]._delegate instanceof ConfigurableSeparatorMenuItem) {
          menuItem.actor.hide();
          return;
@@ -3331,7 +3331,7 @@ ConfigurablePopupMenuBase.prototype = {
       while (childAfterIndex < children.length && !children[childAfterIndex].visible)
          childAfterIndex++;
 
-      if (childAfterIndex >= children.length
+      if(childAfterIndex >= children.length
           || children[childAfterIndex]._delegate instanceof ConfigurableSeparatorMenuItem) {
          menuItem.actor.hide();
          return;
@@ -3342,27 +3342,27 @@ ConfigurablePopupMenuBase.prototype = {
 
    addMenuItem: function(menuItem, position) {
       let before_item = null;
-      if (position == undefined) {
+      if(position == undefined) {
          this.box.add(menuItem.actor);
       } else {
          let items = this._getMenuItems();
-         if (position < items.length) {
+         if(position < items.length) {
             before_item = items[position].actor;
             this.box.insert_child_below(menuItem.actor, before_item);
          } else
             this.box.add(menuItem.actor);
       }
-      if (menuItem instanceof ConfigurablePopupMenuSection) {
+      if(menuItem instanceof ConfigurablePopupMenuSection) {
          this._connectSubMenuSignals(menuItem, menuItem);
          menuItem.connect('destroy', Lang.bind(this, function() {
             this._disconnectSubMenuSignals(menuItem, menuItem);
             this.length--;
          }));
-      } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      } else if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          menuItem.connect('menu-changed', Lang.bind(this, function(menuItem, oldMenu) { this._onMenuChanged(menuItem, oldMenu); }));
          this._onMenuChanged(menuItem, menuItem.menu);
          this._connectItemSignals(menuItem);
-      } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
+      } else if(menuItem instanceof ConfigurableSeparatorMenuItem) {
          this._connectItemSignals(menuItem);
          // updateSeparatorVisibility needs to get called any time the
          // separator's adjacent siblings change visibility or position.
@@ -3370,7 +3370,7 @@ ConfigurablePopupMenuBase.prototype = {
          // precise ways would require a lot more bookkeeping.
          menuItem._closingMenuId = this.connect('open-state-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
          menuItem._allocationId = this.box.connect('allocation-changed', Lang.bind(this, function() { this._updateSeparatorVisibility(menuItem); }));
-      } else if (menuItem instanceof ConfigurablePopupBaseMenuItem)
+      } else if(menuItem instanceof ConfigurablePopupBaseMenuItem)
          this._connectItemSignals(menuItem);
       else
          throw TypeError("Invalid argument to ConfigurablePopupMenuBase.addMenuItem()");
@@ -3391,7 +3391,7 @@ ConfigurablePopupMenuBase.prototype = {
          this._connectSubMenuSignals(menuItem, menuItem.menu);
          this._connectItemSignals(menuItem);
          menuItem._closingId = this.connect('open-state-changed', function(self, open) {
-            if (!open && menuItem.menu)
+            if(!open && menuItem.menu)
                menuItem.menu.close(false);
          });
       }
@@ -3400,13 +3400,13 @@ ConfigurablePopupMenuBase.prototype = {
    getColumnWidths: function() {
       let columnWidths = [];
       let items = this.box.get_children();
-      for (let i = 0; i < items.length; i++) {
-         if (!items[i].visible)
+      for(let i = 0; i < items.length; i++) {
+         if(!items[i].visible)
             continue;
-         if (items[i]._delegate instanceof ConfigurablePopupBaseMenuItem || items[i]._delegate instanceof ConfigurablePopupMenuBase) {
+         if(items[i]._delegate instanceof ConfigurablePopupBaseMenuItem || items[i]._delegate instanceof ConfigurablePopupMenuBase) {
             let itemColumnWidths = items[i]._delegate.getColumnWidths();
-            for (let j = 0; j < itemColumnWidths.length; j++) {
-               if (j >= columnWidths.length || itemColumnWidths[j] > columnWidths[j])
+            for(let j = 0; j < itemColumnWidths.length; j++) {
+               if(j >= columnWidths.length || itemColumnWidths[j] > columnWidths[j])
                   columnWidths[j] = itemColumnWidths[j];
             }
          }
@@ -3416,14 +3416,14 @@ ConfigurablePopupMenuBase.prototype = {
 
    setColumnWidths: function(widths) {
       let items = this.box.get_children();
-      for (let i = 0; i < items.length; i++) {
-         if (items[i]._delegate instanceof ConfigurablePopupBaseMenuItem || items[i]._delegate instanceof ConfigurablePopupMenuBase)
+      for(let i = 0; i < items.length; i++) {
+         if(items[i]._delegate instanceof ConfigurablePopupBaseMenuItem || items[i]._delegate instanceof ConfigurablePopupMenuBase)
             items[i]._delegate.setColumnWidths(widths);
       }
    },
 
    _menuQueueRelayout: function() {
-      this.box.get_children().map(function (actor) { actor.queue_relayout(); });
+      this.box.get_children().map(function(actor) { actor.queue_relayout(); });
    },
 
    addActor: function(actor) {
@@ -3431,7 +3431,7 @@ ConfigurablePopupMenuBase.prototype = {
    },
 
    _getMenuItems: function() {
-      return this.box.get_children().map(function (actor) {
+      return this.box.get_children().map(function(actor) {
          return actor._delegate;
       }).filter(function(item) {
          return item instanceof ConfigurablePopupBaseMenuItem || item instanceof ConfigurablePopupMenuSection;
@@ -3440,7 +3440,7 @@ ConfigurablePopupMenuBase.prototype = {
 
    get firstMenuItem() {
       let items = this._getMenuItems();
-      if (items.length)
+      if(items.length)
          return items[0];
       else
          return null;
@@ -3452,21 +3452,21 @@ ConfigurablePopupMenuBase.prototype = {
 
    removeAll: function() {
       let children = this._getMenuItems();
-      for (let i = 0; i < children.length; i++) {
+      for(let i = 0; i < children.length; i++) {
          let item = children[i];
          item.destroy();
       }
    },
 
    toggle: function() {
-      if (this.isOpen)
+      if(this.isOpen)
          this.close(true);
       else
          this.open(true);
    },
 
-   toggle_with_options: function (animate, onComplete) {
-      if (this.isOpen) {
+   toggle_with_options: function(animate, onComplete) {
+      if(this.isOpen) {
          this.close(animate, onComplete);
       } else {
          this.open(animate, onComplete);
@@ -3588,7 +3588,7 @@ ConfigurableMenu.prototype = {
    },
 
    _getMenuItems: function() {
-      return this.box.get_children().map(function (actor) {
+      return this.box.get_children().map(function(actor) {
          return actor._delegate;
       }).filter(function(item) {
          return item instanceof ConfigurablePopupBaseMenuItem ||
@@ -3614,7 +3614,7 @@ ConfigurableMenu.prototype = {
 
          let i = 0;
          let monitor;
-         for (; i < global.screen.get_n_monitors(); i++) {
+         for(; i < global.screen.get_n_monitors(); i++) {
             monitor = global.screen.get_monitor_geometry(i);
             if(x >= monitor.x && x < monitor.x + monitor.width &&
                x >= monitor.y && y < monitor.y + monitor.height) {
@@ -3875,7 +3875,7 @@ ConfigurableMenu.prototype = {
    },
 
    _setDesaturateItemIcon: function(menuItem) {
-      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu && menuItem.menu.desaturateItemIcon)
              menuItem.menu.desaturateItemIcon(this._desaturateItemIcon);
       }
@@ -3884,7 +3884,7 @@ ConfigurableMenu.prototype = {
    },
 
    _setShowItemIcon: function(menuItem) {
-      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu && menuItem.menu.setShowItemIcon)
              menuItem.menu.setShowItemIcon(this._showItemIcon);
       }
@@ -3938,18 +3938,18 @@ ConfigurableMenu.prototype = {
       }
    },
 
-   _boxGetPreferredWidth: function (actor, forHeight, alloc) {
+   _boxGetPreferredWidth: function(actor, forHeight, alloc) {
       let columnWidths = this.getColumnWidths();
       this.setColumnWidths(columnWidths);
       // Now they will request the right sizes
       [alloc.min_size, alloc.natural_size] = this._scroll.get_preferred_width(forHeight);
    },
 
-   _boxGetPreferredHeight: function (actor, forWidth, alloc) {
+   _boxGetPreferredHeight: function(actor, forWidth, alloc) {
       [alloc.min_size, alloc.natural_size] = this._scroll.get_preferred_height(forWidth);
    },
 
-   _boxAllocate: function (actor, box, flags) {
+   _boxAllocate: function(actor, box, flags) {
       this._scroll.allocate(box, flags);
    },
 
@@ -4031,7 +4031,7 @@ ConfigurableMenu.prototype = {
    },
 
    _getAllMenuItems: function() {
-      return this.box.get_children().map(function (actor) {
+      return this.box.get_children().map(function(actor) {
          return actor._delegate;
       });
    },
@@ -4059,7 +4059,7 @@ ConfigurableMenu.prototype = {
             this.animating = animate;
          else
             this.animating = false;
-         this._boxPointer.show(animate, Lang.bind(this, function () {
+         this._boxPointer.show(animate, Lang.bind(this, function() {
             this.animating = false;
          }));
          if(!this._boxPointer._sourceActor)
@@ -4369,7 +4369,7 @@ ConfigurableMenu.prototype = {
       return this._topMenu;
    },
 
-   setActive: function (active) {
+   setActive: function(active) {
       if(active != this.active) {
          this.active = active;
          if(this.active) {
@@ -4490,19 +4490,19 @@ ConfigurableMenu.prototype = {
          if(parent)
             parent.remove_actor(menuItem.menu.actor);
       }
-      if (menuItem instanceof ConfigurablePopupMenuSection) {
+      if(menuItem instanceof ConfigurablePopupMenuSection) {
          this._disconnectSubMenuSignals(menuItem, menuItem);
          menuItem.disconnect(menuItem._destroyId);
-      } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      } else if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu)
             this._disconnectSubMenuSignals(menuItem, menuItem.menu);
          menuItem.disconnect(menuItem._closingMenuId);
          this._disconnectItemSignals(menuItem);
-      } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
+      } else if(menuItem instanceof ConfigurableSeparatorMenuItem) {
          this._disconnectItemSignals(menuItem);
          menuItem.disconnect(menuItem._closingMenuId);
          menuItem.disconnect(menuItem._allocationId);
-      } else if (menuItem instanceof ConfigurablePopupBaseMenuItem)
+      } else if(menuItem instanceof ConfigurablePopupBaseMenuItem)
          this._disconnectItemSignals(menuItem);
       this.length--;
    },
@@ -4524,7 +4524,7 @@ ConfigurableMenu.prototype = {
 
    removeChildMenu: function(menu) {
       let index = this._childMenus.indexOf(menu);
-      if (index == -1)
+      if(index == -1)
          return;
       menu.disconnect(menu._destroyChildId);
       this._childMenus.splice(index, 1);
@@ -4792,7 +4792,7 @@ ConfigurablePopupMenuSection.prototype = {
    open: function(animate) { },
    close: function() { },
 
-   setVertical: function (vertical) {
+   setVertical: function(vertical) {
       this.box.set_vertical(vertical);
    },
 
@@ -4806,7 +4806,7 @@ ConfigurablePopupMenuSection.prototype = {
    },
 
    _getMenuItems: function() {
-      return this.box.get_children().map(function (actor) {
+      return this.box.get_children().map(function(actor) {
          return actor._delegate;
       }).filter(function(item) {
          return item instanceof ConfigurablePopupBaseMenuItem ||
@@ -4818,7 +4818,7 @@ ConfigurablePopupMenuSection.prototype = {
       return this._topMenu;
    },
 
-   setActive: function (active) {
+   setActive: function(active) {
       if(active != this.active) {
          this.active = active;
          if(this.active) {
@@ -4865,14 +4865,14 @@ ConfigurablePopupMenuSection.prototype = {
          if(parent)
             parent.remove_actor(menuItem.menu.actor);
       }
-      if (menuItem instanceof ConfigurablePopupMenuSection) {
+      if(menuItem instanceof ConfigurablePopupMenuSection) {
          this._disconnectSubMenuSignals(menuItem, menuItem);
          if(menuItem._destroyId) {
             menuItem.disconnect(menuItem._destroyId);
             menuItem._destroyId = null;
          }
          this._disconnectSubMenuSignals(menuItem, menuItem);
-      } else if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      } else if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu)
             this._disconnectSubMenuSignals(menuItem, menuItem.menu);
          if(menuItem._closingMenuId) {
@@ -4880,7 +4880,7 @@ ConfigurablePopupMenuSection.prototype = {
             menuItem._closingMenuId = null;
          }
          this._disconnectItemSignals(menuItem);
-      } else if (menuItem instanceof ConfigurableSeparatorMenuItem) {
+      } else if(menuItem instanceof ConfigurableSeparatorMenuItem) {
          this._disconnectItemSignals(menuItem);
          if(menuItem._closingMenuId) {
             menuItem.disconnect(menuItem._closingMenuId);
@@ -4890,7 +4890,7 @@ ConfigurablePopupMenuSection.prototype = {
             menuItem.disconnect(menuItem._allocationId);
             menuItem._allocationId = null;
          }
-      } else if (menuItem instanceof ConfigurablePopupBaseMenuItem)
+      } else if(menuItem instanceof ConfigurablePopupBaseMenuItem)
          this._disconnectItemSignals(menuItem);
       this.length--;
    },
@@ -4940,7 +4940,7 @@ ConfigurablePopupMenuSection.prototype = {
    },
 
    _getAllMenuItems: function() {
-      return this.box.get_children().map(function (actor) {
+      return this.box.get_children().map(function(actor) {
          return actor._delegate;
       });
    },
@@ -4950,7 +4950,7 @@ ConfigurablePopupMenuSection.prototype = {
    },
 
    _setDesaturateItemIcon: function(menuItem) {
-      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu && menuItem.menu.desaturateItemIcon)
              menuItem.menu.desaturateItemIcon(this._desaturateItemIcon);
       }
@@ -4959,7 +4959,7 @@ ConfigurablePopupMenuSection.prototype = {
    },
 
    _setShowItemIcon: function(menuItem) {
-      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu && menuItem.menu.setShowItemIcon)
              menuItem.menu.setShowItemIcon(this._showItemIcon);
       }
@@ -4982,7 +4982,7 @@ function ConfigurableSeparatorMenuItem() {
 ConfigurableSeparatorMenuItem.prototype = {
    __proto__: ConfigurablePopupBaseMenuItem.prototype,
 
-   _init: function () {
+   _init: function() {
       ConfigurablePopupBaseMenuItem.prototype._init.call(this, { reactive: false });
       this._drawingArea = new St.DrawingArea({ style_class: 'popup-separator-menu-item' });
       this.addActor(this._drawingArea, { span: -1, expand: true });
@@ -5061,7 +5061,7 @@ ArrayBoxLayout.prototype = {
       this.actor._delegate = this;
    },
 
-   setVertical: function (vertical) {
+   setVertical: function(vertical) {
       this.box.set_vertical(vertical);
       this.scrollBox.setVertical(vertical);
    },
@@ -5071,7 +5071,7 @@ ArrayBoxLayout.prototype = {
              !(x._delegate instanceof ConfigurableSeparatorMenuItem));
    },
 
-   setActive: function (active) {
+   setActive: function(active) {
       if(active != this.active) {
          this.active = active;
          if(this.active) {
@@ -5247,31 +5247,31 @@ ConfigurableGridSection.prototype = {
 
    // Override:
    _connectItemSignals: function(menuItem) {
-      menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function (menuItem, active) {
-         if (active && this._activeMenuItem != menuItem) {
-            if (this._activeMenuItem)
+      menuItem._activeChangeId = menuItem.connect('active-changed', Lang.bind(this, function(menuItem, active) {
+         if(active && this._activeMenuItem != menuItem) {
+            if(this._activeMenuItem)
                this._activeMenuItem.setActive(false);
             this._activeMenuItem = menuItem;
             this.emit('active-changed', menuItem);
-         } else if (!active && this._activeMenuItem == menuItem) {
+         } else if(!active && this._activeMenuItem == menuItem) {
             this._activeMenuItem = null;
             this.emit('active-changed', null);
          }
       }));
       menuItem._sensitiveChangeId = menuItem.connect('sensitive-changed', Lang.bind(this, function(menuItem, sensitive) {
-         if (!sensitive && this._activeMenuItem == menuItem) {
-            if (!this.actor.navigate_focus(menuItem.actor,
+         if(!sensitive && this._activeMenuItem == menuItem) {
+            if(!this.actor.navigate_focus(menuItem.actor,
                                            Gtk.DirectionType.TAB_FORWARD,
                                            true))
                this.actor.grab_key_focus();
-         } else if (sensitive && this._activeMenuItem == null) {
-            if (global.stage.get_key_focus() == this.actor)
+         } else if(sensitive && this._activeMenuItem == null) {
+            if(global.stage.get_key_focus() == this.actor)
                menuItem.actor.grab_key_focus();
          }
       }));
-      menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function (menuItem, event, keepMenu) {
+      menuItem._activateId = menuItem.connect('activate', Lang.bind(this, function(menuItem, event, keepMenu) {
          this.emit('activate', menuItem, keepMenu);
-         if (!keepMenu){
+         if(!keepMenu){
             this.close(true);
          }
       }));
@@ -5300,11 +5300,11 @@ ConfigurableGridSection.prototype = {
          menuItem.disconnect(menuItem._activateId);
          menuItem.disconnect(menuItem._activeChangeId);
          menuItem.disconnect(menuItem._sensitiveChangeId);
-         if (menuItem.menu) {
+         if(menuItem.menu) {
             this._disconnectSubMenuSignals(menuItem, menuItem.menu);
             menuItem.disconnect(menuItem._closingId);
          }
-         if (menuItem == this._activeMenuItem)
+         if(menuItem == this._activeMenuItem)
             this._activeMenuItem = null;
          this.length--;
       }));
@@ -5396,13 +5396,13 @@ ConfigurableGridSection.prototype = {
       return [width, height, xSpacing, ySpacing];
    },
 
-   _computeColumnLayout: function (forWidth) {
+   _computeColumnLayout: function(forWidth) {
       let usedWidth = 0;
       let spacing = this.getSpacing();
       let nColumns = Math.floor(forWidth/(this._getItemWidth() + spacing));
       nColumns = (this._colLimit != null) ? Math.min(this._colLimit, nColumns) : nColumns;
       usedWidth = nColumns*(this._getItemWidth() + spacing);
-      if (nColumns > 0)
+      if(nColumns > 0)
          usedWidth -= spacing;
       return [nColumns, usedWidth];
    },
@@ -5620,7 +5620,7 @@ ConfigurableGridSection.prototype = {
          //this._maxActorWidth = 0;
          //this._updateActorMaxWidth(children);
       }
-      if (this._fillParent) {
+      if(this._fillParent) {
 
          // Ignore all size requests of children and request a size of 0;
          // later we'll allocate as many children as fit the parent
@@ -5640,14 +5640,14 @@ ConfigurableGridSection.prototype = {
    },
 
    _getPreferredHeight: function(forWidth) {
-      if (this._fillParent) {
+      if(this._fillParent) {
          // Ignore all size requests of children and request a size of 0;
          // later we'll allocate as many children as fit the parent
          return [0, 0];
       }
       let children = this._getVisibleChildren();
       let nColumns = children.length;
-      if (forWidth >= 0)
+      if(forWidth >= 0)
          [nColumns, ] = this._computeColumnLayout(forWidth);
       if(this._nColumns != nColumns)
          this._visibleItemsChange = true;
@@ -5727,7 +5727,7 @@ ConfigurableGridSection.prototype = {
       //this.actor.visible = false;
    },
 
-   setActive: function (active) {
+   setActive: function(active) {
       if(active != this.active) {
          this.active = active;
          if(this.active) {
@@ -5893,7 +5893,7 @@ ConfigurableGridSection.prototype = {
          let children = this._getVisibleChildren();
          this._updateActorMaxWidth(children);
       }
-      if (this._fillParent) {
+      if(this._fillParent) {
          // Ignore all size requests of children and request a size of 0;
          // later we'll allocate as many children as fit the parent
          alloc.min_size = this._getItemWidth();
@@ -5912,14 +5912,14 @@ ConfigurableGridSection.prototype = {
    },
 
    _getPreferredHeight: function(grid, forWidth, alloc) {
-      if (this._fillParent) {
+      if(this._fillParent) {
          // Ignore all size requests of children and request a size of 0;
          // later we'll allocate as many children as fit the parent
          //return;
       }
       let children = this._getVisibleChildren();
       let nColumns = children.length;
-      if (forWidth >= 0)
+      if(forWidth >= 0)
          [nColumns, ] = this._computeColumnLayout(forWidth);
       if(this._nColumns != nColumns)
          this._visibleItemsChange = true;
@@ -5930,9 +5930,9 @@ ConfigurableGridSection.prototype = {
 
    _getPreferredAllocationHeight: function(nColumns, children) {
       let nRows = 0;
-      if (nColumns > 0)
+      if(nColumns > 0)
          nRows = Math.ceil(children.length / nColumns);
-      if (this._rowLimit)
+      if(this._rowLimit)
          nRows = Math.min(nRows, this._rowLimit);
       let totalSpacing = Math.max(0, nRows - 1) * this.getSpacing();
       let height = nRows * this._getItemHeight() + totalSpacing;
@@ -5951,7 +5951,7 @@ ConfigurableGridSection.prototype = {
       this._nColumns = nColumns;
       if(((this._visibleItemsChange)||(this._nColumns != nColumns))&&(!this._relayoutBlocked)) {
          this._visibleItemsChange = false;
-         if (this._fillParent) {
+         if(this._fillParent) {
             // Reset the passed in box to fill the parent
             //let parentBox = this.actor.get_parent().allocation;
             //let gridBox = this.actor.get_theme_node().get_content_box(parentBox);
@@ -5982,14 +5982,14 @@ ConfigurableGridSection.prototype = {
          let [viewPortSize, viewPortPosition] = this._getViewPortSize();
 
          let colsHeight = [];
-         for (let i = 0; i < nColumns; i++) {
+         for(let i = 0; i < nColumns; i++) {
             colsHeight.push(0);
          }
 
-         for (let i = 0; i < children.length; i++) {
+         for(let i = 0; i < children.length; i++) {
             let childBox = this._calculateChildBox(children[i].actor, x, colsHeight[columnIndex], box);
             children[i].actor.clip_to_allocation = true;
-            if ((this._rowLimit && rowIndex >= this._rowLimit)
+            if((this._rowLimit && rowIndex >= this._rowLimit)
                 || (this._fillParent && childBox.y2 > availHeight)
                 || (viewPortSize && childBox.y2 > viewPortSize + viewPortPosition)) {
                this.box.set_skip_paint(children[i].actor, true);
@@ -6007,11 +6007,11 @@ ConfigurableGridSection.prototype = {
             }
             //this._rowLimit = 0;
             columnIndex++;
-            if (columnIndex == nColumns) {
+            if(columnIndex == nColumns) {
                columnIndex = 0;
                rowIndex++;
             }
-            if (columnIndex == 0) {
+            if(columnIndex == 0) {
                //y += (childBox.y2 - childBox.y1) + spacing;
                x = box.x1 + leftEmptySpace;
             } else {
@@ -6066,7 +6066,7 @@ ConfigurableGridSection.prototype = {
       // Center the item in its allocation horizontally
       let [,, natWidth, natHeight] = child.get_preferred_size();
       let childBox = new Clutter.ActorBox();
-      if (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL)
+      if(Clutter.get_default_text_direction() == Clutter.TextDirection.RTL)
          childBox.x1 = Math.floor(box.x2 - (x + natWidth));
       else
          childBox.x1 = Math.floor(x);
@@ -6091,7 +6091,7 @@ ConfigurableGridSection.prototype = {
           this._getAllocatedChildSizeAndSpacing(child);
 
       let childBox = new Clutter.ActorBox();
-      if (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL) {
+      if(Clutter.get_default_text_direction() == Clutter.TextDirection.RTL) {
          let _x = box.x2 - (x + width);
          childBox.x1 = Math.floor(_x - childXSpacing);
       } else {
@@ -6103,7 +6103,7 @@ ConfigurableGridSection.prototype = {
       return childBox;
    },
 
-   _computeColumnLayout: function (forWidth) {
+   _computeColumnLayout: function(forWidth) {
       let usedWidth = 0;
       let spacing = this.getSpacing();
       let nColumns = Math.floor(forWidth/(this._getItemWidth() + spacing));
@@ -6114,7 +6114,7 @@ ConfigurableGridSection.prototype = {
       //   usedWidth += this._getItemWidth() + spacing;
       //   nColumns += 1;
       //}
-      if (nColumns > 0)
+      if(nColumns > 0)
          usedWidth -= spacing;
       return [nColumns, usedWidth];
    },
@@ -6166,12 +6166,12 @@ ConfigurableGridSection.prototype = {
 //      let maxEmptyHArea = availWidth - this._minColumns * this._getItemWidth();
 //      let maxHSpacing, maxVSpacing;
 
-//      if (this._minRows <=  1)
+//      if(this._minRows <=  1)
 //         maxVSpacing = maxEmptyVArea;
 //      else
 //         maxVSpacing = Math.floor(maxEmptyVArea / (this._minRows - 1));
 
-//      if (this._minColumns <=  1)
+//      if(this._minColumns <=  1)
 //         maxHSpacing = maxEmptyHArea;
 //      else
 //         maxHSpacing = Math.floor(maxEmptyHArea / (this._minColumns - 1));
@@ -6257,9 +6257,9 @@ ConfigurableGridSection.prototype = {
       //this.actor.visible = false;
    },
 
-   setVisibleItems: function (visibleItems) {
+   setVisibleItems: function(visibleItems) {
       let [viewPortWidth, viewPortHeight, viewPortPosition] = this._getViewPortSize();
-      for (let i = 0; i < this._menuItems.length; i++) {
+      for(let i = 0; i < this._menuItems.length; i++) {
          this._menuItems[i].actor.hide();
       }
       this._visibleItems = [];
@@ -6268,21 +6268,21 @@ ConfigurableGridSection.prototype = {
          let nRows = Math.floor(viewPortHeight/this._getItemHeight());
          let nColumns = Math.floor(viewPortWidth/this._getItemWidth());
          let size = Math.min(nColumns*nRows + 1, visibleItems.length);
-         for (let i = 0; i < size; i++) {
+         for(let i = 0; i < size; i++) {
             visibleItems[i].actor.show();
          }
          Mainloop.idle_add(Lang.bind(this, this._setVisibleInternal, visibleItems, size));
          this._visibleItemsChange = true;
       } else {
-         for (let i = 0; i < visibleItems; i++) {
+         for(let i = 0; i < visibleItems; i++) {
             visibleItems[i].actor.show();
          }
       }
    },
 
-   _setVisibleInternal: function (visibleItems, number) {
+   _setVisibleInternal: function(visibleItems, number) {
       if(this._currentVisibleItems) {
-         for (let i = number; i < this._currentVisibleItems.length; i++) {
+         for(let i = number; i < this._currentVisibleItems.length; i++) {
             this._currentVisibleItems[i].actor.show();
          }
          this._currentVisibleItems = null;
@@ -6290,11 +6290,11 @@ ConfigurableGridSection.prototype = {
       }
    },
 
-   _onScrollEvent: function () {
+   _onScrollEvent: function() {
       Main.notify("scroll");
    },
 
-   setActive: function (active) {
+   setActive: function(active) {
       if(active != this.active) {
          this.active = active;
          if(this.active) {
@@ -6479,7 +6479,7 @@ ConfigurableGridSection.prototype = {
    _getPreferredWidth: function(grid, forHeight, alloc) {
       if(this._relayoutBlocked)
          return;
-      if (this._fillParent) {
+      if(this._fillParent) {
          // Ignore all size requests of children and request a size of 0;
          // later we'll allocate as many children as fit the parent
          alloc.min_size = this._getItemWidth();
@@ -6500,14 +6500,14 @@ ConfigurableGridSection.prototype = {
    _getPreferredHeight: function(grid, forWidth, alloc) {
       if(this._relayoutBlocked)
          return;
-      if (this._fillParent) {
+      if(this._fillParent) {
          // Ignore all size requests of children and request a size of 0;
          // later we'll allocate as many children as fit the parent
          //return;
       }
       let children = this._currentVisibleItems ? this._currentVisibleItems : this._getVisibleChildren();
       let nColumns = children.length;
-      if (forWidth >= 0)
+      if(forWidth >= 0)
          [nColumns, ] = this._computeColumnLayout(forWidth);
       if(this._nColumns != nColumns)
          this._visibleItemsChange = true;
@@ -6518,9 +6518,9 @@ ConfigurableGridSection.prototype = {
 
    _getPreferredAllocationHeight: function(nColumns, children) {
       let nRows = 0;
-      if (nColumns > 0)
+      if(nColumns > 0)
          nRows = Math.ceil(children.length / nColumns);
-      if (this._rowLimit)
+      if(this._rowLimit)
          nRows = Math.min(nRows, this._rowLimit);
       let totalSpacing = Math.max(0, nRows - 1) * this.getSpacing();
       let height = nRows * this._getItemHeight() + totalSpacing;
@@ -6540,7 +6540,7 @@ ConfigurableGridSection.prototype = {
       this._nColumns = nColumns;
      // if((this._visibleItemsChange)||(this._nColumns != nColumns)) {
          this._visibleItemsChange = false;
-         if (this._fillParent) {
+         if(this._fillParent) {
             // Reset the passed in box to fill the parent
             let parentBox = this.actor.get_parent().allocation;
             let gridBox = this.actor.get_theme_node().get_content_box(parentBox);
@@ -6571,17 +6571,17 @@ ConfigurableGridSection.prototype = {
          //let [viewPortWidth, viewPortHeight, viewPortPosition] = this._getViewPortSize();
          let [viewPortWidth, viewPortHeight, viewPortPosition] = [null, null, null];
          let colsHeight = [];
-         for (let i = 0; i < nColumns; i++) {
+         for(let i = 0; i < nColumns; i++) {
             colsHeight.push(0);
          }
 
          //let first = 20;
          let first = children.length;
 
-         for (let i = 0; i < children.length; i++) {
+         for(let i = 0; i < children.length; i++) {
             let childBox = this._calculateChildBox(children[i].actor, x, colsHeight[columnIndex], box);
             children[i].actor.clip_to_allocation = true;
-            if ((this._rowLimit && rowIndex >= this._rowLimit)
+            if((this._rowLimit && rowIndex >= this._rowLimit)
                 || (this._fillParent && childBox.y2 > availHeight)) {
                this.box.set_skip_paint(children[i].actor, true);
             } else if(viewPortHeight && (childBox.y2 > viewPortHeight + viewPortPosition)) {
@@ -6604,11 +6604,11 @@ ConfigurableGridSection.prototype = {
             }
             //this._rowLimit = 0;
             columnIndex++;
-            if (columnIndex == nColumns) {
+            if(columnIndex == nColumns) {
                columnIndex = 0;
                rowIndex++;
             }
-            if (columnIndex == 0) {
+            if(columnIndex == 0) {
                //y += (childBox.y2 - childBox.y1) + spacing;
                x = box.x1 + leftEmptySpace;
             } else {
@@ -6621,7 +6621,7 @@ ConfigurableGridSection.prototype = {
    },
 
    _setVisibleInternalAllocation: function(number) {
-      for (let i = number; i < this._visibleItems.length; i++) {
+      for(let i = number; i < this._visibleItems.length; i++) {
          this.box.set_skip_paint(this._visibleItems[i].actor, false);
       }
    },
@@ -6629,7 +6629,7 @@ ConfigurableGridSection.prototype = {
    _setVisibleAllocation: function(number) {
       //Main.notify("" + this._visibleItems + " " + number)
       let newNumber = Math.min(20+number, this._visibleItems.length);
-      for (let i = number; i < newNumber; i++) {
+      for(let i = number; i < newNumber; i++) {
          this.box.set_skip_paint(this._visibleItems[i].actor, false);
       }
       if(20+number < this._visibleItems.length)
@@ -6661,8 +6661,8 @@ ConfigurableGridSection.prototype = {
          //this.box.queue_relayout();
          let children = this._getVisibleChildren();
          //let [viewPortWidth, viewPortHeight, viewPortPosition] = this._getViewPortSize();
-         for (let i = 0; i < children.length; i++) {
-            //if (viewPortHeight && children[i].actor.allocation.y2 > viewPortHeight + viewPortPosition) {
+         for(let i = 0; i < children.length; i++) {
+            //if(viewPortHeight && children[i].actor.allocation.y2 > viewPortHeight + viewPortPosition) {
                this.box.set_skip_paint(children[i].actor, false);
             //}
          }
@@ -6688,7 +6688,7 @@ ConfigurableGridSection.prototype = {
       // Center the item in its allocation horizontally
       let [,, natWidth, natHeight] = child.get_preferred_size();
       let childBox = new Clutter.ActorBox();
-      if (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL)
+      if(Clutter.get_default_text_direction() == Clutter.TextDirection.RTL)
          childBox.x1 = Math.floor(box.x2 - (x + natWidth));
       else
          childBox.x1 = Math.floor(x);
@@ -6717,7 +6717,7 @@ ConfigurableGridSection.prototype = {
           this._getAllocatedChildSizeAndSpacing(child);
 
       let childBox = new Clutter.ActorBox();
-      if (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL) {
+      if(Clutter.get_default_text_direction() == Clutter.TextDirection.RTL) {
          let _x = box.x2 - (x + width);
          childBox.x1 = Math.floor(_x - childXSpacing);
       } else {
@@ -6729,7 +6729,7 @@ ConfigurableGridSection.prototype = {
       return childBox;
    },
 
-   _computeColumnLayout: function (forWidth) {
+   _computeColumnLayout: function(forWidth) {
       let usedWidth = 0;
       let spacing = this.getSpacing();
       let nColumns = Math.floor(forWidth/(this._getItemWidth() + spacing));
@@ -6740,7 +6740,7 @@ ConfigurableGridSection.prototype = {
       //   usedWidth += this._getItemWidth() + spacing;
       //   nColumns += 1;
       //}
-      if (nColumns > 0)
+      if(nColumns > 0)
          usedWidth -= spacing;
       return [nColumns, usedWidth];
    },
@@ -6868,12 +6868,12 @@ ConfigurableGridSection.prototype = {
 //      let maxEmptyHArea = availWidth - this._minColumns * this._getItemWidth();
 //      let maxHSpacing, maxVSpacing;
 
-//      if (this._minRows <=  1)
+//      if(this._minRows <=  1)
 //         maxVSpacing = maxEmptyVArea;
 //      else
 //         maxVSpacing = Math.floor(maxEmptyVArea / (this._minRows - 1));
 
-//      if (this._minColumns <=  1)
+//      if(this._minColumns <=  1)
 //         maxHSpacing = maxEmptyHArea;
 //      else
 //         maxHSpacing = Math.floor(maxEmptyHArea / (this._minColumns - 1));
@@ -6943,7 +6943,7 @@ ConfigurableMenuApplet.prototype = {
       let items = this._getMenuItems();
       for(let pos in items) {
          let menuItem = items[pos];
-         if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+         if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
             this._setMenuInPosition(menuItem);
             this._setShowItemIcon(menuItem);
             if(menuItem.menu)
@@ -7014,7 +7014,7 @@ ConfigurableMenuApplet.prototype = {
             let menuItem = null;
             for(let pos in items) {
                menuItem = items[pos];
-               if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) && menuItem.menu) {
+               if((menuItem instanceof ConfigurablePopupSubMenuMenuItem) && menuItem.menu) {
                   menuItem.menu.open(animate);
                   break;
                }
@@ -7034,7 +7034,7 @@ ConfigurableMenuApplet.prototype = {
             let items = this._getMenuItems();
             for(let pos in items) {
                let menuItem = items[pos];
-               if ((menuItem instanceof ConfigurablePopupSubMenuMenuItem) && menuItem.menu) {
+               if((menuItem instanceof ConfigurablePopupSubMenuMenuItem) && menuItem.menu) {
                   menuItem.menu.close(animate);
                }
             }
@@ -7099,7 +7099,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    addMenuItem: function(menuItem, position) {
-      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          let beforeItem = null;
          if(position == undefined) {
             this.box.add(menuItem.actor);
@@ -7143,7 +7143,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    removeItem: function(menuItem) {
-      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu && menuItem._stateId != 0)
             menuItem.disconnect(menuItem._stateId);
          menuItem.actor.disconnect(menuItem._pressId);
@@ -7233,7 +7233,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    _setDesaturateItemIcon: function(menuItem) {
-      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu && menuItem.menu.desaturateItemIcon)
              menuItem.menu.desaturateItemIcon(this._desaturateItemIcon);
       }
@@ -7242,7 +7242,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    _setShowItemIcon: function(menuItem) {
-      if (menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+      if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu && menuItem.menu.setShowItemIcon)
              menuItem.menu.setShowItemIcon(this._showItemIcon);
          if(menuItem.setShowItemIcon)
@@ -7269,7 +7269,7 @@ ConfigurableMenuApplet.prototype = {
       }
    },
 
-   _onButtonPressEvent: function (actor, event) {
+   _onButtonPressEvent: function(actor, event) {
       if((!this.floating)&&(event.get_button() == 1)&&(this.launcher._draggable.inhibit)) {
          return true;
       }
@@ -7761,7 +7761,7 @@ PopupMenuAbstractFactory.prototype = {
    addChild: function(pos, childId) {
       let factoryItem = this.getItemById(childId);
       if(factoryItem) {
-         // If our item is previusly asigned, so destroy first the shell item.
+         // ifour item is previusly asigned, so destroy first the shell item.
          factoryItem.destroyShellItem();
          factoryItem.setParent(this);
          this._childrenIds.splice(pos, 0, childId);
@@ -7920,7 +7920,7 @@ PopupMenuAbstractFactory.prototype = {
    },
 
    _getMenuItems: function(menu) {
-      return menu.box.get_children().map(Lang.bind(this, function (actor) {
+      return menu.box.get_children().map(Lang.bind(this, function(actor) {
          return actor._delegate;
       }));
    },*/

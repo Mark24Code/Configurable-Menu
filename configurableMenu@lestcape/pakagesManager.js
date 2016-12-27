@@ -28,8 +28,8 @@ const AppletPath = imports.ui.appletManager.applets['configurableMenu@lestcape']
 const MenuItems = AppletPath.menuItems;
 
 //PakagesManager
-function TerminalReader(command, callback) {
-   this._init(command, callback);
+function TerminalReader() {
+   this._init.apply(this, arguments);
 }
 
 TerminalReader.prototype = {
@@ -82,7 +82,7 @@ TerminalReader.prototype = {
             }
             //throw
          } catch(err) {
-            if (err.code == GLib.SpawnError.G_SPAWN_ERROR_NOENT) {
+            if(err.code == GLib.SpawnError.G_SPAWN_ERROR_NOENT) {
                err.message = _("Command not found.");
             } else {
                // The exception from gjs contains an error string like:
@@ -181,8 +181,8 @@ TerminalReader.prototype = {
    }
 };
 
-function PackagekitWrapper(parent) {
-   this._init(parent);
+function PackagekitWrapper() {
+   this._init.apply(this, arguments);
 }
 
 PackagekitWrapper.prototype = {
@@ -242,8 +242,8 @@ PackagekitWrapper.prototype = {
    }
 };
 
-function PackageInstallerWrapper(parent) {
-   this._init(parent);
+function PackageInstallerWrapper() {
+   this._init.apply(this, arguments);
 }
 
 PackageInstallerWrapper.prototype = {
@@ -579,7 +579,7 @@ PackageInstallerWrapper.prototype = {
             GLib.SpawnFlags.SEARCH_PATH | GLib.SpawnFlags.STDOUT_TO_DEV_NULL  | GLib.SpawnFlags.STDERR_TO_DEV_NULL,
             null, null);
       } catch (err) {
-         if (err.code == GLib.SpawnError.G_SPAWN_ERROR_NOENT) {
+         if(err.code == GLib.SpawnError.G_SPAWN_ERROR_NOENT) {
             err.message = _("Command not found.");
          } else {
             // The exception from gjs contains an error string like:

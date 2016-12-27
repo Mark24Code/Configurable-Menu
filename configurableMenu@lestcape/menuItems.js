@@ -44,14 +44,14 @@ const ConfigurableMenus = AppletPath.configurableMenus;
 
 const USER_DESKTOP_PATH = FileUtils.getUserDesktopDir();
 
-function ApplicationContextMenuItem(appButton, action, label, icon, id) {
-   this._init(appButton, action, label, icon, id);
+function ApplicationContextMenuItem() {
+   this._init.apply(this, arguments);
 }
 
 ApplicationContextMenuItem.prototype = {
    __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
-   _init: function (appButton, action, label, icon, id) {
+   _init: function(appButton, action, label, icon, id) {
       ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {focusOnHover: false});
       this._appButton = appButton;
       this._action = action;
@@ -68,7 +68,7 @@ ApplicationContextMenuItem.prototype = {
       this.addActor(this.container);
    },
 
-   activate: function (event) {
+   activate: function(event) {
       let needClose = false;
       switch (this._action) {
          case "open_with":
@@ -236,8 +236,8 @@ ApplicationContextMenuItem.prototype = {
    }
 };
 
-function PackageItem(parent, pkg, packageName, gIconInstaller, iconSize, textWidth, appDesc, vertical, appWidth) {
-   this._init(parent, pkg, packageName, gIconInstaller, iconSize, textWidth, appDesc, vertical, appWidth);
+function PackageItem() {
+   this._init.apply(this, arguments);
 }
 
 PackageItem.prototype = {
@@ -403,8 +403,8 @@ PackageItem.prototype = {
 };
 
 
-function GnomeCategoryButton(parent, name, icon, symbolic, orientation, panel_height) {
-   this._init(parent, name, icon, symbolic, orientation, panel_height);
+function GnomeCategoryButton() {
+   this._init.apply(this, arguments);
 }
 
 GnomeCategoryButton.prototype = {
@@ -526,8 +526,8 @@ GnomeCategoryButton.prototype = {
    }
 };
 
-function CategoryButton(app, iconSize, iconVisible) {
-   this._init(app, iconSize, iconVisible);
+function CategoryButton() {
+   this._init.apply(this, arguments);
 }
 
 CategoryButton.prototype = {
@@ -570,7 +570,7 @@ CategoryButton.prototype = {
       this.actor._delegate = this;
    },
 
-   setActive: function (active) {
+   setActive: function(active) {
    },
 
    _setCategoryProperties: function(category) {
@@ -643,7 +643,7 @@ CategoryButton.prototype = {
          this.icon.visible = visible;
    },
 
-   setIconSize: function (iconSize) {
+   setIconSize: function(iconSize) {
       this.iconSize = iconSize;
       if(this.icon)
          this.icon.set_icon_size(this.iconSize);
@@ -654,8 +654,8 @@ CategoryButton.prototype = {
    }
 };
 
-function PlaceCategoryButton(app, iconSize, iconVisible) {
-    this._init(app, iconSize, iconVisible);
+function PlaceCategoryButton() {
+   this._init.apply(this, arguments);
 }
 
 PlaceCategoryButton.prototype = {
@@ -676,8 +676,8 @@ PlaceCategoryButton.prototype = {
    }
 };
 
-function RecentCategoryButton(app, iconSize, iconVisible) {
-   this._init(app, iconSize, iconVisible);
+function RecentCategoryButton() {
+   this._init.apply(this, arguments);
 }
 
 RecentCategoryButton.prototype = {
@@ -699,8 +699,8 @@ RecentCategoryButton.prototype = {
 };
 
 
-function GenericApplicationButton(parent, parentScroll, app, withMenu, searchTexts) {
-   this._init(parent, parentScroll, app, withMenu, searchTexts);
+function GenericApplicationButton() {
+   this._init.apply(this, arguments);
 }
 
 GenericApplicationButton.prototype = {
@@ -763,14 +763,14 @@ GenericApplicationButton.prototype = {
 
    unhighlight: function() {
       var app_key = this.app.get_id();
-      if (app_key == null) {
+      if(app_key == null) {
           app_key = this.app.get_name() + ":" + this.app.get_description();
       }
       this.parent._knownApps.push(app_key);
       this.actor.remove_style_pseudo_class('highlighted');
    },
 
-   _onButtonReleaseEvent: function (actor, event) {
+   _onButtonReleaseEvent: function(actor, event) {
       if(!this.parent.pressed) {
          if(event.get_button()==1) {
             this.activate(event);
@@ -937,8 +937,8 @@ GenericApplicationButton.prototype = {
    }
 };
 
-function ApplicationButton(parent, parentScroll, app, vertical, iconSize, iconSizeDrag, appWidth, appDesc) {
-   this._init(parent, parentScroll, app, vertical, iconSize, iconSizeDrag, appWidth, appDesc);
+function ApplicationButton() {
+   this._init.apply(this, arguments);
 }
 
 ApplicationButton.prototype = {
@@ -1014,7 +1014,7 @@ ApplicationButton.prototype = {
       this.textWidth = maxWidth;
    },
 
-   setIconSize: function (iconSize) {
+   setIconSize: function(iconSize) {
       this.iconSize = iconSize;
       if(this.icon) {
          let visible = this.icon.visible; 
@@ -1069,8 +1069,8 @@ ApplicationButton.prototype = {
     }
 };
 
-function PlaceButtonAccessible(parent, parentScroll, place, alterName, vertical, iconSize, appWidth, appDesc) {
-   this._init(parent, parentScroll, place, alterName, vertical, iconSize, appWidth, appDesc);
+function PlaceButtonAccessible() {
+   this._init.apply(this, arguments);
 }
 
 PlaceButtonAccessible.prototype = {
@@ -1117,7 +1117,7 @@ PlaceButtonAccessible.prototype = {
       this.isDraggableApp = true;
    },
 
-   _onButtonReleaseEvent: function (actor, event) {
+   _onButtonReleaseEvent: function(actor, event) {
       if(!this.parent.pressed) {
          if(event.get_button()==1) {
             this.activate(event);
@@ -1355,8 +1355,8 @@ PlaceButtonAccessible.prototype = {
    }
 };
 
-function PlaceButton(parent, parentScroll, place, vertical, iconSize, appWidth, appDesc) {
-   this._init(parent, parentScroll, place, vertical, iconSize, appWidth, appDesc);
+function PlaceButton() {
+   this._init.apply(this, arguments);
 }
 
 PlaceButton.prototype = {
@@ -1384,7 +1384,7 @@ PlaceButton.prototype = {
       return this.actor;
    },
 
-   _onButtonReleaseEvent: function (actor, event) {
+   _onButtonReleaseEvent: function(actor, event) {
       if(!this.parent.pressed) {
          if(event.get_button()==1) {
             this.activate(event);
@@ -1403,8 +1403,8 @@ PlaceButton.prototype = {
    },
 };
 
-function RecentButton(parent, parentScroll, file, vertical, iconSize, appWidth, appDesc) {
-   this._init(parent, parentScroll, file, vertical, iconSize, appWidth, appDesc);
+function RecentButton() {
+   this._init.apply(this, arguments);
 }
 
 RecentButton.prototype = {
@@ -1479,7 +1479,7 @@ RecentButton.prototype = {
             this.menu.box.remove_actor(children[i]);
          }
          let menuItem;
-         if (GLib.find_program_in_path("nemo-open-with") != null) {
+         if(GLib.find_program_in_path("nemo-open-with") != null) {
             menuItem = new ApplicationContextMenuItem(this, "open_with", _("Open with "),//_("Other application..."),
                                                               null, "nemo-open-with " + this.file.uri);
             this.menu.addMenuItem(menuItem);
@@ -1522,7 +1522,7 @@ RecentButton.prototype = {
       let file = Gio.File.new_for_uri(this.file.uri);
       let default_info = Gio.AppInfo.get_default_for_type(this.file.mimeType, !this.hasLocalPath(file));
 
-      if (default_info) {
+      if(default_info) {
          let appSys = Cinnamon.AppSystem.get_default();
          return appSys.lookup_app(default_info.get_id())
       }
@@ -1548,7 +1548,7 @@ RecentButton.prototype = {
       return appCinMime;
    },
 
-   _onButtonReleaseEvent: function (actor, event) {
+   _onButtonReleaseEvent: function(actor, event) {
       if(!this.parent.pressed) {
          if(event.get_button()==1) {
             //This is new on 2.2
@@ -1643,8 +1643,8 @@ RecentButton.prototype = {
    }
 };
 
-function RecentClearButton(parent, vertical, iconSize, appWidth, appDesc) {
-   this._init(parent, vertical, iconSize, appWidth, appDesc);
+function RecentClearButton() {
+   this._init.apply(this, arguments);
 }
 
 RecentClearButton.prototype = {
@@ -1676,7 +1676,7 @@ RecentClearButton.prototype = {
       this.labelDesc.realize();
    },
 
-   _onButtonReleaseEvent: function (actor, event) {
+   _onButtonReleaseEvent: function(actor, event) {
       if(event.get_button() == 1) {
          this.parent.menu.close();
          let GtkRecent = new Gtk.RecentManager();
@@ -1694,7 +1694,7 @@ RecentClearButton.prototype = {
       GtkRecent.purge_items();
    },
 
-   setIconSize: function (iconSize) {
+   setIconSize: function(iconSize) {
       this.iconSize = iconSize;
       if(this.icon)
          this.icon.set_icon_size(this.iconSize);
@@ -1729,8 +1729,8 @@ RecentClearButton.prototype = {
    }
 };
 
-function TransientButton(parent, parentScroll, pathOrCommand, iconSize, vertical, appWidth, appdesc) {
-   this._init(parent, parentScroll, pathOrCommand, iconSize, vertical, appWidth, appdesc);
+function TransientButton() {
+   this._init.apply(this, arguments);
 }
 
 TransientButton.prototype = {
@@ -1824,7 +1824,7 @@ TransientButton.prototype = {
       this.parent.menu.close();
    },
 
-   setIconSize: function (iconSize) {
+   setIconSize: function(iconSize) {
       this.iconSize = iconSize;
       if(this.icon)
          this.icon.set_icon_size(this.iconSize);
@@ -1937,8 +1937,8 @@ TransientButton.prototype = {
    }
 };
 
-function FavoritesButton(parent, parentScroll, vertical, displayVertical, app, alterText, nbFavorites, iconSize, allowName, appTextWidth, appDesc, appWidth) {
-   this._init(parent, parentScroll, vertical, displayVertical, app, alterText, nbFavorites, iconSize, allowName, appTextWidth, appDesc, appWidth);
+function FavoritesButton() {
+   this._init.apply(this, arguments);
 }
 
 FavoritesButton.prototype = {
@@ -2143,8 +2143,8 @@ FavoritesButton.prototype = {
    }
 };
 
-function SystemButton(parent, parentScroll, icon, title, description, iconSize, haveText) {
-   this._init(parent, parentScroll, icon, title, description, iconSize, haveText);
+function SystemButton() {
+   this._init.apply(this, arguments);
 }
 
 SystemButton.prototype = {
@@ -2259,8 +2259,8 @@ SystemButton.prototype = {
 };
 //Signals.addSignalMethods(SystemButton.prototype);
 
-function SearchItem(parent, provider, search_path, icon_path, iconSize, textWidth, appDesc, vertical) {
-   this._init(parent, provider, search_path, icon_path, iconSize, textWidth, appDesc, vertical);
+function SearchItem() {
+   this._init.apply(this, arguments);
 }
 
 SearchItem.prototype = {
@@ -2301,7 +2301,7 @@ SearchItem.prototype = {
       this.isDraggableApp = false;
    },
 
-   setIconSize: function (iconSize) {
+   setIconSize: function(iconSize) {
       this.iconSize = iconSize;
       if(this.icon) {
          let visible = this.icon.visible; 
@@ -2402,8 +2402,8 @@ SearchItem.prototype = {
    }
 };
 
-function DriveMenuItem(parent, selectedAppBox, hover, place, iconSize, iconVisible) {
-   this._init(parent, selectedAppBox, hover, place, iconSize, iconVisible);
+function DriveMenuItem() {
+   this._init.apply(this, arguments);
 }
 
 DriveMenuItem.prototype = {
@@ -2538,14 +2538,14 @@ DriveMenuItem.prototype = {
    }
 };
 
-function ButtonChangerMenuItem(parent, icon, iconSize, labels, selected) {
-   this._init(parent, icon, iconSize, labels, selected);
+function ButtonChangerMenuItem() {
+   this._init.apply(this, arguments);
 }
 
 ButtonChangerMenuItem.prototype = {
    __proto__: ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype,
 
-   _init: function (parent, icon, iconSize, labels, selected) {
+   _init: function(parent, icon, iconSize, labels, selected) {
       ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, labels[selected]);
       this.theme = "";
       this.visible = true;
@@ -2586,7 +2586,7 @@ ButtonChangerMenuItem.prototype = {
       this.label.visible = visible;
    },
 
-   activate: function (event, keepMenu) {
+   activate: function(event, keepMenu) {
       this.activateNext();
       this.emit('activate', event, true);
    },
@@ -2661,8 +2661,8 @@ ButtonChangerMenuItem.prototype = {
    }
 };
 
-function HoverIconBox(parent, iconSize) {
-   this._init(parent, iconSize);
+function HoverIconBox() {
+   this._init.apply(this, arguments);
 }
 
 HoverIconBox.prototype = {
@@ -2767,7 +2767,7 @@ HoverIconBox.prototype = {
          global.stage.set_key_focus(this.notificationsSwitch.actor);
          this.menu.actor.navigate_focus(null, Gtk.DirectionType.DOWN, false);
          return true;
-      } else if (symbol == Clutter.KEY_Left && this.menu.isOpen) {
+      } else if(symbol == Clutter.KEY_Left && this.menu.isOpen) {
          global.stage.set_key_focus(this.actor);
          this.toggleMenu();
          return true;
@@ -2780,7 +2780,7 @@ HoverIconBox.prototype = {
       global.stage.set_key_focus(this.fav_actor);
    },
 
-   setIconSize: function (iconSize) {
+   setIconSize: function(iconSize) {
       this.iconSize = iconSize;
       if(this._userIcon)
          this._userIcon.set_icon_size(this.iconSize);
@@ -2791,7 +2791,7 @@ HoverIconBox.prototype = {
       this.container.set_height(this.iconSize);
    },
 
-   _onButtonReleaseEvent: function (actor, event) {
+   _onButtonReleaseEvent: function(actor, event) {
       if(event.get_button()==1) {
          this.activate(event);
          this.toggleMenu();
@@ -2859,7 +2859,7 @@ HoverIconBox.prototype = {
       }
    },
 
-   refresh: function (icon) {
+   refresh: function(icon) {
       if(this.actor.visible) {
          if((icon)&&(this._icon)) {
             this._removeIcon();
@@ -2870,7 +2870,7 @@ HoverIconBox.prototype = {
       }
    },
 
-   refreshApp: function (app) {
+   refreshApp: function(app) {
       if(this.actor.visible) {
          this._removeIcon();
          this.lastApp = app.create_icon_texture(this.iconSize);
@@ -2880,7 +2880,7 @@ HoverIconBox.prototype = {
       }
    },
 
-   refreshPlace: function (place) {
+   refreshPlace: function(place) {
       if(this.actor.visible) {
          this._removeIcon();
          this.lastApp = place.iconFactory(this.iconSize);
@@ -2890,7 +2890,7 @@ HoverIconBox.prototype = {
       }
    },
 
-   refreshFile: function (file) {
+   refreshFile: function(file) {
       if(this.actor.visible) {
          this._removeIcon();
          this.lastApp = file.createIcon(this.iconSize);
@@ -2900,7 +2900,7 @@ HoverIconBox.prototype = {
       }
    },
 
-   refreshFace: function () {
+   refreshFace: function() {
       if(this.actor.visible) {
          this._removeIcon();
          if(this._userIcon) {
@@ -2909,7 +2909,7 @@ HoverIconBox.prototype = {
       }
    },
 
-   _removeIcon: function () {
+   _removeIcon: function() {
       if(this.lastApp) {
          this.container.remove_actor(this.lastApp);
          this.lastApp.destroy();
