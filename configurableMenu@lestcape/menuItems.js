@@ -49,23 +49,19 @@ function ApplicationContextMenuItem() {
 }
 
 ApplicationContextMenuItem.prototype = {
-   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype,
 
-   _init: function(appButton, action, label, icon, id) {
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {focusOnHover: false});
+   _init: function(appButton, action, label, gicon, id) {
+      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, "", {focusOnHover: false});
       this._appButton = appButton;
       this._action = action;
-      if(id)
-         this.id = id;
-      this.container = new St.BoxLayout();
-      this.label = new St.Label({ text: label });
-      if(icon) {
-         this.icon = icon;
-         this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
+      this.setIconSize(20);
+      this.id = id;
+      if(gicon) {
+         this.setGIcon(gicon);
          this.label.style = "padding-left: 4px;";
       }
-      this.container.add(this.label, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-      this.addActor(this.container);
+      this.setText(label);
    },
 
    activate: function(event) {
@@ -244,7 +240,7 @@ PackageItem.prototype = {
    __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
    _init: function(parent, pkg, packageName, gIconInstaller, iconSize, textWidth, appDesc, vertical, appWidth) {
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this);
+      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, "");
       this.actor.set_style_class_name('menu-application-button');
       this.iconSize = iconSize;
       this.parent = parent;
@@ -254,27 +250,28 @@ PackageItem.prototype = {
       this.string = "";
       this.app = this._createAppWrapper(packageName, gIconInstaller);
       this.name = this.app.get_name();
-      this.labelName = new St.Label({ text: this.name , style_class: 'menu-application-button-label' });
+
+      this.setLabelStyle('menu-application-button-label');
+      this.setText(this.name);
+      this.setIconSize(iconSize);
+      this.setIconType(St.IconType.FULLCOLOR);
+
+      this.label.clutter_text.line_wrap_mode = Pango.WrapMode.CHAR;//WORD_CHAR;
+      this.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;//END;
+      this.label.clutter_text.set_line_alignment(Pango.Alignment.CENTER);
+
       this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
       this.labelDesc.visible = false;
-      this.container = new St.BoxLayout();
-      this.container.set_width(appWidth);
+
       this.textBox = new St.BoxLayout({ vertical: true });
-      this.setTextMaxWidth(textWidth);
-      this.setAppDescriptionVisible(appDesc);
-      this.container.set_vertical(!vertical);
+      this.actor.set_vertical(!vertical);
       this.setVertical(vertical);
 
-      this.icon = this.app.create_icon_texture(this.iconSize);
-      if(this.icon) {
-         this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-         this.icon.realize();
-      }
-      this.container.add(this.textBox, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-      this.addActor(this.container);
-
-      this.labelName.realize();
-      this.labelDesc.realize();
+      this.actor.set_width(appWidth);
+      this.setTextMaxWidth(textWidth);
+      this.setAppDescriptionVisible(appDesc);
+      this.actor.add(this.textBox);
+      this.actor.delegate = this;
       this.isDraggableApp = false;
    },
 
@@ -282,28 +279,12 @@ PackageItem.prototype = {
       this.packageName = packageName;
       this.app = this._createAppWrapper(packageName, this.gIconInstaller);
       this.name = this.app.get_name();
-      this.labelName.set_text(this.name);
+      this.label.set_text(this.name);
       this.setIconSize(iconSize);
       this.setTextMaxWidth(textWidth);
       this.setAppDescriptionVisible(appDesc);
       this.setVertical(vertical);
-      this.container.set_width(appWidth);
-   },
-
-   setIconSize: function(iconSize) {
-      if(this.iconSize != iconSize) {
-         this.iconSize = iconSize;
-         if(this.icon) {
-            let visible = this.icon.visible; 
-            let parentIcon = this.icon.get_parent();
-            if(parentIcon)
-               parentIcon.remove_actor(this.icon);
-            this.icon.destroy();
-            this.icon = this.app.create_icon_texture(this.iconSize);
-            this.icon.visible = visible;
-            this.container.insert_actor(this.icon, 0);
-         }
-      }
+      this.actor.set_width(appWidth);
    },
 
    setAppDescriptionVisible: function(visible) {
@@ -325,19 +306,19 @@ PackageItem.prototype = {
    },
 
    setVertical: function(vertical) {
-      if(this.container.get_vertical() != vertical) {
-         this.container.set_vertical(vertical);
-         let parentL = this.labelName.get_parent();
-         if(parentL) parentL.remove_actor(this.labelName);
+      if(this.actor.get_vertical() != vertical) {
+         this.setTextMaxWidth(this.textWidth);
+         this.actor.set_vertical(vertical);
+         let parentL = this.label.get_parent();
+         if(parentL) parentL.remove_actor(this.label);
          parentL = this.labelDesc.get_parent();
          if(parentL) parentL.remove_actor(this.labelDesc);
-         this.setTextMaxWidth(this.textWidth);
          if(vertical) {
-            this.textBox.add(this.labelName, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
+            this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
             this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
          }
          else {
-            this.textBox.add(this.labelName, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+            this.textBox.add(this.label, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
             this.textBox.add(this.labelDesc, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
          }
       }
@@ -353,14 +334,13 @@ PackageItem.prototype = {
    setString: function(string) {
       this.string = string;
       let webText = _("Package %s").format(this.packageName);
-      this.labelName.set_text(webText);
+      this.label.set_text(webText);
    },
 
    activate: function(event){
-      while(this.string.indexOf(" ")!= -1) {
+      while(this.string.indexOf(" ") != -1) {
          this.string = this.string.replace(" ", "%20");
       }
-
       this.pkg.installPackage(this.packageName);
       this.parent.toggle();
    },
@@ -373,7 +353,10 @@ PackageItem.prototype = {
             this.appInfo = {
                get_filename: function() {
                   return packageName;
-               }
+               },
+               get_icon: function() {
+                  return gIconInstaller;
+               },
             };
             return this.appInfo;
          },
@@ -391,8 +374,6 @@ PackageItem.prototype = {
          },
          create_icon_texture: function(appIconSize) {
             try {
-              //let gicon = new Gio.FileIcon({ file: Gio.file_new_for_path(icon_path) });
-              //return new St.Icon({gicon: gicon, icon_size: appIconSize, icon_type: St.IconType.FULLCOLOR});
               return new St.Icon({gicon: gIconInstaller, icon_size: appIconSize, icon_type: St.IconType.FULLCOLOR});
             } catch (e) {}
             return null;
@@ -401,7 +382,6 @@ PackageItem.prototype = {
       return this.app;
    }
 };
-
 
 function GnomeCategoryButton() {
    this._init.apply(this, arguments);
@@ -531,39 +511,31 @@ function CategoryButton() {
 }
 
 CategoryButton.prototype = {
-   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype,
 
    _init: function(category, iconSize, iconVisible) {
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false});
+      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, "", {hover: false});
       this.category = category;
       this.iconSize = iconSize;
       this.arrowIcon = new St.Icon({icon_name: '', icon_type: St.IconType.SYMBOLIC,
                                     reactive: true, track_hover: true, style_class: 'popup-menu-icon' });
       this.arrowOrientation = St.Side.RIGHT;
       this.haveArrow = false;
-      this.label = new St.Label({ style_class: 'menu-category-button-label' });
+      this.setLabelStyle('menu-category-button-label');
       this.label.clutter_text.line_wrap_mode = Pango.WrapMode.CHAR;//WORD_CHAR;
       this.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;//END;
       this.label.clutter_text.set_line_alignment(Pango.Alignment.CENTER);
-      this.container = new St.BoxLayout();
-      this.textBox = new St.BoxLayout({ vertical: false });
+      this.textBox = new St.BoxLayout({ vertical: true });
       this.setVertical(false);
+      this.label.get_parent().remove_actor(this.label);
       this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
 
+      this.setIconSize(iconSize);
+      this.setIconType(St.IconType.FULLCOLOR);
       this._setCategoryProperties(category);
-      if(this.icon) {
-         this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-         this.icon.realize();
-      }
-      this.container.add(this.textBox, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: true, y_fill: false, expand: true });
-      //this.addActor(this.container, { expand: true, align: St.Align.END});
-      
-      this.label.realize();
+
+      this.actor.add(this.textBox);
       this.setIconVisible(iconVisible);
-      this.actor.destroy();
-      this.actor = new St.BoxLayout({ vertical: false, reactive: true, track_hover: true });
-      //this.actor.add(this.internalActor, { x_fill: false, y_fill: true, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
-      this.actor.add(this.container, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
 
       this.actor.set_style_class_name('menu-category-button');
       this.actor.add_style_class_name('menu-category-button-' + this.theme);
@@ -585,9 +557,10 @@ CategoryButton.prototype = {
          labelName = category.get_name();
       } else
          labelName = _("All Applications");
+      //Main.notify("is " + labelName + " " + icon);
       this.label.set_text(labelName);
       if(category && this.icon_name) {
-         this.icon = St.TextureCache.get_default().load_gicon(null, icon, this.iconSize);
+         this.setGIcon(icon);
       }
    },
 
@@ -601,7 +574,6 @@ CategoryButton.prototype = {
    /*   this.haveArrow = haveArrow;
       this.haveArrowalways = always;
      // Main.notify("haveArrow:" + haveArrow);
-      this.actor.remove_actor(this.container);
       let parentArrow = this.arrowIcon.get_parent();
       if(parentArrow)
          parentArrow.remove_actor(this.arrowIcon);
@@ -610,15 +582,11 @@ CategoryButton.prototype = {
          this.arrowOrientation = orientation;
          if(orientation == St.Side.RIGHT) {
             this.arrowIcon.set_icon_name('media-playback-start');
-            this.actor.add(this.container, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
             this.actor.add(this.arrowIcon, { x_fill: false, expand: false, x_align: St.Align.END });
          } else if(orientation == St.Side.LEFT) {
             this.arrowIcon.set_icon_name('media-playback-start-rtl');
             this.actor.add(this.arrowIcon, { x_fill: false, expand: false, x_align: St.Align.END });
-            this.actor.add(this.container, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
          }
-      } else {
-         this.actor.add(this.container, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
       }*/
    },
 
@@ -639,18 +607,12 @@ CategoryButton.prototype = {
    },
 
    setIconVisible: function(visible) {
-      if(this.icon)
-         this.icon.visible = visible;
-   },
-
-   setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      if(this.icon)
-         this.icon.set_icon_size(this.iconSize);
+      if(this._icon)
+         this._icon.visible = visible;
    },
 
    setVertical: function(vertical) {
-      this.container.set_vertical(vertical);
+      this.actor.set_vertical(vertical);
    }
 };
 
@@ -668,7 +630,7 @@ PlaceCategoryButton.prototype = {
 
    _setCategoryProperties: function(category) {
       this.label.set_text(_("Places"));
-      this.icon = new St.Icon({icon_name: "folder", icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR});
+      this.setIconName("folder");
    },
 
    getCategoryID: function() {
@@ -690,7 +652,7 @@ RecentCategoryButton.prototype = {
 
    _setCategoryProperties: function(category) {
       this.label.set_text(_("Recent Files"));
-      this.icon = new St.Icon({icon_name: "folder-recent", icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR});
+      this.setIconName("folder-recent");
    },
 
    getCategoryID: function() {
@@ -707,18 +669,13 @@ GenericApplicationButton.prototype = {
    __proto__: ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype,
 
    _init: function(parent, parentScroll, app, withMenu, searchTexts) {
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, { hover: false });
+      ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype._init.call(this, "", true, true, { hover: false });
+
       this.app = app;
       this.parent = parent;
       this.parentScroll = parentScroll;
-      this.withMenu = withMenu;
       if((app)&&(searchTexts == null))
          searchTexts = [app.get_name(), app.get_description(), app.get_id()];
-      if(this.withMenu) {
-         this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
-         this.menu.actor.set_style_class_name('menu-context-menu');
-         this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
-      }
       if(searchTexts) {
          this.searchTexts = new Array();
          for(let i=0; i<searchTexts.length; i++) {
@@ -750,13 +707,6 @@ GenericApplicationButton.prototype = {
       return this.searchScore;
    },
 
-   destroy: function() {
-      //ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype.destroy.call(this);
-      if(this.menu)
-         this.menu.destroy();
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype.destroy.call(this);
-   },
-
    highlight: function() {
       this.actor.add_style_pseudo_class('highlighted');
    },
@@ -776,7 +726,7 @@ GenericApplicationButton.prototype = {
             this.activate(event);
          }
          if(event.get_button()==3) {
-            if(this.withMenu) {
+            if(this._withMenu) {
                if(!this.menu.isOpen) {
                   this.parent.closeApplicationsContextMenus(true);
                   let box = this.actor.get_parent();
@@ -829,7 +779,7 @@ GenericApplicationButton.prototype = {
    },
     
    closeMenu: function() {
-      if(this.withMenu) {
+      if(this._withMenu) {
          this.menu.close();
          this.menu.actor.set_width(-1);
          if(this.widthC) {
@@ -840,7 +790,7 @@ GenericApplicationButton.prototype = {
    },
     
    toggleMenu: function() {
-      if(!this.withMenu) return;
+      if(!this._withMenu) return;
       if(!this.menu.isOpen) {
          let children = this.menu.box.get_children();
          for(let i in children) {
@@ -927,14 +877,21 @@ GenericApplicationButton.prototype = {
       let symbol = event.get_key_symbol();
 
       //if(symbol == Clutter.KEY_space) {
-      //   if((this.withMenu) && (!this.menu.isOpen)) {
+      //   if((this._withMenu) && (!this.menu.isOpen)) {
       //      this.parent.closeApplicationsContextMenus(true);
       //   }
       //   this.toggleMenu();
       //   return true;
       //}
       return ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._onKeyPressEvent.call(this, actor, event);
-   }
+   },
+
+   destroy: function() {
+      //ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype.destroy.call(this);
+      if(this.menu)
+         this.menu.destroy();
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype.destroy.call(this);
+   },
 };
 
 function ApplicationButton() {
@@ -951,25 +908,23 @@ ApplicationButton.prototype = {
       this.iconSizeDrag = iconSizeDrag;
       this.category = new Array();
       this.actor.set_style_class_name('menu-application-button');
-      this.icon = this.app.create_icon_texture(this.iconSize);
       this.name = this.app.get_name();
-      this.labelName = new St.Label({ text: this.name , style_class: 'menu-application-button-label' });
+
+      this.setText(this.name);
+      this.setLabelStyle('menu-application-button-label');
+
       this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
       this.labelDesc.visible = false;
-      this.container = new St.BoxLayout();
+
       this.textBox = new St.BoxLayout({ vertical: true });
+      this.actor.add(this.textBox);
+
       this.setTextMaxWidth(appWidth);
       this.setAppDescriptionVisible(appDesc);
       this.setVertical(vertical);
-      if(this.icon) {
-         this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-         this.icon.realize();
-      }
-      this.container.add(this.textBox, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-      this.addActor(this.container);
 
-      this.labelName.realize();
-      this.labelDesc.realize();
+      this.setIconSize(iconSize);
+      this.setGIcon(this.app.get_app_info().get_icon());
 
       this._draggable = DND.makeDraggable(this.actor);
       this._draggable.connect('drag-end', Lang.bind(this, this._onDragEnd));
@@ -1009,43 +964,28 @@ ApplicationButton.prototype = {
    },
 
    setTextMaxWidth: function(maxWidth) {
-      //this.textBox.set_width(maxWidth);
       this.textBox.style = "max-width: "+maxWidth+"px;";
       this.textWidth = maxWidth;
    },
 
-   setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      if(this.icon) {
-         let visible = this.icon.visible; 
-         let parentIcon = this.icon.get_parent();
-         if(parentIcon)
-            parentIcon.remove_actor(this.icon);
-         this.icon.destroy();
-         this.icon = this.app.create_icon_texture(this.iconSize);
-         this.icon.visible = visible;
-         this.container.insert_actor(this.icon, 0);
-      }
-   }, 
- 
    setVertical: function(vertical) {
-      this.container.set_vertical(vertical);
-      let parentL = this.labelName.get_parent();
-      if(parentL) parentL.remove_actor(this.labelName);
+      this.actor.set_vertical(vertical);
+      let parentL = this.label.get_parent();
+      if(parentL) parentL.remove_actor(this.label);
       parentL = this.labelDesc.get_parent();
       if(parentL) parentL.remove_actor(this.labelDesc);
       this.setTextMaxWidth(this.textWidth);
       if(vertical) {
-         this.textBox.add(this.labelName, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
       }
       else {
-         this.textBox.add(this.labelName, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.label, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
       }
    },
  
-   get_app_id: function() {
+   get_id: function() {
       return this.app.get_id();
    },
     
@@ -1085,32 +1025,26 @@ PlaceButtonAccessible.prototype = {
       this.alterName = alterName;
 
       this.actor.set_style_class_name('menu-application-button');
-      this.nameEntry = new St.Entry({ name: 'menu-name-entry', hint_text: _("Type the new name..."), track_hover: true, can_focus: true });
+      this.setLabelStyle('menu-application-button-label');
+
       if((this.alterName)&&(this.alterName != ""))
-         this.labelName = new St.Label({ text: this.alterName, style_class: 'menu-application-button-label' });
+         this.setText(this.alterName);
       else
-         this.labelName = new St.Label({ text: this.place.name, style_class: 'menu-application-button-label' });
+         this.setText(this.place.name);
       this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
+      this.nameEntry = new St.Entry({ name: 'menu-name-entry', hint_text: _("Type the new name..."), track_hover: true, can_focus: true });
       this.nameEntry.visible = false;
       this.labelDesc.visible = false;
-      this.container = new St.BoxLayout();
       this.textBox = new St.BoxLayout({ vertical: true });
       this.setTextMaxWidth(appWidth);
       this.setAppDescriptionVisible(appDesc);
       this.setVertical(vertical);
 
-      this.icon = this.place.iconFactory(this.iconSize);
-      if(!this.icon)
-         this.icon = new St.Icon({icon_name: "folder", icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR});
-      if(this.icon) {
-         this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-         this.icon.realize();
-      }
-      this.container.add(this.textBox, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-      this.addActor(this.container);
+      this.setIconSize(iconSize);
+      this.setGIcon(this.app.get_app_info().get_icon());
 
-      this.labelName.realize();
-      this.labelDesc.realize();
+      this.actor.add(this.textBox);
+      this.actor._delegate = this;
 
       this._draggable = DND.makeDraggable(this.actor);
       this._draggable.connect('drag-end', Lang.bind(this, this._onDragEnd));
@@ -1123,7 +1057,7 @@ PlaceButtonAccessible.prototype = {
             this.activate(event);
          }
          if(event.get_button()==3) {
-            if((this.withMenu) && (!this.menu.isOpen)) {
+            if((this._withMenu) && (!this.menu.isOpen)) {
                this.parent.closeApplicationsContextMenus(true);
                this.parent._previousContextMenuOpen = this;
             } else {
@@ -1138,23 +1072,22 @@ PlaceButtonAccessible.prototype = {
 
    editText: function(edit) {
       if((edit)&&(!this.nameEntry.visible)) {
-         this.nameEntry.set_text(this.labelName.get_text());
+         this.nameEntry.set_text(this.label.get_text());
          this.nameEntry.visible = true;
          global.stage.set_key_focus(this.nameEntry);
-         this.labelName.visible = false;
+         this.label.visible = false;
          this.labelDesc.visible = false;
       }
       else {
          if(this.nameEntry.get_text() != "") {
             global.stage.set_key_focus(this.parent.searchEntry);
-            this.labelName.set_text(this.nameEntry.get_text());
+            this.label.set_text(this.nameEntry.get_text());
             this.alterName = this.nameEntry.get_text();
             this.nameEntry.set_text("");
             this.parent.changePlaceName(this.place.id, this.alterName);
          } else
             global.stage.set_key_focus(this.actor);
-
-         this.labelName.visible = true;
+         this.label.visible = true;
          this.labelDesc.visible = this.haveDesc;
          this.nameEntry.visible = false;
       }
@@ -1162,11 +1095,11 @@ PlaceButtonAccessible.prototype = {
 
    setDefaultText: function() {
       global.stage.set_key_focus(this.parent.searchEntry);
-      this.labelName.set_text(this.place.name);
+      this.label.set_text(this.place.name);
       this.alterName = "";
       this.nameEntry.set_text("");
       this.parent.changePlaceName(this.place.id, this.alterName);
-      this.labelName.visible = true;
+      this.label.visible = true;
       this.labelDesc.visible = this.haveDesc;
       this.nameEntry.visible = false;
    },
@@ -1174,23 +1107,6 @@ PlaceButtonAccessible.prototype = {
    setIconVisible: function(visible) {
       if(this.icon)
          this.icon.visible = visible;
-   },
-
-   setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      if(this.icon) {
-         let visible = this.icon.visible;
-         let parentIcon = this.icon.get_parent();
-         if(parentIcon)
-            parentIcon.remove_actor(this.icon);
-         this.icon.destroy();
-         this.icon = this.place.iconFactory(this.iconSize);
-         if(!this.icon)
-            this.icon = new St.Icon({icon_name: "folder", icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR});
-         if(this.icon)
-            this.container.insert_actor(this.icon, 0);
-         this.icon.visible = visible;
-      }
    },
 
    setAppDescriptionVisible: function(visible) {
@@ -1201,27 +1117,25 @@ PlaceButtonAccessible.prototype = {
    },
 
    setTextMaxWidth: function(maxWidth) {
-      //this.textBox.set_width(maxWidth);
       this.textBox.style = "max-width: "+maxWidth+"px;";
       this.textWidth = maxWidth;
    },
 
    setVertical: function(vertical) {
-      this.container.set_vertical(vertical);
-      let parentL = this.labelName.get_parent();
-      if(parentL) parentL.remove_actor(this.labelName);
+      this.actor.set_vertical(vertical);
+      let parentL = this.label.get_parent();
+      if(parentL) parentL.remove_actor(this.label);
       parentL = this.labelDesc.get_parent();
       if(parentL) parentL.remove_actor(this.labelDesc);
       parentL = this.nameEntry.get_parent();
       if(parentL) parentL.remove_actor(this.nameEntry);
       this.setTextMaxWidth(this.textWidth);
       if(vertical) {
-         this.textBox.add(this.labelName, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.nameEntry, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });     
-      }
-      else {
-         this.textBox.add(this.labelName, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+      } else {
+         this.textBox.add(this.label, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.nameEntry, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
       }
@@ -1274,6 +1188,35 @@ PlaceButtonAccessible.prototype = {
                   if(place.id.indexOf("bookmark:") == -1)
                      return place.id.slice(13);
                   return place.id.slice(16);
+               },
+               get_icon: function() {
+                  if(place.get_icon_name)
+                     return new Gio.ThemedIcon({ name: place.get_icon_name() });
+                  let path = this.get_filename(); //try to find the correct Image for a special folder.
+                  if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOCUMENTS))
+                     return new Gio.ThemedIcon({ name: "folder-documents" });
+                  if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES))
+                     return new Gio.ThemedIcon({ name: "folder-pictures" });
+                  if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_MUSIC))
+                     return new Gio.ThemedIcon({ name: "folder-music" });
+                  if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_VIDEOS))
+                     return new Gio.ThemedIcon({ name: "folder-video" });
+                  if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD))
+                     return new Gio.ThemedIcon({ name: "folder-download" });
+                  if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_TEMPLATES))
+                     return new Gio.ThemedIcon({ name: "folder-templates" });
+                  if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PUBLIC_SHARE))
+                     return new Gio.ThemedIcon({ name: "folder-publicshare" });
+                  try {
+                     let file = Gio.file_new_for_path(path);
+                     let fileInfo = file.query_filesystem_info("standard::type", null);
+                     if (fileInfo.get_file_type() == Gio.FileType.UNKNOWN)
+                        return new Gio.ThemedIcon({ name: "folder" });
+                     return fileInfo.get_icon();
+                  } catch(e) {
+                     return new Gio.ThemedIcon({ name: "network-workgroup" });
+                  }            
+                  return null;
                }
             };
             return this.appInfo;
@@ -1308,32 +1251,31 @@ PlaceButtonAccessible.prototype = {
             return place.iconFactory(appIconSize);
          },
          get_icon_name: function() {
+            if(place.get_icon_name)
+               place.get_icon_name();
+            let path = this.get_description(); //try to find the correct Image for a special folder.
+            if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOCUMENTS))
+               return "folder-documents";
+            if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES))
+               return "folder-pictures";
+            if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_MUSIC))
+               return "folder-music";
+            if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_VIDEOS))
+               return "folder-video";
+            if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD))
+               return "folder-download";
+            if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_TEMPLATES))
+               return "folder-templates";
+            if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PUBLIC_SHARE))
+               return "folder-publicshare";
             try {
                let icon = place.iconFactory(20);
                if(icon) {
                   let icon_name = icon.get_icon_name();
                   icon.destroy();
-                  return icon.get_icon_name();
+                  return icon_name;
                }
-               return place.get_icon_name();
-            } catch(e) {};
-            try {
-               let path = this.get_description(); //try to find the correct Image for a special folder.
-               if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOCUMENTS))
-                  return "folder-documents";
-               if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES))
-                  return "folder-pictures";
-               if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_MUSIC))
-                  return "folder-music";
-               if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_VIDEOS))
-                  return "folder-video";
-               if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD))
-                  return "folder-download";
-               if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_TEMPLATES))
-                  return "folder-templates";
-               if(path == GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PUBLIC_SHARE))
-                  return "folder-publicshare";
-            } catch(e) {};  
+            } catch(e) {}; 
             return "folder";
          },
          make_desktop_file: function() {
@@ -1367,7 +1309,7 @@ PlaceButton.prototype = {
       this.actor._delegate = this;
    },
 
-   get_app_id: function() {
+   get_id: function() {
       return this.app.get_id();
    },
     
@@ -1390,11 +1332,11 @@ PlaceButton.prototype = {
             this.activate(event);
          }
          if(event.get_button()==3) {
-            if((this.withMenu) && (!this.menu.isOpen)) {
+            if((this._withMenu) && (!this.menu.isOpen)) {
                this.parent.closeApplicationsContextMenus(true);
                this.parent._previousContextMenuOpen = this;
             }
-            //Main.notify("nnoo " + this.withMenu);
+            //Main.notify("nnoo " + this._withMenu);
             this.toggleMenu();
          }
       }
@@ -1411,37 +1353,28 @@ RecentButton.prototype = {
    __proto__: ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype,
 
    _init: function(parent, parentScroll, file, vertical, iconSize, appWidth, appDesc) {
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false});
-
-      this.iconSize = iconSize;
+      ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype._init.call(this, "", true, true, { hover: false });
       this.file = file;
       this.parent = parent;
       this.parentScroll = parentScroll;
-      this.button_name = this.file.name;
-      this.actor.set_style_class_name('menu-application-button');
-      this.actor._delegate = this;
-      this.labelName = new St.Label({ text: this.button_name, style_class: 'menu-application-button-label' });
+      this.name = this.file.name;
+
+      this.setText(this.name);
+      this.setLabelStyle('menu-application-button-label');
+
       this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
       this.labelDesc.visible = false;
-      this.container = new St.BoxLayout();
       this.textBox = new St.BoxLayout({ vertical: true });
       this.setTextMaxWidth(appWidth);
       this.setAppDescriptionVisible(appDesc);
       this.setVertical(vertical);
-      this.icon = file.createIcon(this.iconSize);
-      if(this.icon) {
-         this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-         this.icon.realize();
-      }
-      this.container.add(this.textBox, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-      this.addActor(this.container);
+      this.setGIcon(file.gicon);
+      this.setIconType(St.IconType.FULLCOLOR);
+      this.setIconSize(iconSize);
 
-      this.labelName.realize();
-      this.labelDesc.realize();
-
-      this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
-      this.menu.actor.set_style_class_name('menu-context-menu');
-      this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
+      this.actor.add(this.textBox);
+      this.actor.set_style_class_name('menu-application-button');
+      this.actor._delegate = this;
    },
 
    _subMenuOpenStateChanged: function() {
@@ -1454,7 +1387,7 @@ RecentButton.prototype = {
       let symbol = event.get_key_symbol();
 
       //if(symbol == Clutter.KEY_space) {
-      //   if((this.withMenu) && (!this.menu.isOpen)) {
+      //   if((this._withMenu) && (!this.menu.isOpen)) {
       //      this.parent.closeApplicationsContextMenus(true);
       //   }
       //   this.toggleMenu();
@@ -1487,14 +1420,14 @@ RecentButton.prototype = {
          let appCinMimeDef = this.getDefaultAppForMime();
          if(appCinMimeDef) {
             menuItem = new ApplicationContextMenuItem(this, "open_with", appCinMimeDef.get_name(),
-                                                              appCinMimeDef.create_icon_texture(20), appCinMimeDef.get_id());
+                                                              appCinMimeDef.get_app_info().get_icon(), appCinMimeDef.get_id());
             menuItem.actor.style = "font-weight: bold";
             this.menu.addMenuItem(menuItem);
          }
          let appCinMime = this.getAppForMime(appCinMimeDef);
          for(let app in appCinMime) {
             menuItem = new ApplicationContextMenuItem(this, "open_with", appCinMime[app].get_name(),
-                                                              appCinMime[app].create_icon_texture(20), appCinMime[app].get_id());
+                                                              appCinMime[app].get_app_info().get_icon(), appCinMime[app].get_id());
             this.menu.addMenuItem(menuItem);
          }
       }
@@ -1592,20 +1525,13 @@ RecentButton.prototype = {
       this.parent.menu.close();
    },
 
-   setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      if(this.icon)
-         this.icon.set_icon_size(this.iconSize);
-   },
-
    setTextMaxWidth: function(maxWidth) {
-      //this.textBox.set_width(maxWidth);
       this.textBox.style = "max-width: "+maxWidth+"px;";
       this.textWidth = maxWidth;
    },
 
    getName: function() {
-      return this.button_name;
+      return this.name;
    },
 
    getDescription: function() {
@@ -1626,18 +1552,17 @@ RecentButton.prototype = {
    },
 
    setVertical: function(vertical) {
-      this.container.set_vertical(vertical);
-      let parentL = this.labelName.get_parent();
-      if(parentL) parentL.remove_actor(this.labelName);
+      this.actor.set_vertical(vertical);
+      this.setTextMaxWidth(this.textWidth);
+      let parentL = this.label.get_parent();
+      if(parentL) parentL.remove_actor(this.label);
       parentL = this.labelDesc.get_parent();
       if(parentL) parentL.remove_actor(this.labelDesc);
-      this.setTextMaxWidth(this.textWidth);
       if(vertical) {
-         this.textBox.add(this.labelName, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
-      }
-      else {
-         this.textBox.add(this.labelName, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+      } else {
+         this.textBox.add(this.label, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
       }
    }
@@ -1648,32 +1573,31 @@ function RecentClearButton() {
 }
 
 RecentClearButton.prototype = {
-   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype,
 
    _init: function(parent, vertical, iconSize, appWidth, appDesc) {
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false});
+      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, "", {hover: false});
       this.iconSize = iconSize;
       this.parent = parent;
-      this.actor.set_style_class_name('menu-application-button');
-      this.button_name = _("Clear list");
-      this.actor._delegate = this;
-      this.labelName = new St.Label({ text: this.button_name, style_class: 'menu-application-button-label' });
+      this.name = _("Clear list");
+
       this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
       this.labelDesc.visible = false;
-      this.container = new St.BoxLayout();
       this.textBox = new St.BoxLayout({ vertical: true });
       this.setTextMaxWidth(appWidth);
       this.setAppDescriptionVisible(appDesc);
       this.setVertical(vertical);
 
-      this.icon = new St.Icon({ icon_name: 'edit-clear', icon_type: St.IconType.SYMBOLIC, icon_size: this.iconSize });
-      this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-      this.container.add(this.textBox, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
+      this.setText(this.name);
+      this.setLabelStyle('menu-application-button-label');
 
-      this.addActor(this.container);      
-      this.icon.realize();
-      this.labelName.realize();
-      this.labelDesc.realize();
+      this.setIconName('edit-clear');
+      this.setIconType(St.IconType.SYMBOLIC);
+      this.setIconSize(iconSize);
+
+      this.actor.add(this.textBox);
+      this.actor.set_style_class_name('menu-application-button');
+      this.actor._delegate = this;
    },
 
    _onButtonReleaseEvent: function(actor, event) {
@@ -1685,7 +1609,7 @@ RecentClearButton.prototype = {
    },
 
    getName: function() {
-      return this.button_name;
+      return this.name;
    },
 
    activate: function(event) {
@@ -1694,14 +1618,7 @@ RecentClearButton.prototype = {
       GtkRecent.purge_items();
    },
 
-   setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      if(this.icon)
-         this.icon.set_icon_size(this.iconSize);
-   },
-
    setTextMaxWidth: function(maxWidth) {
-      //this.textBox.set_width(maxWidth);
       this.textBox.style = "max-width: "+maxWidth+"px;";
       this.textWidth = maxWidth;
    },
@@ -1712,18 +1629,17 @@ RecentClearButton.prototype = {
    },
 
    setVertical: function(vertical) {
-      this.container.set_vertical(vertical);
-      let parentL = this.labelName.get_parent();
-      if(parentL) parentL.remove_actor(this.labelName);
+      this.actor.set_vertical(vertical);
+      this.setTextMaxWidth(this.textWidth);
+      let parentL = this.label.get_parent();
+      if(parentL) parentL.remove_actor(this.label);
       parentL = this.labelDesc.get_parent();
       if(parentL) parentL.remove_actor(this.labelDesc);
-      this.setTextMaxWidth(this.textWidth);
       if(vertical) {
-         this.textBox.add(this.labelName, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
-      }
-      else {
-         this.textBox.add(this.labelName, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+      } else {
+         this.textBox.add(this.label, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
       }
    }
@@ -1753,50 +1669,37 @@ TransientButton.prototype = {
             this.path = pathOrCommand.substr(0, n);
          }
       }
-
       this.pathOrCommand = pathOrCommand;
-
       this.parent = parent;
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false});
 
-      let iconBox = new St.Bin();
+      this.setIconSize(iconSize);
+      this.setIconType(St.IconType.FULLCOLOR);
+
       this.file = Gio.file_new_for_path(this.pathOrCommand);
       try {
          this.handler = this.file.query_default_handler(null);
          let icon_uri = this.file.get_uri();
          let fileInfo = this.file.query_info(Gio.FILE_ATTRIBUTE_STANDARD_TYPE, Gio.FileQueryInfoFlags.NONE, null);
          let contentType = Gio.content_type_guess(this.pathOrCommand, null);
-         let themedIcon = Gio.content_type_get_icon(contentType[0]);
-         this.icon = new St.Icon({gicon: themedIcon, icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR });
+         this.setGIcon(Gio.content_type_get_icon(contentType[0]));
       } catch (e) {
          this.handler = null;
          let iconName = this.isPath ? 'folder' : 'unknown';
-         this.icon = new St.Icon({icon_name: iconName, icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR });
+         this.setIconName(iconName);
          // @todo Would be nice to indicate we don't have a handler for this file.
       }
       this.actor.set_style_class_name('menu-application-button');
+      this.setText(this.app.get_name());
+      this.setLabelStyle('menu-application-button-label');
 
-      
-
-      this.labelName = new St.Label({ text: this.app.get_description(), style_class: 'menu-application-button-label' });
       this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
       this.labelDesc.visible = false;
-      this.container = new St.BoxLayout();
       this.textBox = new St.BoxLayout({ vertical: true });
       this.setTextMaxWidth(appWidth);
       this.setAppDescriptionVisible(appdesc);
       this.setVertical(vertical);
 
-      this.textBox.add(this.labelName, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
-      if(this.icon) {
-         this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-         this.icon.realize();
-      }
-      this.container.add(this.textBox, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-      this.addActor(this.container);
-
-      this.labelName.realize();
-      this.labelDesc.realize();
+      this.actor.add(this.textBox);
       this.isDraggableApp = false;
     //  this._draggable = DND.makeDraggable(this.actor);
     //  this._draggable.connect('drag-end', Lang.bind(this, this._onDragEnd));
@@ -1842,18 +1745,18 @@ TransientButton.prototype = {
    },
 
    setVertical: function(vertical) {
-      this.container.set_vertical(vertical);
-      let parentL = this.labelName.get_parent();
-      if(parentL) parentL.remove_actor(this.labelName);
+      this.setTextMaxWidth(this.textWidth);
+      this.actor.set_vertical(vertical);
+      let parentL = this.label.get_parent();
+      if(parentL) parentL.remove_actor(this.label);
       parentL = this.labelDesc.get_parent();
       if(parentL) parentL.remove_actor(this.labelDesc);
-      this.setTextMaxWidth(this.textWidth);
       if(vertical) {
-         this.textBox.add(this.labelName, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
       }
       else {
-         this.textBox.add(this.labelName, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.label, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
       }
    },
@@ -1900,6 +1803,15 @@ TransientButton.prototype = {
                      Main.notify("Error on decode, the encode of the text are unsupported", e.message);
                   }
                   return pathOrCommand;
+               },
+               get_icon: function() {
+                  try {
+                     let contentType = Gio.content_type_guess(pathOrCommand, null);
+                     return Gio.content_type_get_icon(contentType[0]);
+                  } catch (e) {}
+                  let isPath = pathOrCommand.substr(pathOrCommand.length - 1) == '/';
+                  let iconName = isPath ? 'folder' : 'unknown';
+                  return new Gio.ThemedIcon({name: iconName});
                }
             };
             return this.appInfo;
@@ -1916,7 +1828,12 @@ TransientButton.prototype = {
             return pathOrCommand;
          },
          get_name: function() {
-            return  '';
+            try {
+               return decodeURIComponent(pathOrCommand);
+            } catch(e) {
+               Main.notify("Error on decode, the encode of the text are unsupported", e.message);
+            }
+            return pathOrCommand;
          },
          is_window_backed: function() {
             return false;
@@ -1954,33 +1871,20 @@ FavoritesButton.prototype = {
       this.alterName = alterName;
       this.appWidth = appWidth;
 
-      this.container = new St.BoxLayout();
-      let icon_size = this.iconSize;
-      if(!this.allowName) {
-         let monitor = Main.layoutManager.primaryMonitor;
-         let monitorHeight;
-         if(this.displayVertical)
-            monitorHeight = monitor.height;
-         else
-            monitorHeight = monitor.width;
-         let real_size = (0.7*monitorHeight) / this.nbFavorites;
-         if(global.ui_scale) icon_size = 0.6*real_size/global.ui_scale;
-         else icon_size = 0.6*real_size;
-         if(icon_size > this.iconSize) icon_size = this.iconSize;
-      }
       this.actor.set_style_class_name('menu-favorites-button');
-      this.icon = app.create_icon_texture(icon_size);
-      
+
+      this.setIconSize(iconSize);
+      this.setGIcon(this.app.get_app_info().get_icon());
+      this._icon.show();
+
+      this.setLabelStyle('menu-application-button-label');
+
       if(this.allowName) {
-         if(this.icon) {
-            this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-            this.icon.realize();
-         }
          this.nameEntry = new St.Entry({ name: 'menu-name-entry', hint_text: _("Type the new name..."), track_hover: true, can_focus: true });
          if((this.alterName)&&(this.alterName != ""))
-            this.labelName = new St.Label({ text: this.alterName, style_class: 'menu-application-button-label' });
+            this.setText(this.alterName);
          else
-            this.labelName = new St.Label({ text: this.app.get_name(), style_class: 'menu-application-button-label' });
+            this.setText(this.app.get_name());
          this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
          this.nameEntry.visible = false;
          this.labelDesc.visible = false;
@@ -1988,15 +1892,9 @@ FavoritesButton.prototype = {
          this.textBox = new St.BoxLayout({ vertical: true });
          this.setTextMaxWidth(appTextWidth);
          this.setAppDescriptionVisible(appDesc);
-         this.container.add(this.textBox, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
+         this.actor.add(this.textBox);//, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
          this.setVertical(vertical);
-         this.labelName.realize();
-         this.labelDesc.realize();
-      } else if(this.icon) {
-         this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
-         this.icon.realize();
       }
-      this.addActor(this.container);
       this.actor._delegate = this;
       this._draggable = DND.makeDraggable(this.actor);
       this._draggable.connect('drag-end', Lang.bind(this, this._onDragEnd));  
@@ -2004,28 +1902,28 @@ FavoritesButton.prototype = {
    },
 
    setWidthApp: function() {
-      this.container.set_width(this.appWidth);
+      this.actor.set_width(this.appWidth);
    },
 
    editText: function(edit) {
       if((edit)&&(!this.nameEntry.visible)) {
-         this.nameEntry.set_text(this.labelName.get_text());
+         this.nameEntry.set_text(this.label.get_text());
          this.nameEntry.visible = true;
          global.stage.set_key_focus(this.nameEntry);
-         this.labelName.visible = false;
+         this.label.visible = false;
          this.labelDesc.visible = false;
       }
       else {
          if(this.nameEntry.get_text() != "") {
             global.stage.set_key_focus(this.parent.searchEntry);
-            this.labelName.set_text(this.nameEntry.get_text());
+            this.label.set_text(this.nameEntry.get_text());
             this.alterName = this.nameEntry.get_text();
             this.nameEntry.set_text("");
             this.parent.changeAppName(this.app.get_id(), this.alterName);
          } else
             global.stage.set_key_focus(this.actor);
 
-         this.labelName.visible = true;
+         this.label.visible = true;
          this.labelDesc.visible = this.haveDesc;
          this.nameEntry.visible = false;
       }
@@ -2033,49 +1931,37 @@ FavoritesButton.prototype = {
 
    setDefaultText: function() {
       global.stage.set_key_focus(this.parent.searchEntry);
-      this.labelName.set_text(this.app.get_name());
+      this.label.set_text(this.app.get_name());
       this.alterName = "";
       this.nameEntry.set_text("");
       this.parent.changeAppName(this.app.get_id(), this.alterName);
-      this.labelName.visible = true;
+      this.label.visible = true;
       this.labelDesc.visible = this.haveDesc;
       this.nameEntry.visible = false;
    },
 
    setIconVisible: function(visible) {
-      if(this.icon)
-         this.icon.visible = visible;
+      if(this._icon)
+         this._icon.visible = visible;
    },
 
-   setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      if(this.icon) {
-         if(!this.allowName) {
-            let monitor = Main.layoutManager.findMonitorForActor(this.actor);
-            let monitorHeight;
-            if(this.displayVertical)
-               monitorHeight = monitor.height;
-            else
-               monitorHeight = monitor.width;
-            let real_size = (0.7*monitorHeight) / this.nbFavorites;
-            let icon_size = 0.7*real_size;
-            if(icon_size > this.iconSize) icon_size = this.iconSize;
-         }
-         let visible = this.icon.visible;
-         let parentIcon = this.icon.get_parent();
-         if(parentIcon)
-            parentIcon.remove_actor(this.icon);
-         this.icon.destroy();
-         this.icon = this.app.create_icon_texture(this.iconSize);
-         if(this.icon) {
-            this.container.insert_actor(this.icon, 0);
-            this.icon.visible = visible;
-         }
+   _getSizeEstimation: function(size) {
+      if(!this.allowName) {
+         let monitor = Main.layoutManager.findMonitorForActor(this.actor);
+         let monitorHeight;
+         if(this.displayVertical)
+            monitorHeight = monitor.height;
+         else
+            monitorHeight = monitor.width;
+         let real_size = (0.7*monitorHeight) / this.nbFavorites;
+         let icon_size = 0.7*real_size;
+         if(icon_size > size) 
+            return icon_size;
       }
+      return size;
    },
 
    setTextMaxWidth: function(maxWidth) {
-      //this.textBox.set_width(maxWidth);
       this.textBox.style = "max-width: "+maxWidth+"px;";
       this.textWidth = maxWidth;
    },
@@ -2090,25 +1976,23 @@ FavoritesButton.prototype = {
    },
 
    setVertical: function(vertical) {
-      this.container.set_vertical(vertical);
+      this.actor.set_vertical(vertical);
       this.setTextMaxWidth(this.textWidth);
       if(this.allowName) {      
-         let parentL = this.labelName.get_parent();
-         if(parentL) parentL.remove_actor(this.labelName);
+         let parentL = this.label.get_parent();
+         if(parentL) parentL.remove_actor(this.label);
          parentL = this.labelDesc.get_parent();
-         if(parentL) parentL.remove_actor(this.labelName);
+         if(parentL) parentL.remove_actor(this.labelDesc);
          parentL = this.nameEntry.get_parent();
          if(parentL) parentL.remove_actor(this.nameEntry);
          if(vertical) {
-            this.textBox.add(this.labelName, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
-            this.textBox.add(this.nameEntry, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
+            this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
             this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
-            
-         }
-         else {
-            this.textBox.add(this.labelName, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
-            this.textBox.add(this.nameEntry, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+            this.textBox.add(this.nameEntry, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });     
+         } else {
+            this.textBox.add(this.label, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
             this.textBox.add(this.labelDesc, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+            this.textBox.add(this.nameEntry, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
          }
       }
    },
@@ -2154,48 +2038,45 @@ SystemButton.prototype = {
       GenericApplicationButton.prototype._init.call(this, parent, parentScroll);
       this.title = title;
       this.description = description;
-      this.actor.destroy();
-      this.actor = new St.BoxLayout({ style_class:'menu-category-button', reactive: true, track_hover: true });
+      this.actor.set_style_class_name('menu-category-button');
+
       this.iconSize = iconSize;
       this.icon = icon;
       this.title = title;
       this.description = description;
       this.active = false;
-      
-      this.container = new St.BoxLayout();
-      this.iconObj = new St.Icon({icon_name: icon, icon_size: this.iconSize, icon_type: St.IconType.FULLCOLOR });
-      if(this.iconObj) {
-         this.container.add(this.iconObj, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-         this.iconObj.realize();
-      }
 
-      this.label = new St.Label({ text: this.title, style_class: 'menu-application-button-label' });
+      this.setIconSize(iconSize);
+      this.setIconName(icon);
+      this._icon.show();
+      this.setLabelStyle('menu-application-button-label');
+      this.setText(this.title);
       this.label.clutter_text.line_wrap_mode = Pango.WrapMode.CHAR;//WORD_CHAR;
       this.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;//END;
       this.label.clutter_text.set_line_alignment(Pango.Alignment.CENTER);
-      this.textBox = new St.BoxLayout({ vertical: false });
-      this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
+
+      this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
+      this.textBox = new St.BoxLayout({ vertical: true });
       this.setTextVisible(false);
       this.setIconVisible(true);
-      this.container.add_actor(this.textBox);
-      this.label.realize();
+      this.setVertical(false);
 
-      this.actor.add(this.container, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
+      this.actor.add(this.textBox);
       this.actor._delegate = this;
    },
 
    setIconSymbolic: function(symbolic) {
-      if(this.iconObj) {
+      if(this._icon) {
          if(symbolic)
-            this.iconObj.set_icon_type(St.IconType.SYMBOLIC);
+            this._icon.set_icon_type(St.IconType.SYMBOLIC);
          else
-            this.iconObj.set_icon_type(St.IconType.FULLCOLOR);
+            this._icon.set_icon_type(St.IconType.FULLCOLOR);
       }
    },
 
    setIconVisible: function(haveIcon) {
-      if(this.iconObj) {
-         this.iconObj.visible = haveIcon;
+      if(this._icon) {
+         this._icon.visible = haveIcon;
       }
    },
 
@@ -2210,20 +2091,24 @@ SystemButton.prototype = {
    },
 
    setVertical: function(vertical) {
-      this.actor.remove_actor(this.container);
-      if(vertical)
-         this.actor.add(this.container, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
-      else
-         this.actor.add(this.container, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
-       this.container.set_vertical(vertical);
+      this.actor.set_vertical(vertical);
+      this.setTextMaxWidth(this.textWidth);     
+      let parentL = this.label.get_parent();
+      if(parentL) parentL.remove_actor(this.label);
+      parentL = this.labelDesc.get_parent();
+      if(parentL) parentL.remove_actor(this.labelDesc);
+      if(vertical) {
+         this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });     
+      } else {
+         this.textBox.add(this.label, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.labelDesc, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+      }
    },
 
-   setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      if((this.icon)&&(this.iconObj)) {
-         this.iconObj.set_icon_size(this.iconSize);
-         this.iconObj.realize();
-      }
+   setIconSize: function(size) {
+      this.iconSize = size;
+      GenericApplicationButton.prototype.setIconSize.call(this, size);
    },
 
    setAction: function(actionCallBack) {
@@ -2236,6 +2121,11 @@ SystemButton.prototype = {
          this.setActive(false);
          this.actionCallBack();
       }
+   },
+
+   setTextMaxWidth: function(maxWidth) {
+      this.textBox.style = "max-width: "+maxWidth+"px;";
+      this.textWidth = maxWidth;
    },
 
    setActive: function(active) {
@@ -2264,12 +2154,11 @@ function SearchItem() {
 }
 
 SearchItem.prototype = {
-   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype,
 
    _init: function(parent, provider, path, icon_path, iconSize, textWidth, appDesc, vertical) {
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this);
+      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, "");
       this.actor.set_style_class_name('menu-application-button');
-      this.iconSize = iconSize;
       this.parent = parent;
       this.provider = provider;
       this.path = path;
@@ -2278,41 +2167,24 @@ SearchItem.prototype = {
       this.icon_uri = fileIcon.get_uri();
       this.app = this._createAppWrapper(provider, path, icon_path);
       this.name = this.app.get_name();
-      this.labelName = new St.Label({ text: this.name , style_class: 'menu-application-button-label' });
+
+      this.setLabelStyle('menu-application-button-label');
+      this.setText(this.name);
+
       this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
       this.labelDesc.visible = false;
-      this.container = new St.BoxLayout();
       this.textBox = new St.BoxLayout({ vertical: true });
       this.setTextMaxWidth(textWidth);
       this.setAppDescriptionVisible(appDesc);
       this.setVertical(vertical);
 
-      this.icon = this.app.create_icon_texture(this.iconSize);
-      // St.TextureCache.get_default().load_uri_async(this.icon_uri, this.iconSize, this.iconSize);
-      if(this.icon) {
-         this.container.add(this.icon, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-         this.icon.realize();
-      }
-      this.container.add(this.textBox, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-      this.addActor(this.container);
+      this.setGIcon(this.app.get_app_info().get_icon());
+      this.setIconSize(iconSize);
+      this.setIconType(St.IconType.FULLCOLOR);
 
-      this.labelName.realize();
-      this.labelDesc.realize();
+      this.actor.add(this.textBox);
+      this.actor.delegate = this;
       this.isDraggableApp = false;
-   },
-
-   setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      if(this.icon) {
-         let visible = this.icon.visible; 
-         let parentIcon = this.icon.get_parent();
-         if(parentIcon)
-            parentIcon.remove_actor(this.icon);
-         this.icon.destroy();
-         this.icon = this.app.create_icon_texture(this.iconSize);
-         this.icon.visible = visible;
-         this.container.insert_actor(this.icon, 0);
-      }
    },
 
    setAppDescriptionVisible: function(visible) {
@@ -2322,24 +2194,23 @@ SearchItem.prototype = {
    },
 
    setTextMaxWidth: function(maxWidth) {
-      //this.textBox.set_width(maxWidth);
       this.textBox.style = "max-width: "+maxWidth+"px;";
       this.textWidth = maxWidth;
    },
 
    setVertical: function(vertical) {
-      this.container.set_vertical(vertical);
-      let parentL = this.labelName.get_parent();
-      if(parentL) parentL.remove_actor(this.labelName);
+      this.actor.set_vertical(vertical);
+      this.setTextMaxWidth(this.textWidth);
+      let parentL = this.label.get_parent();
+      if(parentL) parentL.remove_actor(this.label);
       parentL = this.labelDesc.get_parent();
       if(parentL) parentL.remove_actor(this.labelDesc);
-      this.setTextMaxWidth(this.textWidth);
       if(vertical) {
-         this.textBox.add(this.labelName, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
       }
       else {
-         this.textBox.add(this.labelName, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
+         this.textBox.add(this.label, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
       }
    },
@@ -2354,7 +2225,7 @@ SearchItem.prototype = {
    setString: function(string) {
       this.string = string;
       let webText = _("Search %s for %s").format(this.provider, string);
-      this.labelName.set_text(webText);
+      this.label.set_text(webText);
    },
 
    activate: function(event){
@@ -2374,6 +2245,9 @@ SearchItem.prototype = {
             this.appInfo = {
                get_filename: function() {
                   return pathOrCommand;
+               },
+               get_icon: function() {
+                  return new Gio.FileIcon({ file: Gio.file_new_for_path(icon_path) });
                }
             };
             return this.appInfo;
@@ -2407,48 +2281,38 @@ function DriveMenuItem() {
 }
 
 DriveMenuItem.prototype = {
-   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype,
 
-   _init: function(parent, selectedAppBox, hover, place, iconSize, iconVisible) {
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, {hover: false, sensitive: false, focusOnHover: false});
+   _init: function(selectedAppBox, hover, place, iconSize, iconVisible) {
+      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, {hover: false, focusOnHover: false});
       this.place = place;
       this.iconSize = iconSize;
-      this.parent = parent;
       this.selectedAppBox = selectedAppBox;
       this.hover = hover;
+      this.actor.style_class = 'menu-application-button';
 
-      this.actor.destroy();
-      this.actor = new St.BoxLayout({ style_class: 'menu-application-button', vertical: false, reactive: true, track_hover: true });
       this.actor.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
       this.actor.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
       this.actor.connect('notify::hover', Lang.bind(this, this._onHoverChanged));
       this.actor.connect('key-focus-in', Lang.bind(this, this._onKeyFocusIn));
       this.actor.connect('key-focus-out', Lang.bind(this, this._onKeyFocusOut));
-
-
       this.app = this._createAppWrapper(this.place);
 
-      this.container = new St.BoxLayout({ vertical: false });
+      this.setLabelStyle('menu-application-button-label');
+      this.setText(place.name);
 
-      this.icon = this.app.create_icon_texture(this.iconSize);
-      if(this.icon) { 
-         this.container.add(this.icon, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: false });
-         this.icon.realize();
-      }
-
-      this.label = new St.Label({ style_class: 'menu-application-button-label', text: place.name });
-      this.container.add(this.label, { x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
+      this.setGIcon(this.app.get_app_info().get_icon());
+      this.setIconSize(iconSize);
+      this.setIconType(St.IconType.FULLCOLOR);
 
       let ejectIcon = new St.Icon({ icon_name: 'media-eject', icon_type: St.IconType.SYMBOLIC, style_class: 'popup-menu-icon' });
       this.ejectButton = new St.Button({ style_class: 'menu-eject-button', child: ejectIcon });
       this.ejectButton.connect('clicked', Lang.bind(this, this._eject));
       this.ejectButton.connect('enter-event', Lang.bind(this, this._ejectEnterEvent));
       this.ejectButton.connect('leave-event', Lang.bind(this, this._ejectLeaveEvent));
-      this.actor.add(this.container, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
       this.actor.add(this.ejectButton, { x_fill: false, y_fill: false, x_align: St.Align.END, y_align: St.Align.MIDDLE, expand: true });
 
       this.setIconVisible(iconVisible);
-      this.label.realize();
       this.actor._delegate = this;
    },
 
@@ -2462,36 +2326,21 @@ DriveMenuItem.prototype = {
       global.unset_cursor();
    },
 
-   setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      if(this.icon) {
-         let visible = this.icon.visible;
-         let iconParent = this.icon.get_parent();
-         if(iconParent)
-            iconParent.remove_actor(this.icon);
-         this.icon.destroy();
-         this.icon = this.place.iconFactory(this.iconSize);
-         this.icon.visible = visible;
-         this.container.insert_actor(this.icon, 0);
-      }
-   },
-
    setIconVisible: function(iconVisible) {
-      if(this.icon)
-         this.icon.visible = iconVisible;
+      if(this._icon)
+         this._icon.visible = iconVisible;
    },
 
    _eject: function() {
       this.place.remove();
    },
 
-   activate: function(event) {
+   activate: function(event, keepMenu) {
       if(event)
          this.place.launch({ timestamp: event.get_time() });
       else
          this.place.launch();
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype.activate.call(this, event);
-      this.parent.menu.close();
+      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype.activate.call(this, event, keepMenu);
    },
 
    setActive: function(active) {
@@ -2512,6 +2361,26 @@ DriveMenuItem.prototype = {
    _createAppWrapper: function(place) {
       // We need this fake app to help standar works.
       this.app = {
+         get_app_info: function() {
+            this.appInfo = {
+               get_filename: function() {
+                  try {
+                     if(place.id.indexOf("bookmark:") == -1)
+                        return decodeURIComponent(place.id.slice(13));
+                     return decodeURIComponent(place.id.slice(16));
+                  } catch(e) {
+                     Main.notify("Error on decode, the encode of the text are unsupported", e.message);
+                  }
+                  if(place.id.indexOf("bookmark:") == -1)
+                     return place.id.slice(13);
+                  return place.id.slice(16);
+               },
+               get_icon: function() {
+                  return null;//new Gio.FileIcon({ file: Gio.file_new_for_path(icon_path) });
+               }
+            };
+            return this.appInfo;
+         },
          open_new_window: function(open) {
             place.launch();
          },
@@ -2550,18 +2419,19 @@ ButtonChangerMenuItem.prototype = {
       this.theme = "";
       this.visible = true;
       this.actor.set_style_class_name('menu-category-button');
-      this.actor.reactive = true;
-      this.actor.track_hover = true;
+      //this.actor.reactive = true;
+      //this.actor.track_hover = true;
       this.parent = parent;
       this.labels = labels;
       this.selected = selected;
       this.label.set_style_class_name('menu-selected-app-title');
-      this.icon = new St.Icon({ style_class: 'popup-menu-icon', icon_type: St.IconType.FULLCOLOR, icon_name: icon, icon_size: iconSize });
-      this.label.realize();
-      if(this.icon) {
-         this.actor.add(this.icon, {x_fill: false, y_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE });
-         this.icon.realize();
-      } 
+
+      this.setIconName(icon);
+      this.setIconSize(iconSize);
+      this.setIconType(St.IconType.FULLCOLOR);
+      this._icon.set_style_class_name('popup-menu-icon');
+      this.actor.pack_start = true;
+
       this.actor.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
       this.actor.connect('enter-event', Lang.bind(this, function() {
          global.set_cursor(Cinnamon.Cursor.POINTING_HAND);
@@ -2674,18 +2544,16 @@ HoverIconBox.prototype = {
          this.actor._delegate = this;
          this.parent = parent;
          this.iconSize = iconSize;
-         this.container = this.actor;
-         this.actor = new St.BoxLayout({ vertical: false });
-         this.actor.add_actor(this.container);
 
-         this.container.set_height(this.iconSize);
+         //this.actor.set_height(this.iconSize);
          this._userIcon = new St.Icon({ icon_size: this.iconSize });
 
          this._icon.set_icon_size(this.iconSize);
          this._icon.set_icon_type(St.IconType.FULLCOLOR);
          this._icon.get_parent().remove_actor(this._icon);
 
-         this.actor.add_actor(this.menu.actor);
+         //this.actor.setVertical(false);
+         //this.actor.add_actor(this.menu.actor);
          this.menu.actor.set_style_class_name('menu-context-menu');
 
          this._user = AccountsService.UserManager.get_default().get_user(GLib.get_user_name());
@@ -2719,8 +2587,8 @@ HoverIconBox.prototype = {
 
          this._onUserChanged();
          this.refreshFace();
-         this.container.style = "padding-top: "+(0)+"px;padding-bottom: "+(0)+"px;padding-left: "+(0)+"px;padding-right: "+(0)+"px;margin:auto;";
-         this.container.connect('button-press-event', Lang.bind(this, function() {
+         this.actor.style = "padding-top: "+(0)+"px;padding-bottom: "+(0)+"px;padding-left: "+(0)+"px;padding-right: "+(0)+"px;margin:auto;";
+         this.actor.connect('button-press-event', Lang.bind(this, function() {
             this.actor.add_style_pseudo_class('pressed');
          }));
       } catch(e) {
@@ -2788,7 +2656,7 @@ HoverIconBox.prototype = {
          this._icon.set_icon_size(this.iconSize);
       if(this.lastApp)
          this.lastApp.set_icon_size(this.iconSize);
-      this.container.set_height(this.iconSize);
+      this.actor.set_height(this.iconSize);
    },
 
    _onButtonReleaseEvent: function(actor, event) {
@@ -2824,17 +2692,17 @@ HoverIconBox.prototype = {
    closeMenu: function() {
       //this.menu.close(true);
       this.setActive(false);
-      this.container.remove_style_pseudo_class('open');
+      this.actor.remove_style_pseudo_class('open');
    },
     
    toggleMenu: function() {
       if(this.menu.isOpen) {
          this.menu.close(true);
-         this.container.remove_style_pseudo_class('open');
+         this.actor.remove_style_pseudo_class('open');
          //this.menu.sourceActor._delegate.setActive(false);
       } else {
          this.menu.open();
-         this.container.add_style_pseudo_class('open');
+         this.actor.add_style_pseudo_class('open');
          //this.menu.sourceActor._delegate.setActive(true);
       }
    },
@@ -2864,7 +2732,7 @@ HoverIconBox.prototype = {
          if((icon)&&(this._icon)) {
             this._removeIcon();
             this._icon.set_icon_name(icon);
-            this.container.add_actor(this._icon, 0);
+            this.actor.add_actor(this._icon, 0);
          } else
             this.refreshFace();
       }
@@ -2875,7 +2743,7 @@ HoverIconBox.prototype = {
          this._removeIcon();
          this.lastApp = app.create_icon_texture(this.iconSize);
          if(this.lastApp) {
-            this.container.add_actor(this.lastApp, 0);
+            this.actor.add_actor(this.lastApp, 0);
          }
       }
    },
@@ -2885,7 +2753,7 @@ HoverIconBox.prototype = {
          this._removeIcon();
          this.lastApp = place.iconFactory(this.iconSize);
          if(this.lastApp) {
-            this.container.add_actor(this.lastApp, 0);
+            this.actor.add_actor(this.lastApp, 0);
          }
       }
    },
@@ -2895,7 +2763,7 @@ HoverIconBox.prototype = {
          this._removeIcon();
          this.lastApp = file.createIcon(this.iconSize);
          if(this.lastApp) {
-            this.container.add_actor(this.lastApp, 0);
+            this.actor.add_actor(this.lastApp, 0);
          }
       }
    },
@@ -2904,21 +2772,21 @@ HoverIconBox.prototype = {
       if(this.actor.visible) {
          this._removeIcon();
          if(this._userIcon) {
-            this.container.add_actor(this._userIcon, 0);
+            this.actor.add_actor(this._userIcon, 0);
          }
       }
    },
 
    _removeIcon: function() {
       if(this.lastApp) {
-         this.container.remove_actor(this.lastApp);
+         this.actor.remove_actor(this.lastApp);
          this.lastApp.destroy();
          this.lastApp = null;
       }
-      if((this._icon)&&(this._icon.get_parent() == this.container))
-         this.container.remove_actor(this._icon);
-      if((this._userIcon)&&(this._userIcon.get_parent() == this.container))
-         this.container.remove_actor(this._userIcon);
+      if((this._icon)&&(this._icon.get_parent() == this.actor))
+         this.actor.remove_actor(this._icon);
+      if((this._userIcon)&&(this._userIcon.get_parent() == this.actor))
+         this.actor.remove_actor(this._userIcon);
    }
 };
 

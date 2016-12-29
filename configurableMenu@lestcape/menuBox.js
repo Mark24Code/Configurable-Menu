@@ -517,7 +517,7 @@ FavoritesBoxExtended.prototype = {
       return result;
    },
 
-   addMenuItem: function(menuItem, position, properties) {
+   addMenuItem: function(menuItem, params, position) {
       try {
          if(!this._firstElement) {
             this._firstElement = menuItem.actor;
@@ -530,13 +530,13 @@ FavoritesBoxExtended.prototype = {
          let currentNumberItems = childrens[0].get_children().length;
          for(let i = 1; i < childrens.length; i++) {
             if(currentNumberItems > childrens[i].get_children().length) {
-               this._addInCorrectBox(childrens[i], menuItem.actor, menuItem.menu, properties);
+               this._addInCorrectBox(childrens[i], menuItem.actor, menuItem.menu, params);
                currentNumberItems--; 
                break;
             }
          }
          if(currentNumberItems == childrens[0].get_children().length)
-            this._addInCorrectBox(childrens[0], menuItem.actor, menuItem.menu, properties);
+            this._addInCorrectBox(childrens[0], menuItem.actor, menuItem.menu, params);
       
       } catch(e) {
          Main.notify("Favorite add element error", e.message);
@@ -1835,7 +1835,7 @@ GnoMenuBox.prototype = {
 
    _insertButtons: function() {
       let xAling, yAling;
-      switch(this.parent.styleGnoMenuPanel.style_class) {
+      switch(this.parent.styleGnoMenuPanel.actor.style_class) {
          case 'menu-gno-operative-box-left':
               xAling = St.Align.END;
               yAling = St.Align.END;
@@ -1951,7 +1951,7 @@ GnoMenuBox.prototype = {
       if(active)
          selected = '-selected';
       button.setActive(active);
-      switch(this.parent.styleGnoMenuPanel.style_class) {
+      switch(this.parent.styleGnoMenuPanel.actor.style_class) {
          case 'menu-gno-operative-box-left':
               button.actor.add_style_class_name('menu-gno-button-left' + selected);
               break;
@@ -1972,7 +1972,7 @@ GnoMenuBox.prototype = {
       if(greyed)
          greyed = '-greyed';
       button.actor.set_style_class_name('menu-category-button' + greyed);
-      switch(this.parent.styleGnoMenuPanel.style_class) {
+      switch(this.parent.styleGnoMenuPanel.actor.style_class) {
          case 'menu-gno-operative-box-left':
               button.actor.add_style_class_name('menu-gno-button-left' + greyed);
               break;
@@ -2016,7 +2016,7 @@ GnoMenuBox.prototype = {
 
    takePower: function(take) {
       if((take)&&(this.powerBox.get_children().indexOf(this.powerPanel.actor) == -1)) {
-         switch(this.parent.styleGnoMenuPanel.style_class) {
+         switch(this.parent.styleGnoMenuPanel.actor.style_class) {
             case 'menu-gno-operative-box-left':
                    this.powerBox.set_style_class_name('menu-gno-system-left');
                    break;
@@ -2094,26 +2094,46 @@ GnoMenuBox.prototype = {
 };
 Signals.addSignalMethods(GnoMenuBox.prototype);
 
-function AccessibleDropBox() {
+function MenuItemsDropBox() {
    this._init.apply(this, arguments);
 }
 
-AccessibleDropBox.prototype = {
-   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+MenuItemsDropBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuBox.prototype,
 
-   _init: function(parent, place) {
-      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
-      this.parent = parent;
-      this.place = place;
+   _init: function(label) {
+      ConfigurableMenus.ConfigurablePopupMenuBox.prototype._init.call(this, label);
       this.actor._delegate = this;
 
       this._dragPlaceholder = null;
       this._dragPlaceholderPos = -1;
       this._animatingPlaceholdersCount = 0;
+      this.allowedClassList = [];
+      this.deniedClassList = [];
    },
 
-   destroy: function() {
-      this.actor.destroy();
+   addMenuItem: function(menuItem, params, position) {
+      if(menuItem.get_id) {
+         ConfigurableMenus.ConfigurablePopupMenuBox.prototype.addMenuItem.call(this, menuItem, params, position);
+      } else
+         throw TypeError("Invalid argument to ConfigurablePopupMenuBase.addMenuItem()");
+   },
+
+   getIdList: function() {
+      let idList = new Array();
+      let items = this._getMenuItems();
+      for(let pos in items) {
+         idList.push(items[pos].get_id());
+      }
+      return idList;
+   },
+
+   setAllowedClass: function(itemClass) {
+      this.allowedClassList.push(itemClass);
+   },
+
+   setDeniedClass: function(itemClass) {
+      this.deniedClassList.push(itemClass);
    },
     
    _clearDragPlaceholder: function() {
@@ -2123,32 +2143,40 @@ AccessibleDropBox.prototype = {
          this._dragPlaceholderPos = -1;
       }
    },
+
+   _isAllowedClass: function(item) {
+       if(this.allowedClassList.length == 0)
+          return true;
+       for(let pos in this.allowedClassList) {
+           if(item instanceof this.allowedClassList[pos])
+              return true;
+       }
+       return false;
+   },
+
+   _isDeniedClass: function(item) {
+       if(this.deniedClassList.length == 0)
+          return false;
+       for(let pos in this.deniedClassList) {
+           if(item instanceof this.deniedClassList[pos])
+              return true;
+       }
+       return false;
+   },
     
    handleDragOver: function(source, actor, x, y, time) {
     try {
-      let currentObj, classType1, classType2;
-      if(this.place) {
-         currentObj = this.parent.getPlacesList();
-         classType1 = MenuItems.PlaceButtonAccessible;
-         classType2 = MenuItems.PlaceButton;
-      } else {
-         currentObj = this.parent.getAppsList();
-         classType1 = MenuItems.FavoritesButton;
-         classType2 = MenuItems.ApplicationButton;
-      }
-      let app = source.app;
-      let itemPos = currentObj.indexOf(app.get_id());
-      // Don't allow favoriting of transient apps
-      if(app == null || app.is_window_backed() || ((!(source instanceof classType1)) && (!(source instanceof classType2))))
+      if(!(source.get_id) || this._isDeniedClass(source) || !this._isAllowedClass(source))
          return DND.DragMotionResult.NO_DROP;
 
-      let numItems = currentObj.length;
+      let id = source.get_id();
+      let idList = this.getIdList();
+      let itemPos = idList.indexOf(id);
 
+      let numItems = idList.length;
       let children = this.actor.get_children();
       let numChildren = children.length;
-
       let boxHeight = this.actor.height;
-
 
       // Keep the placeholder out of the index calculation; assuming that
       // the remove target has the same size as "normal" items, we don't
@@ -2160,30 +2188,7 @@ AccessibleDropBox.prototype = {
       let pos = Math.round(y * numItems / boxHeight);
 
       if(pos <= numItems) {
-        // if(this._animatingPlaceholdersCount > 0) {
-        //    let appChildren = children.filter(function(actor) {
-        //       return ((actor._delegate instanceof classType1) || (actor._delegate instanceof classType2));
-        //    });
-        //    this._dragPlaceholderPos = children.indexOf(appChildren[pos]);
-        // } else {
-            this._dragPlaceholderPos = pos;
-        // }
-
-         // Don't allow positioning before or after self
-        //   if(itemPos != -1 && (pos == itemPos || pos == itemPos + 1)) {
-        //    if(this._dragPlaceholder) {
-        //       this._dragPlaceholder.animateOutAndDestroy();
-        //       this._animatingPlaceholdersCount++;
-        //       this._dragPlaceholder.actor.connect('destroy',
-        //          Lang.bind(this, function() {
-        //             this._animatingPlaceholdersCount--;
-        //          }));
-        //    }
-        //    this._dragPlaceholder = null;
-
-        //    return DND.DragMotionResult.CONTINUE;
-        // }
-
+         this._dragPlaceholderPos = pos;
          // If the placeholder already exists, we just move
          // it, but if we are adding it, expand its size in
          // an animation
@@ -2196,11 +2201,10 @@ AccessibleDropBox.prototype = {
          } else {
             fadeIn = true;
          }
-
          this._dragPlaceholder = new DND.GenericDragPlaceholderItem();
          this._dragPlaceholder.child.set_width (source.actor.width);
          this._dragPlaceholder.child.set_height (source.actor.height);
-         this.actor.insert_actor(this._dragPlaceholder.actor, 2*this._dragPlaceholderPos);
+         this.box.insert_actor(this._dragPlaceholder.actor, 2*(this._dragPlaceholderPos));
          if(fadeIn)
             this._dragPlaceholder.animateIn();
       }
@@ -2219,66 +2223,169 @@ AccessibleDropBox.prototype = {
     
    // Draggable target interface
    acceptDrop: function(source, actor, x, y, time) {
-      let currentObj, classType1, classType2;
-      if(this.place) {
-         currentObj = this.parent.getPlacesList();
-         classType1 = MenuItems.PlaceButtonAccessible;
-         classType2 = MenuItems.PlaceButton;
-      } else {
-         currentObj = this.parent.getAppsList();
-         classType1 = MenuItems.FavoritesButton;
-         classType2 = MenuItems.ApplicationButton;
-      }
-
-      let app = source.app;
-
-      // Don't allow favoriting of transient apps
-      if(app == null || app.is_window_backed() || ((!(source instanceof classType1)) && (!(source instanceof classType2)))) {
+      if(!(source.get_id) || this._isDeniedClass(source) || !this._isAllowedClass(source)) {
+         this._clearDragPlaceholder();
          return false;
       }
 
-      let id = app.get_id();
-
-      let itemPos = currentObj.indexOf(app.get_id());
+      let id = source.get_id();
+      let idList = this.getIdList();
+      let itemPos = idList.indexOf(id);
       let srcIsCurrentItem = (itemPos != -1);
 
       itemPos = this._dragPlaceholderPos;
-//       let children = this.actor.get_children();
-//         for(let i = 0; i < this._dragPlaceholderPos; i++) {
-//            if(this._dragPlaceholder && children[i] == this._dragPlaceholder.actor)
-//               continue;
-//            
-//            if(!(children[i]._delegate instanceof classType1)) continue;
-//
-//            let childId = children[i]._delegate.app.get_id();
-//            if(childId == id)
-//               continue;
-//            if(currentObj.indexOf(childId) != -1)
-//               itemPos++;
-//         }
 
       Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this, function() {
-         if(srcIsCurrentItem) {//moveFavoriteToPos
-            currentObj.splice(currentObj.indexOf(app.get_id()), 1);
-            currentObj.splice(itemPos, 0, id);
-            if(this.place)
-               this.parent.setPlacesList(currentObj);
-            else
-               this.parent.setAppsList(currentObj);
+         if(srcIsCurrentItem) {
+            idList.splice(idList.indexOf(id), 1);
+            idList.splice(itemPos, 0, id);
+            this.emit('current-list-changed', idList);
+         } else {
+            idList.splice(itemPos, 0, id);
+            this.emit('current-list-changed', idList);
          }
-         else {
-            currentObj.splice(itemPos, 0, id);
-            if(this.place)
-               this.parent.setPlacesList(currentObj);
-            else
-               this.parent.setAppsList(currentObj);
-         }
+         this._clearDragPlaceholder();
          return false;
       }));
 
       return true;
    }
 };
+
+function PlacesBox() {
+   this._init.apply(this, arguments);
+}
+
+PlacesBox.prototype = {
+   __proto__: MenuItemsDropBox.prototype,
+
+   _init: function(label) {
+      MenuItemsDropBox.prototype._init.call(this, label);
+      this.actor._delegate = this;
+      this.allowedClassList.push(MenuItems.PlaceButton);
+      this.allowedClassList.push(MenuItems.PlaceButtonAccessible);
+   },
+
+   addMenuItem: function(menuItem, params, position) {
+      if(menuItem.app && !menuItem.get_id) {
+         menuItem.get_id = Lang.bind(this, function() {
+            return menuItem.app.get_id();
+         });
+      }
+      MenuItemsDropBox.prototype.addMenuItem.call(this, menuItem, params, position);
+   },
+
+   setIconSize: function(iconSize) {
+      let items = this._getMenuItems();
+      for(let pos in items) {
+         if(items[pos].setIconSize) {
+            items[pos].setIconSize(iconSize);
+         }
+      }
+   },
+};
+
+function ApplicationsBox() {
+   this._init.apply(this, arguments);
+}
+
+ApplicationsBox.prototype = {
+   __proto__: MenuItemsDropBox.prototype,
+
+   _init: function(label) {
+      MenuItemsDropBox.prototype._init.call(this, label);
+      this.actor._delegate = this;
+      this.allowedClassList.push(MenuItems.ApplicationButton);
+      this.allowedClassList.push(MenuItems.FavoritesButton);
+   },
+
+   addMenuItem: function(menuItem, params, position) {
+      if(menuItem.app && !menuItem.get_id) {
+         menuItem.get_id = Lang.bind(this, function() {
+            return menuItem.app.get_id();
+         });
+      }
+      MenuItemsDropBox.prototype.addMenuItem.call(this, menuItem, params, position);
+   },
+
+   setIconSize: function(iconSize) {
+      let items = this._getMenuItems();
+      for(let pos in items) {
+         if(items[pos].setIconSize) {
+            items[pos].setIconSize(iconSize);
+         }
+      }
+   },
+};
+
+function DevicesBox() {
+   this._init.apply(this, arguments);
+}
+
+DevicesBox.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
+
+   _init: function(parent, selectedAppBox, hover) {
+      ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
+      this.actor.style_class = 'menu-accessible-devices-box';
+      this.idSignalRemovable = 0;
+      this.showRemovable = false;
+      this.iconsVisible = false;
+      this.iconSize = 20;
+      this.hover = hover;
+      this.selectedAppBox = selectedAppBox;
+   },
+
+   showIcons: function(show) {
+      this.iconsVisible = show;
+   },
+
+   setIconSize: function(size) {
+      this.iconSize = size;
+   },
+
+   showRemovable: function(show) {
+      if(this.showRemovable != show) {
+         this.showRemovable = show;
+         this.refresh();
+         if(show) {
+            if(this.idSignalRemovable == 0)
+               this.idSignalRemovable = Main.placesManager.connect('mounts-updated', Lang.bind(this, this.refresh));
+         } else {
+            if(this.idSignalRemovable > 0) {
+               Main.placesManager.disconnect(this.idSignalRemovable);
+               this.idSignalRemovable = 0;
+            }
+         }
+      }
+   },
+
+   refresh: function() {
+      let any = false;
+      this.removeAll();
+      if(this.showRemovable) {
+         try {
+            let mounts = Main.placesManager.getMounts();
+            let drive;
+            for(let i = 0; i < mounts.length; i++) {
+               if(mounts[i].isRemovable()) {
+                  drive = new MenuItems.DriveMenuItem(this.selectedAppBox, this.hover, mounts[i], this.iconSize, this.iconsVisible);
+                  drive.connect('activate',  Lang.bind(this, function(drive, event, keepMenu) {
+                     this.emit('activate', event, keepMenu);
+                  }));
+                  this.addMenuItem(drive);
+                  any = true;
+               }
+            }
+         } catch(e) {
+            global.logError(e);
+            Main.notify("ErrorDevice:", e.message);
+         }
+      }
+      this.actor.visible = any;
+   },
+};
+Signals.addSignalMethods(DevicesBox.prototype);
 
 function AccessibleBox() {
    this._init.apply(this, arguments);
@@ -2289,51 +2396,67 @@ AccessibleBox.prototype = {
 
    _init: function(parent, hoverIcon, selectedAppBox, controlBox, powerBox, vertical, iconSize, showRemovable) {
       ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
-      this.internalBox = new St.BoxLayout({ style_class: 'menu-accessible-panel', vertical: true });
-      this.actor.add(this.internalBox, { y_fill: true, expand: true });
-      
-      this.placeName = new St.Label({ style_class: 'menu-selected-app-title', text: _("Places"), visible: false });
-      this.systemName = new St.Label({ style_class: 'menu-selected-app-title', text: _("System"), visible: false });
-      this.placeName.style = "font-size: " + 10 + "pt";
-      this.systemName.style = "font-size: " + 10 + "pt";
-      this.hoverBox = new St.BoxLayout({ vertical: false });
-      this.internalBox.add_actor(this.hoverBox);
-      this.controlBox = new St.BoxLayout({ vertical: false });
-      this.internalBox.add_actor(this.controlBox);
-      this.itemsBox = new St.BoxLayout({ vertical: true });
-      this.itemsDevices = new St.BoxLayout({ style_class: 'menu-accessible-devices-box', vertical: true });
-      this.itemsPlaces = new AccessibleDropBox(parent, true).actor;
-      this.itemsPlaces.set_style_class_name('menu-accessible-places-box');
-      this.itemsSystem = new AccessibleDropBox(parent, false).actor;
-      this.itemsSystem.set_style_class_name('menu-accessible-system-box');
-      this.itemsBox.add_actor(this.placeName);
-      this.itemsBox.add_actor(this.itemsPlaces);
-      this.itemsBox.add_actor(this.itemsDevices);
-      this.powerBoxItem = new St.BoxLayout({ vertical: true });
-      this.separatorMiddle = new ConfigurableMenus.ConfigurableSeparatorMenuItem();// St.BoxLayout({ vertical: false, height: 20 });
+      this.actor = new St.BoxLayout({ vertical: true, style_class: 'menu-accessible-box' });
+
+      this.hoverBox = new ConfigurableMenus.ConfigurablePopupMenuSection();
+      this.hoverBox.setVertical(false);
+      this.actor.add(this.hoverBox.actor);
+      this.controlBox = new ConfigurableMenus.ConfigurablePopupMenuSection();
+      this.controlBox.setVertical(false);
+      this.actor.add(this.controlBox.actor);
+
+      this.scrollActor = new ConfigurableMenus.ScrollItemsBox(parent, this.box, true, St.Align.START);
+      this.actor.add(this.scrollActor.actor, { y_fill: true, expand: true });
+
+      this.itemsDevices = new DevicesBox();
+      this.itemsDevices.actor.set_style_class_name('menu-accessible-devices-box');
+      this.itemsDevices.connect('activate',  Lang.bind(this, function(devices, event, keepMenu) {
+         this.emit('activate', event, keepMenu);
+      }));
+
+      this.itemsPlaces = new PlacesBox(_("Places"));//new AccessibleDropBox(parent, _("Places"), true);
+      this.itemsPlaces.actor.set_style_class_name('menu-accessible-places-box');
+      this.itemsPlaces.setLabelStyle('menu-selected-app-title');
+      this.itemsPlaces.setLabelVisible(false);
+      this.itemsPlaces.connect('current-list-changed', Lang.bind(this, function(places, list) {
+         this.parent.setPlacesList(list);
+      }));
+
+      this.itemsApplications = new ApplicationsBox(_("System"));//new AccessibleDropBox(parent, _("System"), false);
+      this.itemsApplications.actor.set_style_class_name('menu-accessible-system-box');
+      this.itemsApplications.setLabelStyle('menu-selected-app-title');
+      this.itemsApplications.setLabelVisible(false);
+      this.itemsApplications.connect('current-list-changed', Lang.bind(this, function(apps, list) {
+         this.parent.setAppsList(list);
+      }));
+
+      this.separatorTop = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      this.separatorTop.setVisible(false);
+      this.separatorTop.setSpace(20);
+
+      this.separatorMiddle = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
       this.separatorMiddle.setVisible(false);
       this.separatorMiddle.setSpace(20);
 
-      this.itemsBox.add_actor(this.separatorMiddle.actor);
-      this.itemsBox.add_actor(this.systemName);
-      this.itemsBox.add_actor(this.itemsSystem);
-      this.scrollActor = new ConfigurableMenus.ScrollItemsBox(parent, this.itemsBox, true, St.Align.START);
-      this.separatorTop = new ConfigurableMenus.ConfigurableSeparatorMenuItem();//St.BoxLayout({ vertical: false, height: 20 });
-      this.separatorTop.setVisible(false);
-      this.separatorTop.setSpace(20);
-      this.internalBox.add_actor(this.separatorTop.actor);
-      this.internalBox.add(this.scrollActor.actor, { y_fill: true, expand: true });
-      this.internalBox.add(this.powerBoxItem, { y_fill: true, expand: true });
+      this.addMenuItem(this.itemsPlaces);
+      this.addMenuItem(this.itemsDevices);
+      this.addMenuItem(this.separatorTop);
+      this.addMenuItem(this.itemsApplications);
+      this.addMenuItem(this.separatorMiddle);
+
+      this.powerBox = new ConfigurableMenus.ConfigurablePopupMenuSection();
+      this.powerBox.setVertical(true);
+      this.actor.add(this.powerBox.actor, { y_fill: true, expand: true });
+
       this.actor._delegate = this;
 
-      this.showRemovable = showRemovable;
       this.idSignalRemovable = 0;
       this._staticSelected = -1;
       this.parent = parent;
       this.hover = hoverIcon;
       this.selectedAppBox = selectedAppBox;
       this.control = controlBox;
-      this.powerBox = powerBox;
+      this.power = powerBox;
       this.vertical = vertical;
       this.iconSize = iconSize;
       this.iconsVisible = true;
@@ -2344,7 +2467,7 @@ AccessibleBox.prototype = {
       this.refreshAccessibleItems();
 
       this.actor.connect('key-focus-in', Lang.bind(this, function(actor, event) {
-         if((this._staticButtons.length > 0)&&(this._staticSelected == -1))
+         if((this.getItems().length > 0)&&(this._staticSelected == -1))
             this._staticSelected = 0;
          this.activeSelected();
       }));
@@ -2353,22 +2476,28 @@ AccessibleBox.prototype = {
       }));
    },
 
+   getItems: function() {
+      let buttoms = new Array();
+      let items = this.itemsPlaces._getMenuItems();
+      for(let pos in items)
+         buttoms.push(items[pos]);
+      items = this.itemsApplications._getMenuItems();
+      for(let pos in items)
+         buttoms.push(items[pos]);
+      return buttoms;
+   },
+
    destroy: function() {
       this.separatorTop.destroy();
       this.separatorMiddle.destroy();
-      for(let i = 0; i < this.itemsDevices.length; i++) {
-         this.itemsDevices[i].destroy();
-      }
-      for(let i = 0; i < this._staticButtons.length; i++) {
-         this._staticButtons[i].destroy();
-      }
+      this.itemsDevices.destroy();
       this.itemsPlaces.destroy();
-      this.itemsSystem.destroy();
+      this.itemsApplications.destroy();
       this.actor.destroy();
    },
 
    updateVisibility: function() {
-      this.hoverBox.visible = this.hover.actor.visible;
+      this.hoverBox.actor.visible = this.hover.actor.visible;
       if((!this.hover.actor.visible)&&(!this.control.actor.visible)) {
           this.separatorTop.actor.visible = false;
       } else {
@@ -2376,41 +2505,8 @@ AccessibleBox.prototype = {
       }
    },
 
-   initItemsRemovables: function() {
-      let any = false;
-      if(this.showRemovable) {
-         try {
-            let mounts = Main.placesManager.getMounts();
-
-            let drive;
-            for(let i = 0; i < mounts.length; i++) {
-               if(mounts[i].isRemovable()) {
-                  drive = new MenuItems.DriveMenuItem(this.parent, this.selectedAppBox, this.hover, mounts[i], this.iconSize, this.iconsVisible);
-                  this.itemsDevices.add_actor(drive.actor);
-                  this._staticButtons.push(drive);
-                  any = true;
-               }
-            }
-         } catch(e) {
-            global.logError(e);
-            Main.notify("ErrorDevice:", e.message);
-         }
-         if(this.idSignalRemovable == 0)
-            this.idSignalRemovable = Main.placesManager.connect('mounts-updated', Lang.bind(this, this.refreshAccessibleItems));
-      } else {
-         if(this.idSignalRemovable > 0) {
-            Main.placesManager.disconnect(this.idSignalRemovable);
-            this.idSignalRemovable = 0;
-         }
-      }
-      this.itemsDevices.visible = any;
-   },
-
-   showRemovableDrives: function(showRemovable) {
-      if(this.showRemovable != showRemovable) {
-         this.showRemovable = showRemovable;
-         this.refreshAccessibleItems();
-      }
+   showRemovableDrives: function(show) {
+      //this.itemsDevices.showRemovable(show);
    },
 
    setSeparatorSpace: function(space) {
@@ -2424,24 +2520,27 @@ AccessibleBox.prototype = {
    },
 
    setNamesVisible: function(visible) {
-      this.placeName.visible = true;
-      this.systemName.visible = true;
+      this.itemsPlaces.setLabelVisible(visible);
+      this.itemsApplications.setLabelVisible(visible);
    },
 
    setIconsVisible: function(visible) {
-      this.iconsVisible = visible;
-      for(let i = 0; i < this._staticButtons.length; i++) {
-         this._staticButtons[i].setIconVisible(visible);
+      let buttoms = this.getItems();
+      if(this.iconsVisible != visible) {
+         this.iconsVisible = visible;
+         for(let i = 0; i < buttoms.length; i++) {
+            buttoms[i].setIconVisible(visible);
+         }
       }
    },
 
    setSpecialColor: function(specialColor) {
       if(specialColor) {
-         this.actor.set_style_class_name('menu-favorites-box');
-         this.actor.add_style_class_name('menu-accessible-box');
+         this.actor.set_style_class_name('menu-accessible-box');
+         this.actor.add_style_class_name('menu-favorites-box');
       }
       else
-         this.actor.set_style_class_name('');
+         this.actor.set_style_class_name('menu-accessible-box');
    },
 
    acceptDrop: function(source, actor, x, y, time) {
@@ -2455,46 +2554,39 @@ AccessibleBox.prototype = {
    },
 
   // closeContextMenus: function(excludeApp, animate) {
-  //    for(let app in this._staticButtons) {
-  //       if((app!=excludeApp)&&(this._staticButtons[app].menu)&&(this._staticButtons[app].menu.isOpen)) {
+  //    let buttoms = this.getItems();
+  //    for(let pos in buttoms) {
+  //       if((app!=excludeApp)&&(buttoms[pos].menu)&&(buttoms[pos].menu.isOpen)) {
   //          if(animate)
-  //             this._staticButtons[app].toggleMenu();
+  //             buttoms[pos].toggleMenu();
   //          else
-  //             this._staticButtons[app].closeMenu();
+  //             buttoms[pos].closeMenu();
   //       }
   //    }
   // },
 
    takeHover: function(take) {
-      let parent = this.hover.actor.get_parent();
-      if(parent) {
-         parent.remove_actor(this.hover.actor);
-      }
+      this.hover.removeFromParentContainer();
       if(take) {
-         this.hoverBox.add(this.hover.actor, { x_fill: false, x_align: St.Align.MIDDLE, expand: true });
-         this.hoverBox.set_style("padding-top: 10px; padding-bottom: 10px;");
+         this.hoverBox.addMenuItem(this.hover, { x_fill: false, x_align: St.Align.MIDDLE, expand: true });
+         this.hoverBox.actor.set_style("padding-top: 10px; padding-bottom: 10px;");
       } else {
-         this.hoverBox.set_style("padding-top: 0px; padding-bottom: 0px;");
+         this.hoverBox.actor.set_style("padding-top: 0px; padding-bottom: 0px;");
       }
       this.hoverBox.visible = take;
    },
 
    takeControl: function(take) {
+      this.control.removeFromParentContainer();
       if(take) {
-         this.controlBox.add(this.control.actor, { x_fill: true, x_align: St.Align.MIDDLE, expand: true });
-      }
-      else if(this.control.actor.get_parent() == this.controlBox) {
-         this.controlBox.remove_actor(this.control.actor);
+         this.controlBox.addMenuItem(this.control, { x_fill: true, x_align: St.Align.MIDDLE, expand: true });
       }
    },
 
    takePower: function(take) {
+      this.power.removeFromParentContainer();
       if(take) {
-         if(this.powerBoxItem.get_children().indexOf(this.powerBox.actor) == -1)
-            this.powerBoxItem.add(this.powerBox.actor, { x_fill: true, y_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.END, expand: true });
-      }
-      else if(this.powerBox.actor.get_parent() == this.powerBoxItem) {
-         this.powerBoxItem.remove_actor(this.powerBox.actor);
+         this.powerBox.addMenuItem(this.power, { x_fill: true, y_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.END, expand: true });
       }
    },
 
@@ -2507,7 +2599,7 @@ AccessibleBox.prototype = {
    },
 
    getFirstElement: function() {
-      let childrens = this.internalBox.get_children();
+      let childrens = this.actor.get_children();
       if(childrens.length > 0) {
          return childrens[0];
       }
@@ -2524,17 +2616,11 @@ AccessibleBox.prototype = {
    },
 
    refreshAccessibleItems: function() {
-      if(this._staticButtons) {
-         for(let i = 0; i < this._staticButtons.length; i++) {
-            this._staticButtons[i].actor.destroy();
-         }
-         this.itemsPlaces.destroy_all_children();
-         this.itemsSystem.destroy_all_children();
-         this.itemsDevices.destroy_all_children();
-      }
-      this._staticButtons = new Array();
+      this.itemsPlaces.removeAll();
+      this.itemsApplications.removeAll();
+
       this.initItemsPlaces();
-      this.initItemsRemovables();
+      //this.itemsDevices.refresh();
       this.initItemsSystem();
       this.setIconsVisible(this.iconsVisible);
       this.parent._updateSize();
@@ -2554,15 +2640,7 @@ AccessibleBox.prototype = {
             menuItemPlace.actor.connect('enter-event', Lang.bind(this, this._appEnterEvent, menuItemPlace));
             //menuItemPlace.connect('enter-event', Lang.bind(this, this._appEnterEvent, menuItemPlace));
             menuItemPlace.actor.connect('leave-event', Lang.bind(this, this._appLeaveEvent, menuItemPlace));
-            this.itemsPlaces.add_actor(menuItemPlace.actor);
-            //if(item.menu)
-               this.itemsPlaces.add_actor(menuItemPlace.menu.actor);
-            //else {//Remplace menu actor by a hide false actor.
-            //   falseActor = new St.BoxLayout();
-            //   falseActor.hide();
-            //   this.itemsPlaces.add_actor(falseActor);
-            //}
-            this._staticButtons.push(menuItemPlace);
+            this.itemsPlaces.addMenuItem(menuItemPlace);
          }
       }
     } catch(e) {
@@ -2581,9 +2659,10 @@ AccessibleBox.prototype = {
    },
 
    setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      for(let i = 0; i < this._staticButtons.length; i++) {
-         this._staticButtons[i].setIconSize(iconSize);
+      if(this.iconSize != iconSize) {
+         this.iconSize = iconSize;
+         this.itemsPlaces.setIconSize(iconSize);
+         this.itemsApplications.setIconSize(iconSize);
       }
    },
 
@@ -2597,15 +2676,14 @@ AccessibleBox.prototype = {
          menuItemFav.actor.connect('enter-event', Lang.bind(this, this._appEnterEvent, menuItemFav));
          menuItemFav.actor.connect('leave-event', Lang.bind(this, this._appLeaveEvent, menuItemFav));
          menuItemFav.actor.set_style_class_name('menu-application-button');
-         this.itemsSystem.add_actor(menuItemFav.actor);
-         this.itemsSystem.add_actor(menuItemFav.menu.actor);
-         this._staticButtons.push(menuItemFav);
+         this.itemsApplications.addMenuItem(menuItemFav);
       }
    },
 
    disableSelected: function() {
-      if((this._staticSelected != -1)&&(this._staticSelected < this._staticButtons.length)) {
-         let selectedBtt = this._staticButtons[this._staticSelected];
+      let buttoms = this.getItems();
+      if((this._staticSelected != -1)&&(this._staticSelected < buttoms.length)) {
+         let selectedBtt = buttoms[this._staticSelected];
          selectedBtt.actor.style_class = "menu-application-button";
       }
       this.selectedAppBox.setSelectedText("", "");
@@ -2613,8 +2691,9 @@ AccessibleBox.prototype = {
    },
 
    activeSelected: function() {
-      if((this._staticSelected != -1)&&(this._staticSelected < this._staticButtons.length)) {
-         let selectedBtt = this._staticButtons[this._staticSelected];
+      let buttoms = this.getItems();
+      if((this._staticSelected != -1)&&(this._staticSelected < buttoms.length)) {
+         let selectedBtt = buttoms[this._staticSelected];
          selectedBtt.actor.style_class = "menu-application-button-selected";
          if(selectedBtt.app.get_description())
             this.selectedAppBox.setSelectedText(selectedBtt.app.get_name(), selectedBtt.app.get_description().split("\n")[0]);
@@ -2629,23 +2708,25 @@ AccessibleBox.prototype = {
    },
 
    executeButtonAction: function(buttonIndex) {
-      if((buttonIndex != -1)&&(buttonIndex < this._staticButtons.length)) {
-         this._staticButtons[buttonIndex].actor._delegate.activate();
+      let buttoms = this.getItems();
+      if((buttonIndex != -1)&&(buttonIndex < buttoms.length)) {
+         buttoms[buttonIndex].actor._delegate.activate();
       }
    },
 
    navegateAccessibleBox: function(symbol, actor) {
-      if((this._staticSelected != -1)&&(this._staticSelected < this._staticButtons.length)) {
+      let buttoms = this.getItems();
+      if((this._staticSelected != -1)&&(this._staticSelected < buttoms.length)) {
          let changerPos = this._staticSelected;
          this.disableSelected();
          if((symbol == Clutter.KEY_Up) || (symbol == Clutter.KEY_Left)) {
             if(changerPos - 1 < 0)
-               this._staticSelected = this._staticButtons.length - 1;
+               this._staticSelected = buttoms.length - 1;
             else
                this._staticSelected = changerPos - 1;
          }
          else if((symbol == Clutter.KEY_Down) || (symbol == Clutter.KEY_Right)) {
-            if(changerPos + 1 < this._staticButtons.length)
+            if(changerPos + 1 < buttoms.length)
                this._staticSelected = changerPos + 1;
             else
                this._staticSelected = 0;
@@ -2653,17 +2734,18 @@ AccessibleBox.prototype = {
             this.executeButtonAction(changerPos);
          }
 
-      } else if(this._staticButtons.length > 0) {
+      } else if(buttoms.length > 0) {
          this._staticSelected = 0;
       }
-      this.scrollActor.scrollToActor(this._staticButtons[this._staticSelected].actor);
+      this.scrollActor.scrollToActor(buttoms[this._staticSelected].actor);
       this.activeSelected();
       return true;
    },
 
    _appEnterEvent: function(actor, event, applicationButton) {
       this.disableSelected();
-      this._staticSelected = this._staticButtons.indexOf(applicationButton);
+      let buttoms = this.getItems();
+      this._staticSelected = buttoms.indexOf(applicationButton);
       this.activeSelected();
    },
 
@@ -2671,3 +2753,4 @@ AccessibleBox.prototype = {
       this.disableSelected();
    }
 };
+Signals.addSignalMethods(AccessibleBox.prototype);

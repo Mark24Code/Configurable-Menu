@@ -1711,6 +1711,20 @@ ConfigurablePopupBaseMenuItem.prototype = {
       }
    },
 
+   getContainer: function() {
+      let parentBox = this.actor.get_parent();
+      if(parentBox && parentBox.delegate) {
+         return parentBox.delegate;
+      }
+      return null;
+   },
+
+   removeFromParentContainer: function() {
+      let containerParent = this.getContainer();
+      if(containerParent)
+         containerParent.removeMenuItem(this);
+   },
+
    _onStyleChanged: function(actor) {
       this._spacing = Math.round(actor.get_theme_node().get_length('spacing'));
    },
@@ -2235,6 +2249,15 @@ ConfigurableBasicPopupMenuItem.prototype = {
       this._icon.set_icon_type(type);
    },
 
+   setIconSize: function(size) {
+      this._icon.set_icon_size(size);
+   },
+
+   setGIcon: function(gicon) {
+      this._icon.visible = ((this._displayIcon) && (gicon != null));
+      this._icon.gicon = gicon;
+   },
+
    desaturateItemIcon: function(desaturate) {
       if(this._desaturateIcon != desaturate) {
          this._desaturateIcon = desaturate;
@@ -2243,11 +2266,6 @@ ConfigurableBasicPopupMenuItem.prototype = {
          else
             this._icon.remove_effect_by_name("desaturate");
       }
-   },
-
-   setGIcon: function(gicon) {
-      this._icon.visible = ((this._displayIcon) && (gicon != null));
-      this._icon.gicon = gicon;
    },
 
    destroy: function() {
@@ -2361,8 +2379,9 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       this._openMenuOnActivation = false;
       this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
       this._withMenu = withMenu;
+      this._floatingMenu = false;
       if(this._withMenu) {
-         let menu = new ConfigurableMenu(this, 0.0, St.Side.LEFT, false);
+         let menu = new ConfigurableMenu(this, 0.0, St.Side.LEFT, this._floatingMenu);
          this.setMenu(menu);
       }
    },
@@ -2383,6 +2402,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
          this.emit('menu-changed', oldMenu, this.menu);
          if(oldMenu && this._withMenu)
             oldMenu.destroy();
+         this.setFloatingSubMenu(this._floatingMenu);
       }
    },
 
@@ -2416,6 +2436,15 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       });
       return arrow;
    },
+
+   setFloatingSubMenu: function(floating) {
+      if(this._floatingMenu != floating) {
+         this._floatingMenu = floating;
+         if(this.menu && this.menu.setFloatingState)
+            this.menu.setFloatingState(floating);
+      }
+   },
+
 
    openMenuOnActivation: function(open) {
       this._openMenuOnActivation = open;
@@ -3164,7 +3193,20 @@ ConfigurablePopupMenuBase.prototype = {
       } else {
          this.box = new St.BoxLayout({ vertical: true });
       }
+      // Hack: The St.BoxLayout have not a way to insert an actor and set parameters directly.
+      if(!this.box.insert_below) {
+         this.box.insert_below = Lang.bind(this, function(actor, beforeActor, params) {
+            this.box.insert_child_below(actor, beforeActor);
+            if(params) {
+               for(let key in params) {
+                  this.box.child_set_property(actor, key, params[key]);
+               }
+            }
+         });
+      }
+
       this.box.connect_after('queue-relayout', Lang.bind(this, this._menuQueueRelayout));
+      this.box.delegate = this;
       this.length = 0;
 
       this.isOpen = false;
@@ -3340,17 +3382,17 @@ ConfigurablePopupMenuBase.prototype = {
       menuItem.actor.show();
    },
 
-   addMenuItem: function(menuItem, position) {
+   addMenuItem: function(menuItem, params, position) {
       let before_item = null;
       if(position == undefined) {
-         this.box.add(menuItem.actor);
+         this.box.add(menuItem.actor, params);
       } else {
          let items = this._getMenuItems();
          if(position < items.length) {
             before_item = items[position].actor;
-            this.box.insert_child_below(menuItem.actor, before_item);
+            this.box.insert_below(menuItem.actor, before_item, params);
          } else
-            this.box.add(menuItem.actor);
+            this.box.add(menuItem.actor, params);
       }
       if(menuItem instanceof ConfigurablePopupMenuSection) {
          this._connectSubMenuSignals(menuItem, menuItem);
@@ -3378,6 +3420,17 @@ ConfigurablePopupMenuBase.prototype = {
       this.length++;
    },
 
+   removeMenuItem: function(menuItem) {
+      if(menuItem.actor.get_parent() == this.box) {
+         if(menuItem.menu && menuItem.menu.actor.get_parent() == this.box) {
+            this.box.remove_actor(menuItem.menu.actor);
+            this._disconnectSubMenuSignals(menuItem, menuItem.menu);
+         }
+         this.box.remove_actor(menuItem.actor);
+         this._disconnectItemSignals(menuItem);
+      }
+   },
+
    _onMenuChanged: function(menuItem, oldMenu) {
       if(oldMenu) {
          this._disconnectSubMenuSignals(menuItem, oldMenu);
@@ -3386,10 +3439,8 @@ ConfigurablePopupMenuBase.prototype = {
       }
       if(menuItem.menu) {
          if(!this._isFloating(menuItem.menu))
-            this.box.insert_before(menuItem.menu.actor, menuItem.actor);
+            this.box.insert_child_above(menuItem.menu.actor, menuItem.actor);
          this._connectSubMenuSignals(menuItem, menuItem.menu);
-         this._connectSubMenuSignals(menuItem, menuItem.menu);
-         this._connectItemSignals(menuItem);
          menuItem._closingId = this.connect('open-state-changed', function(self, open) {
             if(!open && menuItem.menu)
                menuItem.menu.close(false);
@@ -3844,7 +3895,7 @@ ConfigurableMenu.prototype = {
                 let position = items.indexOf(this.launcher) + 1;
                 if((position != 0) && (position < items.length)) {
                     let beforeItem = items[position].actor;
-                    box.insert_before(this.actor, beforeItem);
+                    box.insert_child_above(this.actor, beforeItem);
                 } else {
                     box.add(this.actor);
                 }
@@ -3870,7 +3921,7 @@ ConfigurableMenu.prototype = {
 
    _setMenuInPosition: function(menuItem) {
       if(menuItem.menu && (!menuItem.menu.isInFloatingState || !menuItem.menu.isInFloatingState())) {
-         this.box.insert_before(menuItem.menu.actor, menuItem.actor);
+         this.box.insert_child_above(menuItem.menu.actor, menuItem.actor);
       }
    },
 
@@ -4473,11 +4524,11 @@ ConfigurableMenu.prototype = {
       return this._isInResizeMode;
    },
 
-   addMenuItem: function(menuItem, position) {
+   addMenuItem: function(menuItem, params, position) {
       this._setShowItemIcon(menuItem);
       this._setDesaturateItemIcon(menuItem);
       this._setVectorBox(menuItem);
-      ConfigurablePopupMenuBase.prototype.addMenuItem.call (this, menuItem, position);
+      ConfigurablePopupMenuBase.prototype.addMenuItem.call (this, menuItem, params, position);
    },
 
    removeItem: function(menuItem) {
@@ -4784,6 +4835,20 @@ ConfigurablePopupMenuSection.prototype = {
       this.idSignalMapped = this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
    },
 
+   getContainer: function() {
+      let parentBox = this.actor.get_parent();
+      if(parentBox && parentBox.delegate) {
+         return parentBox.delegate;
+      }
+      return null;
+   },
+
+   removeFromParentContainer: function() {
+      let containerParent = this.getContainer();
+      if(containerParent)
+         containerParent.removeMenuItem(this);
+   },
+
    _onMapped: function() {
       this._topMenu = this._getTopMenu(this.actor.get_parent());
    },
@@ -4836,11 +4901,11 @@ ConfigurablePopupMenuSection.prototype = {
       return this._activeMenuItem;
    },
 
-   addMenuItem: function(menuItem, position) {
+   addMenuItem: function(menuItem, params, position) {
       this._setShowItemIcon(menuItem);
       this._setDesaturateItemIcon(menuItem);
       this._setVectorBox(menuItem);
-      ConfigurablePopupMenuBase.prototype.addMenuItem.call(this, menuItem, position);
+      ConfigurablePopupMenuBase.prototype.addMenuItem.call(this, menuItem, params, position);
    },
 
    _onMenuChanged: function(menuItem, oldMenu) {
@@ -4850,8 +4915,9 @@ ConfigurablePopupMenuSection.prototype = {
             this.box.remove_actor(oldMenu.actor);
       }
       if(menuItem.menu) {
-         if(!this._isFloating(menuItem.menu))
-            this.box.insert_before(menuItem.menu.actor, menuItem.actor);
+         if(!this._isFloating(menuItem.menu)) {
+            this.box.insert_child_above(menuItem.menu.actor, menuItem.actor);
+         }
          this._connectSubMenuSignals(menuItem, menuItem.menu);
       }
    },
@@ -4973,6 +5039,30 @@ ConfigurablePopupMenuSection.prototype = {
          this.actor = null;
       }
    }
+};
+
+function ConfigurablePopupMenuBox() {
+   this._init.apply(this, arguments);
+}
+
+ConfigurablePopupMenuBox.prototype = {
+   __proto__: ConfigurablePopupMenuSection.prototype,
+
+   _init: function(label) {
+      ConfigurablePopupMenuSection.prototype._init.call(this);
+      this.actor = new St.BoxLayout({ vertical: true });
+      this.label = new St.Label({ text: label });
+      this.actor.add(this.label, { expand: true });
+      this.actor.add(this.box, { expand: true });
+   },
+
+   setLabelStyle: function(style_class) {
+      this.label.style_class = style_class;
+   },
+
+   setLabelVisible: function(visible) {
+      this.label.visible = visible;
+   },
 };
 
 function ConfigurableSeparatorMenuItem() {
@@ -5210,9 +5300,9 @@ ConfigurableGridSection.prototype = {
    sortMenuItems: function(pattern, sortType, appsUsage) {
    },
 
-   addMenuItem: function(menuItem, position) {
+   addMenuItem: function(menuItem, params, position) {
       this._relayoutBlocked = true;
-      ConfigurablePopupMenuSection.prototype.addMenuItem.call(this, menuItem, position);
+      ConfigurablePopupMenuSection.prototype.addMenuItem.call(this, menuItem, params, position);
       let width = menuItem.actor.width;
       if(this._maxActorWidth < width)
          this._maxActorWidth = width;
@@ -5540,7 +5630,7 @@ ConfigurableGridSection.prototype = {
                let index = child.indexOf(this._visibleItems[i].actor);
                if(index != -1) {
                   if(index+1 < child.length)
-                     parent.insert_before(this._visibleItems[i].menu.actor, child[index+1]);
+                     parent.insert_child_before(this._visibleItems[i].menu.actor, child[index+1]);
                   else
                      parent.add_actor(this._visibleItems[i].menu.actor);
                }
@@ -5595,19 +5685,19 @@ ConfigurableGridSection.prototype = {
        let viewBox = appBox[x].get_children();
        let beforeItem = viewBox[2*y];
        if(beforeItem)
-          appBox[x].insert_before(menuItem.actor, beforeItem);
+          appBox[x].insert_child_before(menuItem.actor, beforeItem);
        else
           appBox[x].add_actor(menuItem.actor);
        if(menuItem.menu) {
           if(beforeItem)
-             appBox[x].insert_before(menuItem.menu.actor, beforeItem);
+             appBox[x].insert_child_before(menuItem.menu.actor, beforeItem);
           else
              appBox[x].add_actor(menuItem.menu.actor);
        } else {//Remplace menu actor by a hide false actor.
           falseActor = new St.BoxLayout();
           falseActor.hide();
           if(beforeItem)
-             appBox[x].insert_before(falseActor, beforeItem);
+             appBox[x].insert_child_before(falseActor, beforeItem);
           else
              appBox[x].add_actor(falseActor);
        }
@@ -5701,12 +5791,17 @@ ConfigurableGridSection.prototype = {
       this._relayoutBlocked = false;
 
       this.box = new Cinnamon.GenericContainer();
-      if(!this.box.insert_before) {
-         this.box.insert_before = Lang.bind(this, function(actor, beforeActor) {
+      if(!this.box.insert_child_below) {
+         this.box.insert_child_below = Lang.bind(this, function(actor, beforeActor) {
             let childs = this.box.get_children();
             let position = childs.indexOf(beforeActor);
             if(position != -1)
                this.box.insert_child_at_index(actor, position);
+         });
+      }
+      if(!this.box.insert_below) {
+         this.box.insert_below = Lang.bind(this, function(actor, beforeActor, params) {
+            this.box.insert_child_below(actor, beforeActor);
          });
       }
       if(!this.box.add) {
@@ -5756,8 +5851,8 @@ ConfigurableGridSection.prototype = {
    sortMenuItems: function(search, searchSorted, appsUsage) {
    },
 
-   addMenuItem: function(menuItem, position) {
-      ConfigurablePopupMenuSection.prototype.addMenuItem.call(this, menuItem, position);
+   addMenuItem: function(menuItem, params, position) {
+      ConfigurablePopupMenuSection.prototype.addMenuItem.call(this, menuItem, params, position);
       if(this._maxActorWidth < menuItem.actor.width)
          this._maxActorWidth = menuItem.actor.width;
       if(this._maxActorHeight < menuItem.actor.height)
@@ -6231,12 +6326,17 @@ ConfigurableGridSection.prototype = {
       this._viewPort = null;
 
       this.box = new Cinnamon.GenericContainer();
-      if(!this.box.insert_before) {
-         this.box.insert_before = Lang.bind(this, function(actor, beforeActor) {
+      if(!this.box.insert_child_below) {
+         this.box.insert_child_below = Lang.bind(this, function(actor, beforeActor) {
             let childs = this.box.get_children();
             let position = childs.indexOf(beforeActor);
             if(position != -1)
                this.box.insert_child_at_index(actor, position);
+         });
+      }
+      if(!this.box.insert_below) {
+         this.box.insert_below = Lang.bind(this, function(actor, beforeActor, params) {
+            this.box.insert_child_below(actor, beforeActor);
          });
       }
       if(!this.box.add) {
@@ -6328,8 +6428,8 @@ ConfigurableGridSection.prototype = {
    sortMenuItems: function(search, searchSorted, appsUsage) {
    },
 
-   addMenuItem: function(menuItem, position) {
-      ConfigurablePopupMenuSection.prototype.addMenuItem.call(this, menuItem, position);
+   addMenuItem: function(menuItem, params, position) {
+      ConfigurablePopupMenuSection.prototype.addMenuItem.call(this, menuItem, params, position);
       if(this._maxActorWidth < menuItem.actor.width)
          this._maxActorWidth = menuItem.actor.width;
       if(this._maxActorHeight < menuItem.actor.height)
@@ -7098,18 +7198,18 @@ ConfigurableMenuApplet.prototype = {
       return this._openOnHover;
    },
 
-   addMenuItem: function(menuItem, position) {
+   addMenuItem: function(menuItem, params, position) {
       if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          let beforeItem = null;
          if(position == undefined) {
-            this.box.add(menuItem.actor);
+            this.box.add(menuItem.actor, params);
          } else {
             let items = this._getMenuItems();
             if(position < items.length) {
                beforeItem = items[position].actor;
-               this.box.insert_before(menuItem.actor, beforeItem);
+               this.box.insert_below(menuItem.actor, beforeItem, params);
             } else
-               this.box.add(menuItem.actor);
+               this.box.add(menuItem.actor, params);
          }
          menuItem.connect('menu-changed', Lang.bind(this, function(menuItem, oldMenu) { this._onMenuChanged(menuItem, oldMenu); }));
          this._onMenuChanged(menuItem, menuItem.menu);
@@ -7131,7 +7231,7 @@ ConfigurableMenuApplet.prototype = {
          menuItem._pressId = menuItem.actor.connect('button-press-event', Lang.bind(this, this._onButtonPressEvent));
          menuItem._notifyHoverId = menuItem.actor.connect('notify::hover', Lang.bind(this, this._onMenuItemHoverChanged));
       } else {
-         ConfigurableMenu.prototype.addMenuItem.call(this, menuItem, position);
+         ConfigurableMenu.prototype.addMenuItem.call(this, menuItem, params, position);
       }
    },
 
@@ -8159,10 +8259,10 @@ MenuFactory.prototype = {
       let shellItem = factoryItem.getShellItem();
       if(shellItem) {
          if(shellItem instanceof ConfigurablePopupSubMenuMenuItem) {
-            shellItem.menu.addMenuItem(this._createItem(child), position, "factor");
+            shellItem.menu.addMenuItem(this._createItem(child), null, position);
          } else if((shellItem instanceof ConfigurablePopupMenuSection) ||
                     (shellItem instanceof ConfigurableMenu)) {
-            shellItem.addMenuItem(this._createItem(child), position);
+            shellItem.addMenuItem(this._createItem(child), null, position);
          } else {
             global.logWarning("Tried to add a child to non-submenu item. Better recreate it as whole");
             this._onTypeChanged(factoryItem);
@@ -8220,7 +8320,7 @@ MenuFactory.prototype = {
       if(parentMenu) {
          // Add our new self
          let newShellItem = this._createItem(factoryItem);
-         parentMenu.addMenuItem(newShellItem, pos);
+         parentMenu.addMenuItem(newShellItem, null, pos);
       }
    },
 
