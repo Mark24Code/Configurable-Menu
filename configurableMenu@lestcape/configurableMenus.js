@@ -1713,8 +1713,10 @@ ConfigurablePopupBaseMenuItem.prototype = {
 
    getContainer: function() {
       let parentBox = this.actor.get_parent();
-      if(parentBox && parentBox.delegate) {
-         return parentBox.delegate;
+      while(parentBox) {
+         if(parentBox._delegate)
+             return parentBox._delegate;
+         parentBox = parentBox.get_parent();
       }
       return null;
    },
@@ -2235,7 +2237,7 @@ ConfigurableBasicPopupMenuItem.prototype = {
       this.preserveSelection = preserve;
    },
 
-   setShowItemIcon: function(show) {
+   setIconVisible: function(show) {
       this._displayIcon = show;
       this._icon.visible = (this._displayIcon)&&(this.haveIcon());
    },
@@ -2454,7 +2456,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       return (this._icon && ((this._icon.icon_name && this._icon.icon_name != "") || (this._icon.gicon)));
    },
 
-   setShowItemIcon: function(show) {
+   setIconVisible: function(show) {
       if(this._displayIcon != show) {
          this._displayIcon = show;
          if(this._icon)
@@ -2715,8 +2717,8 @@ ConfigurableMenuManager.prototype = {
             menu.showBoxPointer(this._showBoxPointer);
          if(menu.fixToCorner)
             menu.fixToCorner(this._alignSubMenu);
-         if(menu.setShowItemIcon)
-            menu.setShowItemIcon(this._showItemIcon);
+         if(menu.setIconVisible)
+            menu.setIconVisible(this._showItemIcon);
          if(menu.desaturateItemIcon)
             menu.desaturateItemIcon(this._desaturateItemIcon);
          if(menu.setEffect)
@@ -3039,12 +3041,12 @@ ConfigurableMenuManager.prototype = {
       }
    },
 
-   setShowItemIcon: function(show) {
+   setIconVisible: function(show) {
       if(this._showItemIcon != show) {
          this._showItemIcon = show;
          for(let pos in this._menus) {
-            if(this._menus[pos].menu.setShowItemIcon)
-               this._menus[pos].menu.setShowItemIcon(this._showItemIcon);
+            if(this._menus[pos].menu.setIconVisible)
+               this._menus[pos].menu.setIconVisible(this._showItemIcon);
          }
       }
    },
@@ -3206,7 +3208,6 @@ ConfigurablePopupMenuBase.prototype = {
       }
 
       this.box.connect_after('queue-relayout', Lang.bind(this, this._menuQueueRelayout));
-      this.box.delegate = this;
       this.length = 0;
 
       this.isOpen = false;
@@ -3387,7 +3388,7 @@ ConfigurablePopupMenuBase.prototype = {
       if(position == undefined) {
          this.box.add(menuItem.actor, params);
       } else {
-         let items = this._getMenuItems();
+         let items = this.getMenuItems();
          if(position < items.length) {
             before_item = items[position].actor;
             this.box.insert_below(menuItem.actor, before_item, params);
@@ -3481,7 +3482,7 @@ ConfigurablePopupMenuBase.prototype = {
       this.box.add(actor);
    },
 
-   _getMenuItems: function() {
+   getMenuItems: function() {
       return this.box.get_children().map(function(actor) {
          return actor._delegate;
       }).filter(function(item) {
@@ -3490,7 +3491,7 @@ ConfigurablePopupMenuBase.prototype = {
    },
 
    get firstMenuItem() {
-      let items = this._getMenuItems();
+      let items = this.getMenuItems();
       if(items.length)
          return items[0];
       else
@@ -3498,11 +3499,11 @@ ConfigurablePopupMenuBase.prototype = {
    },
 
    get numMenuItems() {
-      return this._getMenuItems().length;
+      return this.getMenuItems().length;
    },
 
    removeAll: function() {
-      let children = this._getMenuItems();
+      let children = this.getMenuItems();
       for(let i = 0; i < children.length; i++) {
          let item = children[i];
          item.destroy();
@@ -3638,7 +3639,7 @@ ConfigurableMenu.prototype = {
       }
    },
 
-   _getMenuItems: function() {
+   getMenuItems: function() {
       return this.box.get_children().map(function(actor) {
          return actor._delegate;
       }).filter(function(item) {
@@ -3891,7 +3892,7 @@ ConfigurableMenu.prototype = {
             if(parent)
                parent.remove_actor(this.actor);
             if((box._delegate)&&(box._delegate instanceof ConfigurablePopupMenuBase)) {
-                let items = box._delegate._getMenuItems();
+                let items = box._delegate.getMenuItems();
                 let position = items.indexOf(this.launcher) + 1;
                 if((position != 0) && (position < items.length)) {
                     let beforeItem = items[position].actor;
@@ -3934,13 +3935,13 @@ ConfigurableMenu.prototype = {
           menuItem.desaturateItemIcon(this._desaturateItemIcon);
    },
 
-   _setShowItemIcon: function(menuItem) {
+   _setIconVisible: function(menuItem) {
       if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu && menuItem.menu.setShowItemIcon)
-             menuItem.menu.setShowItemIcon(this._showItemIcon);
+         if(menuItem.menu && menuItem.menu.setIconVisible)
+             menuItem.menu.setIconVisible(this._showItemIcon);
       }
-      if(menuItem.setShowItemIcon)
-         menuItem.setShowItemIcon(this._showItemIcon);
+      if(menuItem.setIconVisible)
+         menuItem.setIconVisible(this._showItemIcon);
    },
 
    _on_paint: function(actor) {
@@ -4424,7 +4425,7 @@ ConfigurableMenu.prototype = {
       if(active != this.active) {
          this.active = active;
          if(this.active) {
-            let items = this._getMenuItems();
+            let items = this.getMenuItems();
             for(let pos in items) {
                if(items[pos].actor.visible && items[pos].setActive) {
                   items[pos].setActive(true);
@@ -4525,7 +4526,7 @@ ConfigurableMenu.prototype = {
    },
 
    addMenuItem: function(menuItem, params, position) {
-      this._setShowItemIcon(menuItem);
+      this._setIconVisible(menuItem);
       this._setDesaturateItemIcon(menuItem);
       this._setVectorBox(menuItem);
       ConfigurablePopupMenuBase.prototype.addMenuItem.call (this, menuItem, params, position);
@@ -4559,7 +4560,7 @@ ConfigurableMenu.prototype = {
    },
 
    clearAll: function() {
-      let children = this._getMenuItems();
+      let children = this.getMenuItems();
       children.map(function(child) {
          this.removeItem(child);
       }, this);
@@ -4588,13 +4589,13 @@ ConfigurableMenu.prototype = {
       return 1;
    },
 
-   setShowItemIcon: function(show) {
+   setIconVisible: function(show) {
       if(this._showItemIcon != show) {
          this._showItemIcon = show;
-         let items = this._getMenuItems();
+         let items = this.getMenuItems();
          for(let pos in items) {
             let menuItem = items[pos];
-            this._setShowItemIcon(menuItem);
+            this._setIconVisible(menuItem);
          }
       }
    },
@@ -4602,7 +4603,7 @@ ConfigurableMenu.prototype = {
    desaturateItemIcon: function(desaturate) {
       if(this._desaturateItemIcon != desaturate) {
          this._desaturateItemIcon = desaturate;
-         let items = this._getMenuItems();
+         let items = this.getMenuItems();
          for(let pos in items) {
             let menuItem = items[pos];
             this._setDesaturateItemIcon(menuItem);
@@ -4837,8 +4838,10 @@ ConfigurablePopupMenuSection.prototype = {
 
    getContainer: function() {
       let parentBox = this.actor.get_parent();
-      if(parentBox && parentBox.delegate) {
-         return parentBox.delegate;
+      while(parentBox) {
+         if(parentBox._delegate)
+             return parentBox._delegate;
+         parentBox = parentBox.get_parent();
       }
       return null;
    },
@@ -4870,7 +4873,7 @@ ConfigurablePopupMenuSection.prototype = {
       return null;
    },
 
-   _getMenuItems: function() {
+   getMenuItems: function() {
       return this.box.get_children().map(function(actor) {
          return actor._delegate;
       }).filter(function(item) {
@@ -4887,7 +4890,7 @@ ConfigurablePopupMenuSection.prototype = {
       if(active != this.active) {
          this.active = active;
          if(this.active) {
-            let items = this._getMenuItems();
+            let items = this.getMenuItems();
             for(let pos in items) {
                if(items[pos].actor.visible && items[pos].setActive) {
                   items[pos].setActive(true);
@@ -4902,7 +4905,7 @@ ConfigurablePopupMenuSection.prototype = {
    },
 
    addMenuItem: function(menuItem, params, position) {
-      this._setShowItemIcon(menuItem);
+      this._setIconVisible(menuItem);
       this._setDesaturateItemIcon(menuItem);
       this._setVectorBox(menuItem);
       ConfigurablePopupMenuBase.prototype.addMenuItem.call(this, menuItem, params, position);
@@ -4962,7 +4965,7 @@ ConfigurablePopupMenuSection.prototype = {
    },
 
    clearAll: function() {
-      let children = this._getMenuItems();
+      let children = this.getMenuItems();
       children.map(function(child) {
          this.removeItem(child);
       }, this);
@@ -4978,13 +4981,13 @@ ConfigurablePopupMenuSection.prototype = {
       }
    },
 
-   setShowItemIcon: function(show) {
+   setIconVisible: function(show) {
       if(this._showItemIcon != show) {
          this._showItemIcon = show;
-         let items = this._getMenuItems();
+         let items = this.getMenuItems();
          for(let pos in items) {
             let menuItem = items[pos];
-            this._setShowItemIcon(menuItem);
+            this._setIconVisible(menuItem);
          }
       }
    },
@@ -4992,7 +4995,7 @@ ConfigurablePopupMenuSection.prototype = {
    desaturateItemIcon: function(desaturate) {
       if(this._desaturateItemIcon != desaturate) {
          this._desaturateItemIcon = desaturate;
-         let items = this._getMenuItems();
+         let items = this.getMenuItems();
          for(let pos in items) {
             let menuItem = items[pos];
             this._setDesaturateItemIcon(menuItem);
@@ -5024,13 +5027,13 @@ ConfigurablePopupMenuSection.prototype = {
           menuItem.desaturateItemIcon(this._desaturateItemIcon);
    },
 
-   _setShowItemIcon: function(menuItem) {
+   _setIconVisible: function(menuItem) {
       if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu && menuItem.menu.setShowItemIcon)
-             menuItem.menu.setShowItemIcon(this._showItemIcon);
+         if(menuItem.menu && menuItem.menu.setIconVisible)
+             menuItem.menu.setIconVisible(this._showItemIcon);
       }
-      if(menuItem.setShowItemIcon)
-         menuItem.setShowItemIcon(this._showItemIcon);
+      if(menuItem.setIconVisible)
+         menuItem.setIconVisible(this._showItemIcon);
    },
 
    destroy: function() {
@@ -5165,7 +5168,7 @@ ArrayBoxLayout.prototype = {
       if(active != this.active) {
          this.active = active;
          if(this.active) {
-            let items = this._getMenuItems();
+            let items = this.getMenuItems();
             for(let pos in items) {
                if(items[pos].actor.visible && items[pos].setActive) {
                   items[pos].setActive(true);
@@ -5182,7 +5185,7 @@ ArrayBoxLayout.prototype = {
    contains: function(actor) {
       if(this.actor.contains(actor))
          return true;
-      let menuItems = this._getMenuItems();
+      let menuItems = this.getMenuItems();
       for(let pos in menuItems) {
          if(menuItems[pos].contains && menuItems[pos].contains(actor))
             return true;
@@ -5191,7 +5194,7 @@ ArrayBoxLayout.prototype = {
    },
 
    getFirstVisible: function() {
-      let menuItems = this._getMenuItems();
+      let menuItems = this.getMenuItems();
       for(let pos in menuItems) {
           if(menuItems[pos].getFirstVisible)
              return menuItems[pos].getFirstVisible();
@@ -5201,7 +5204,7 @@ ArrayBoxLayout.prototype = {
 
    isInBorder: function(symbol, actor) {
       if(actor) {
-         let menuItems = this._getMenuItems();
+         let menuItems = this.getMenuItems();
          for(let pos in menuItems) {
             if(menuItems[pos].contains(actor)) {
                return menuItems[pos].isInBorder(symbol, actor);
@@ -5213,7 +5216,7 @@ ArrayBoxLayout.prototype = {
 
    navegate: function(symbol, actor) {
       if(actor) {
-         let menuItems = this._getMenuItems();
+         let menuItems = this.getMenuItems();
          for(let pos in menuItems) {
             if(menuItems[pos].contains(actor)) {
                return menuItems[pos].navegate(symbol, actor);
@@ -5912,7 +5915,7 @@ ConfigurableGridSection.prototype = {
       }));
    },
 
-   _getMenuItems: function() {
+   getMenuItems: function() {
       Main.notify("call" + this._menuItems.length);
       return this._menuItems;//this._visibleItems;
    },   
@@ -6506,7 +6509,7 @@ ConfigurableGridSection.prototype = {
       }));
    },
 
-   _getMenuItems: function() {
+   getMenuItems: function() {
       return this._menuItems;//this._visibleItems;
    },   
 
@@ -6852,7 +6855,7 @@ ConfigurableGridSection.prototype = {
    contains: function(actor) {
       if(this.actor.contains(actor))
          return true;
-      let menuItems = this._getMenuItems();
+      let menuItems = this.getMenuItems();
       for(let pos in menuItems) {
          if(menuItems[pos].contains && menuItems[pos].contains(actor))
             return true;
@@ -7040,12 +7043,12 @@ ConfigurableMenuApplet.prototype = {
          this.box.set_vertical(false);
          this._scroll.set_style_class_name('');
       }
-      let items = this._getMenuItems();
+      let items = this.getMenuItems();
       for(let pos in items) {
          let menuItem = items[pos];
          if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
             this._setMenuInPosition(menuItem);
-            this._setShowItemIcon(menuItem);
+            this._setIconVisible(menuItem);
             if(menuItem.menu)
                menuItem.menu.fixToCorner(menuItem.menu.fixCorner);
          }
@@ -7110,7 +7113,7 @@ ConfigurableMenuApplet.prototype = {
          } else {
             if(!this.isOpen)
                this.open(animate);
-            let items = this._getMenuItems();
+            let items = this.getMenuItems();
             let menuItem = null;
             for(let pos in items) {
                menuItem = items[pos];
@@ -7131,7 +7134,7 @@ ConfigurableMenuApplet.prototype = {
          if(this._floating) {
             this.close(animate);
          } else {
-            let items = this._getMenuItems();
+            let items = this.getMenuItems();
             for(let pos in items) {
                let menuItem = items[pos];
                if((menuItem instanceof ConfigurablePopupSubMenuMenuItem) && menuItem.menu) {
@@ -7204,7 +7207,7 @@ ConfigurableMenuApplet.prototype = {
          if(position == undefined) {
             this.box.add(menuItem.actor, params);
          } else {
-            let items = this._getMenuItems();
+            let items = this.getMenuItems();
             if(position < items.length) {
                beforeItem = items[position].actor;
                this.box.insert_below(menuItem.actor, beforeItem, params);
@@ -7224,7 +7227,7 @@ ConfigurableMenuApplet.prototype = {
          });
          this._connectItemSignals(menuItem);
          this._setMenuInPosition(menuItem);
-         this._setShowItemIcon(menuItem);
+         this._setIconVisible(menuItem);
          this._setDesaturateItemIcon(menuItem);
          if(menuItem.menu)
             this.addChildMenu(menuItem.menu);
@@ -7341,14 +7344,14 @@ ConfigurableMenuApplet.prototype = {
           menuItem.desaturateItemIcon(this._desaturateItemIcon);
    },
 
-   _setShowItemIcon: function(menuItem) {
+   _setIconVisible: function(menuItem) {
       if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu && menuItem.menu.setShowItemIcon)
-             menuItem.menu.setShowItemIcon(this._showItemIcon);
-         if(menuItem.setShowItemIcon)
-             menuItem.setShowItemIcon((this._showItemIcon)&&(this._floating));
-      } else if(menuItem.setShowItemIcon)
-         menuItem.setShowItemIcon(this._showItemIcon);
+         if(menuItem.menu && menuItem.menu.setIconVisible)
+             menuItem.menu.setIconVisible(this._showItemIcon);
+         if(menuItem.setIconVisible)
+             menuItem.setIconVisible((this._showItemIcon)&&(this._floating));
+      } else if(menuItem.setIconVisible)
+         menuItem.setIconVisible(this._showItemIcon);
    },
 
    _setMenuInPosition: function(menuItem) {
@@ -7994,7 +7997,7 @@ PopupMenuAbstractFactory.prototype = {
    },
 
    _closeAllSubmenuChilds: function(menu) {
-      let childs = this._getMenuItems(menu);
+      let childs = this.getMenuItems(menu);
       let child;
       for(let i in childs) {
          child = childs[i];
@@ -8019,7 +8022,7 @@ PopupMenuAbstractFactory.prototype = {
       return null;
    },
 
-   _getMenuItems: function(menu) {
+   getMenuItems: function(menu) {
       return menu.box.get_children().map(Lang.bind(this, function(actor) {
          return actor._delegate;
       }));
@@ -8306,7 +8309,7 @@ MenuFactory.prototype = {
       // First, we need to find our old position
       let pos = -1;
       if((parentMenu)&&(shellItem)) {
-         let family = parentMenu._getMenuItems();
+         let family = parentMenu.getMenuItems();
          for(let i = 0; i < family.length; ++i) {
             if(family[i] == shellItem)
                pos = i;
@@ -8329,7 +8332,7 @@ MenuFactory.prototype = {
       // First, find our wrapper. Children tend to lie. We do not trust the old positioning.
       let shellItem = factoryItem.getShellItem();
       if(shellItem) {
-         let family = menu._getMenuItems();
+         let family = menu.getMenuItems();
          for(let i = 0; i < family.length; ++i) {
             if(family[i] == shellItem) {
                // Now, remove it

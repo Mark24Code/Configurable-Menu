@@ -371,17 +371,18 @@ FavoritesBoxExtended.prototype = {
       this._firstElement = null;
       this.scrollBox = new ConfigurableMenus.ScrollItemsBox(this, this.box, vertical, St.Align.START);
       this.actor = this.scrollBox.actor;
-      this.actor.add(this.box);
-      //this.actor._delegate = this;
+      this.actor._delegate = this;
       this.linesDragPlaces = new Array();
       let internalLine;
       for(let i = 0; i < numberLines; i++) {
          internalLine = new FavoritesBoxLine(this, !vertical);
          this.linesDragPlaces.push(internalLine);
-         this.box.add(internalLine.actor, { x_align: St.Align.MIDDLE, y_align: St.Align.START, x_fill: true, y_fill: false, expand: true });
+         ConfigurableMenus.ConfigurablePopupMenuSection.prototype.addMenuItem.call( this, internalLine, {
+             x_align: St.Align.MIDDLE, y_align: St.Align.START, x_fill: false, y_fill: false, expand: true
+         });
       }
-
-      this.box.set_vertical(vertical);
+      //Important!!! this only work in that way:
+      this.box.set_vertical(false);
       this.setVertical(vertical);
    },
 
@@ -393,14 +394,9 @@ FavoritesBoxExtended.prototype = {
       this._lastFocus = global.stage.get_key_focus();
    },
 
-   _addInCorrectBox: function(box, actor, menu, properties) {
-      box.add(actor, properties);
-      box.add_actor(menu.actor);
-   },
-
-   _navegateFocusOut: function(linesDragPlaces) {
+   _navegateFocusOut: function(actor) {
       let focus = global.stage.get_key_focus();
-      if(linesDragPlaces.actor.contains(focus)) {
+      if(actor.contains(focus)) {
          if(this._lastFocus)
             this._lastFocus.grab_key_focus();
          else
@@ -466,47 +462,39 @@ FavoritesBoxExtended.prototype = {
 
    setNumberLines: function(numberLines) {
       let childrens;
-      let saveItems = new Array();
       for(let i = 0; i < this.linesDragPlaces.length; i++) {
-         childrens = this.linesDragPlaces[i].actor.get_children();
+         childrens = this.linesDragPlaces[i].getMenuItems();
          for(let j = 0; j < childrens.length; j++) {
-            saveItems.push(childrens[j]);
-            this.linesDragPlaces[i].actor.remove_actor(childrens[j]);
+            this.linesDragPlaces[i].removeItem(childrens[j]);
          }
       }
       let internalLine;
       for(let i = this.linesDragPlaces.length; i < numberLines; i++) {
          internalLine = new FavoritesBoxLine(this, this.isVertical());
          this.linesDragPlaces.push(internalLine);
-         this.box.add(internalLine.actor, { x_align: St.Align.MIDDLE, y_align: St.Align.START, x_fill: true, y_fill: false, expand: true });
+         ConfigurableMenus.ConfigurablePopupMenuSection.prototype.addMenuItem.call( this, internalLine, {
+             x_align: St.Align.MIDDLE, y_align: St.Align.START, x_fill: false, y_fill: false, expand: true
+         });
       }
       let lastPos = this.linesDragPlaces.length;
       while(numberLines < lastPos) {
          lastPos--;
-         if(this.linesDragPlaces[lastPos].actor.get_parent() == this.box)
-            this.box.remove_actor(this.linesDragPlaces[lastPos].actor);
-         this.linesDragPlaces[lastPos].actor.destroy();
+         this.linesDragPlaces[lastPos].destroy();
          this.linesDragPlaces.splice(lastPos, 1);
       }
-      for(let i = 0; i < saveItems.length; i++) {
-         this.add(saveItems[i]);
-      }
-      //Main.notify("chil:" + this.box.get_children().length + " line:" + this.linesDragPlaces.length);
    },
 
    setVertical: function(vertical) {
       if(vertical != this.isVertical()) {
-         this.box.set_vertical(vertical);
          this.scrollBox.setVertical(vertical);
-         let childrens = this.box.get_children();
-         for(let i = 0; i < childrens.length; i++) {
-            childrens[i].set_vertical(!vertical);
+         for(let i = 0; i < this.linesDragPlaces.length; i++) {
+            this.linesDragPlaces[i].setVertical(vertical);
          }
       }
    },
 
    isVertical: function() {
-      return this.box.get_vertical();
+      return this.scrollBox.actor.get_vertical();
    },
 
    getRealSpace: function() {
@@ -530,13 +518,13 @@ FavoritesBoxExtended.prototype = {
          let currentNumberItems = childrens[0].get_children().length;
          for(let i = 1; i < childrens.length; i++) {
             if(currentNumberItems > childrens[i].get_children().length) {
-               this._addInCorrectBox(childrens[i], menuItem.actor, menuItem.menu, params);
+               childrens[i]._delegate.addMenuItem(menuItem, params);
                currentNumberItems--; 
                break;
             }
          }
          if(currentNumberItems == childrens[0].get_children().length)
-            this._addInCorrectBox(childrens[0], menuItem.actor, menuItem.menu, params);
+            childrens[0]._delegate.addMenuItem(menuItem, params);
       
       } catch(e) {
          Main.notify("Favorite add element error", e.message);
@@ -546,16 +534,19 @@ FavoritesBoxExtended.prototype = {
    removeAll: function() {
       try {
          this._firstElement = null;
-         //Remove all favorites and release the focus if is necessary.
-         for(let i = 0; i < this.linesDragPlaces.length; i++) {
-            this._navegateFocusOut(this.linesDragPlaces[i]);
-            this.linesDragPlaces[i].actor.destroy();
-         }
          if(this._dragPlaceholder) {
             let parentHolder = this._dragPlaceholder.actor.get_parent();
-            if(parentHolder)
-               parentHolder.remove_actor(this._dragPlaceholder.actor);
+            if(parentHolder) {
+               this._navegateFocusOut(this._dragPlaceholder.actor);
+               this._dragPlaceholder.actor.destroy();
+            }
             this._dragPlaceholder = null;
+         }
+
+         //Remove all favorites and release the focus if is necessary.
+         for(let i = 0; i < this.linesDragPlaces.length; i++) {
+            this._navegateFocusOut(this.linesDragPlaces[i].actor);
+            this.linesDragPlaces[i].destroy();
          }
          this._favRefresh = true;
          this.linesDragPlaces = new Array();
@@ -2121,7 +2112,7 @@ MenuItemsDropBox.prototype = {
 
    getIdList: function() {
       let idList = new Array();
-      let items = this._getMenuItems();
+      let items = this.getMenuItems();
       for(let pos in items) {
          idList.push(items[pos].get_id());
       }
@@ -2276,7 +2267,7 @@ PlacesBox.prototype = {
    },
 
    setIconSize: function(iconSize) {
-      let items = this._getMenuItems();
+      let items = this.getMenuItems();
       for(let pos in items) {
          if(items[pos].setIconSize) {
             items[pos].setIconSize(iconSize);
@@ -2309,7 +2300,7 @@ ApplicationsBox.prototype = {
    },
 
    setIconSize: function(iconSize) {
-      let items = this._getMenuItems();
+      let items = this.getMenuItems();
       for(let pos in items) {
          if(items[pos].setIconSize) {
             items[pos].setIconSize(iconSize);
@@ -2478,10 +2469,10 @@ AccessibleBox.prototype = {
 
    getItems: function() {
       let buttoms = new Array();
-      let items = this.itemsPlaces._getMenuItems();
+      let items = this.itemsPlaces.getMenuItems();
       for(let pos in items)
          buttoms.push(items[pos]);
-      items = this.itemsApplications._getMenuItems();
+      items = this.itemsApplications.getMenuItems();
       for(let pos in items)
          buttoms.push(items[pos]);
       return buttoms;

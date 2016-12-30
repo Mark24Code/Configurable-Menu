@@ -557,8 +557,7 @@ CategoryButton.prototype = {
          labelName = category.get_name();
       } else
          labelName = _("All Applications");
-      //Main.notify("is " + labelName + " " + icon);
-      this.label.set_text(labelName);
+      this.setText(labelName);
       if(category && this.icon_name) {
          this.setGIcon(icon);
       }
@@ -604,11 +603,6 @@ CategoryButton.prototype = {
       //   this.arrowIcon.set_icon_name('');
       //}
       this.arrowIcon.visible = (visible||this.haveArrowalways);
-   },
-
-   setIconVisible: function(visible) {
-      if(this._icon)
-         this._icon.visible = visible;
    },
 
    setVertical: function(vertical) {
@@ -1102,11 +1096,6 @@ PlaceButtonAccessible.prototype = {
       this.label.visible = true;
       this.labelDesc.visible = this.haveDesc;
       this.nameEntry.visible = false;
-   },
-
-   setIconVisible: function(visible) {
-      if(this.icon)
-         this.icon.visible = visible;
    },
 
    setAppDescriptionVisible: function(visible) {
@@ -1879,29 +1868,41 @@ FavoritesButton.prototype = {
 
       this.setLabelStyle('menu-application-button-label');
 
-      if(this.allowName) {
-         this.nameEntry = new St.Entry({ name: 'menu-name-entry', hint_text: _("Type the new name..."), track_hover: true, can_focus: true });
-         if((this.alterName)&&(this.alterName != ""))
-            this.setText(this.alterName);
-         else
-            this.setText(this.app.get_name());
-         this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
-         this.nameEntry.visible = false;
-         this.labelDesc.visible = false;
+      this.nameEntry = new St.Entry({ name: 'menu-name-entry', hint_text: _("Type the new name..."), track_hover: true, can_focus: true });
+      if((this.alterName)&&(this.alterName != ""))
+         this.setText(this.alterName);
+      else
+         this.setText(this.app.get_name());
+      this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
+      this.nameEntry.visible = false;
+      this.labelDesc.visible = false;
 
-         this.textBox = new St.BoxLayout({ vertical: true });
-         this.setTextMaxWidth(appTextWidth);
-         this.setAppDescriptionVisible(appDesc);
-         this.actor.add(this.textBox);//, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
-         this.setVertical(vertical);
-      }
+      this.textBox = new St.BoxLayout({ vertical: true });
+      this.setTextMaxWidth(appTextWidth);
+      this.setAppDescriptionVisible(appDesc);
+      this.actor.add(this.textBox);//, { x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: false });
+      this.setVertical(vertical);
+      this.label.visible = this.allowName;
       this.actor._delegate = this;
       this._draggable = DND.makeDraggable(this.actor);
       this._draggable.connect('drag-end', Lang.bind(this, this._onDragEnd));  
       this.isDraggableApp = true;
+      //FIXME: do not set appwidth on favorites, this cause problems on icons only.
+      //Main.notify("hi " + this.appWidth);
+      //this.actor.set_width(this.appWidth);
    },
 
-   setWidthApp: function() {
+   setAllowNames: function(allow) {
+      this.allowName = allow;
+      this.label.visible = this.allowName;
+      if(!this.allowName) {
+         this.nameEntry.visible = false;
+         this.labelDesc.visible = false;
+      }
+   },
+
+   setWidthApp: function(appWidth) {
+      this.appWidth = appWidth;
       this.actor.set_width(this.appWidth);
    },
 
@@ -1912,8 +1913,7 @@ FavoritesButton.prototype = {
          global.stage.set_key_focus(this.nameEntry);
          this.label.visible = false;
          this.labelDesc.visible = false;
-      }
-      else {
+      } else {
          if(this.nameEntry.get_text() != "") {
             global.stage.set_key_focus(this.parent.searchEntry);
             this.label.set_text(this.nameEntry.get_text());
@@ -1938,11 +1938,6 @@ FavoritesButton.prototype = {
       this.label.visible = true;
       this.labelDesc.visible = this.haveDesc;
       this.nameEntry.visible = false;
-   },
-
-   setIconVisible: function(visible) {
-      if(this._icon)
-         this._icon.visible = visible;
    },
 
    _getSizeEstimation: function(size) {
@@ -2052,10 +2047,13 @@ SystemButton.prototype = {
       this.setLabelStyle('menu-application-button-label');
       this.setText(this.title);
       this.label.clutter_text.line_wrap_mode = Pango.WrapMode.CHAR;//WORD_CHAR;
-      this.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;//END;
+      this.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
       this.label.clutter_text.set_line_alignment(Pango.Alignment.CENTER);
+      //this.label.clutterText.set_single_line_mode(false);
+      //this.label.clutterText.set_line_wrap(true);
 
       this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
+      this.labelDesc.visible = false;
       this.textBox = new St.BoxLayout({ vertical: true });
       this.setTextVisible(false);
       this.setIconVisible(true);
@@ -2074,12 +2072,6 @@ SystemButton.prototype = {
       }
    },
 
-   setIconVisible: function(haveIcon) {
-      if(this._icon) {
-         this._icon.visible = haveIcon;
-      }
-   },
-
    setTheme: function(theme) {
       this.theme = theme;
       this.actor.set_style_class_name('menu-category-button');
@@ -2093,10 +2085,10 @@ SystemButton.prototype = {
    setVertical: function(vertical) {
       this.actor.set_vertical(vertical);
       this.setTextMaxWidth(this.textWidth);     
-      let parentL = this.label.get_parent();
-      if(parentL) parentL.remove_actor(this.label);
-      parentL = this.labelDesc.get_parent();
-      if(parentL) parentL.remove_actor(this.labelDesc);
+      let parent = this.label.get_parent();
+      if(parent) parent.remove_actor(this.label);
+      parent = this.labelDesc.get_parent();
+      if(parent) parent.remove_actor(this.labelDesc);
       if(vertical) {
          this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });     
@@ -2324,11 +2316,6 @@ DriveMenuItem.prototype = {
    _ejectLeaveEvent: function(actor, event) {
       actor.remove_style_pseudo_class('hover');
       global.unset_cursor();
-   },
-
-   setIconVisible: function(iconVisible) {
-      if(this._icon)
-         this._icon.visible = iconVisible;
    },
 
    _eject: function() {

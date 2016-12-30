@@ -136,7 +136,7 @@ MyApplet.prototype = {
          this._previousSelectedActor = null;
          this._previousTreeSelectedActor = null;
          this._activeContainer = null;
-         this._applicationsBoxWidth = 0;
+         this._applicationsBoxWidth = -1;
          this.menuIsOpening = false;
          this._knownApps = new Array(); // Used to keep track of apps that are already installed, so we can highlight newly installed ones
          this._appsWereRefreshed = false;
@@ -1490,7 +1490,7 @@ MyApplet.prototype = {
    },
 
    _clearAppSize: function() {
-      this._applicationsBoxWidth = 0;
+      this._applicationsBoxWidth = -1;
       for(let i = 0; i < this._applicationsButtons.length; i++) {
           this._applicationsButtons[i].actor.set_width(-1);
       } 
@@ -1978,6 +1978,8 @@ MyApplet.prototype = {
 
    _onThemeChange: function() {
       this._updateLayout();
+      this._updateAppSize();
+      this._refreshFavs();
       this._updateSize();
    },
 
@@ -2250,7 +2252,6 @@ MyApplet.prototype = {
       this._updateAppButtonDesc();
       this._updateTextButtonWidth();
       this._setAppIconDirection();
-      this._updateAppSize();
       this._select_category(null, this._allAppsCategoryButton);
       this._select_category(null, this._allAppsCategoryButton);
       this._alignSubMenu();
@@ -2260,6 +2261,7 @@ MyApplet.prototype = {
    _updateComplete: function() {
       this._updateLayout();
       this._refreshApps();
+      this._updateAppSize();
       this._refreshFavs();
       Mainloop.idle_add(Lang.bind(this, function() {
          this._clearAllSelections(true);
@@ -2514,7 +2516,7 @@ MyApplet.prototype = {
       }
       if(event.get_button() == 3) {
          this.menu.close();   
-         if(this._applet_context_menu._getMenuItems().length > 0) {
+         if(this._applet_context_menu.getMenuItems().length > 0) {
             this._applet_context_menu.setLauncher(this);
             this._applet_context_menu.setArrowSide(this.orientation);
             this._applet_context_menu.toggle();	
@@ -2582,7 +2584,7 @@ MyApplet.prototype = {
          this._applet_context_menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, true);
          this._menuManager.addMenu(this._applet_context_menu);
 
-         let items = this._applet_context_menu._getMenuItems();
+         let items = this._applet_context_menu.getMenuItems();
 
          this.listView = new MenuItems.PopupIconMenuItem(_("List View"), 'view-list-symbolic', St.IconType.SYMBOLIC);
          this.listView.connect('activate', Lang.bind(this, function() {
@@ -2649,12 +2651,12 @@ MyApplet.prototype = {
 
    finalizeContextMenu: function() {
       // Add default context menus if we're in panel edit mode, ensure their removal if we're not       
-      let items = this._applet_context_menu._getMenuItems();
+      let items = this._applet_context_menu.getMenuItems();
 
       if(this.context_menu_item_remove == null) {
          this.context_menu_item_remove = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Remove '%s'").format(_(this._meta.name)));
          this.context_menu_item_remove.setIconName("edit-delete");
-         this.context_menu_item_remove.setShowItemIcon(true);
+         this.context_menu_item_remove.setIconVisible(true);
          this.context_menu_item_remove.setIconType(St.IconType.SYMBOLIC);
          this.context_menu_item_remove.connect('activate', Lang.bind(this, function() {
             AppletManager._removeAppletFromPanel(this._uuid, this.instance_id);
@@ -2663,7 +2665,7 @@ MyApplet.prototype = {
       if(this.context_menu_item_about == null) {
          this.context_menu_item_about = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("About..."));
          this.context_menu_item_about.setIconName("dialog-question");
-         this.context_menu_item_about.setShowItemIcon(true);
+         this.context_menu_item_about.setIconVisible(true);
          this.context_menu_item_about.setIconType(St.IconType.SYMBOLIC);
          this.context_menu_item_about.connect('activate', Lang.bind(this, this.openAbout));
       }
@@ -2680,7 +2682,7 @@ MyApplet.prototype = {
          if(this.context_menu_item_configure == null) {            
              this.context_menu_item_configure = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Configure..."));
              this.context_menu_item_configure.setIconName("system-run");
-             this.context_menu_item_configure.setShowItemIcon(true);
+             this.context_menu_item_configure.setIconVisible(true);
              this.context_menu_item_configure.setIconType(St.IconType.SYMBOLIC);
              this.context_menu_item_configure.connect('activate', Lang.bind(this, this.configureApplet));
          }
@@ -3521,7 +3523,9 @@ MyApplet.prototype = {
 
    loadWindows: function() {
       this.betterPanel.setVertical(true);
-      this.operativePanel.actor.visible = false;
+      this.operativePanel.setVertical(false);
+      this.categoriesBox.setVertical(true);
+      this.favoritesObj.setVertical(true);
       this.searchBox.setLabelVisible(false);
       this.panelAppsName.setVisible(true);
       this.favoritesObj.scrollBox.setXAlign(St.Align.MIDDLE);
@@ -4703,7 +4707,7 @@ MyApplet.prototype = {
                                                      this.allowFavName, this.textButtonWidth, this.appButtonDescription, this._applicationsBoxWidth);
             // + 3 because we're adding 3 system buttons at the bottom
             this._favoritesButtons[app] = button;
-            this.favoritesObj.addMenuItem(button, { x_align: St.Align.START, y_align: St.Align.MIDDLE, x_fill: true, y_fill: true, expand: true }, -1);
+            this.favoritesObj.addMenuItem(button, { x_align: St.Align.START, y_align: St.Align.MIDDLE, x_fill: true, y_fill: true, expand: false });
             button.actor.connect('enter-event', Lang.bind(this, function() {
                //this._clearPrevCatSelection();
                this.hover.refreshApp(button.app);
@@ -4735,8 +4739,7 @@ MyApplet.prototype = {
       this._applicationsButtons = new Array();
       this._transientButtons = new Array();
       this._categoryButtons = new Array();
-      this._applicationsButtonFromApp = new Object(); 
-      this._applicationsBoxWidth = 0;
+      this._applicationsButtonFromApp = new Object();
       this._activeContainer = null;
 
       //Remove all categories
@@ -4782,7 +4785,6 @@ MyApplet.prototype = {
          this._allAppsCategoryButton.isHovered = false;
       }));
       this._categoryButtons.push(this._allAppsCategoryButton);
-    
       let trees = [appsys.get_tree()];
       for(let i in trees) {
          let tree = trees[i];
