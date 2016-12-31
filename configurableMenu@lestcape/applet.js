@@ -1701,7 +1701,7 @@ MyApplet.prototype = {
 
    _setVisibleAccessibleIcons: function() {
       if(this.accessibleBox) {
-         this.accessibleBox.setIconsVisible(this.showAccessibleIcons);
+         this.accessibleBox.setIconVisible(this.showAccessibleIcons);
          this._updateSize();
       }
    },
@@ -2245,7 +2245,7 @@ MyApplet.prototype = {
          this.accessibleBox.setIconSize(this.iconAccessibleSize);
          this.accessibleBox.setSpecialColor(this.showAccessibleBox);
          this.accessibleBox.showRemovableDrives(this.showRemovable);
-         this.accessibleBox.setIconsVisible(this.showAccessibleIcons);
+         this.accessibleBox.setIconVisible(this.showAccessibleIcons);
          this.accessibleBox.updateVisibility();
       }
       this._clearAppSize();
@@ -3216,6 +3216,7 @@ MyApplet.prototype = {
       this.arrayBoxLayout.setVertical(true);
       this.categoriesBox.setVertical(true);
       this.favoritesObj.setVertical(true);
+
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.topBoxSwaper.addMenuItem(this.hover, {x_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.START, expand: true });
       this.changeTopBoxUp.addMenuItem(this.controlView, {x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.START, expand: true });
@@ -3243,6 +3244,7 @@ MyApplet.prototype = {
       this.arrayBoxLayout.setVertical(true);
       this.categoriesBox.setVertical(true);
       this.favoritesObj.setVertical(true);
+
       this.changeTopBoxDown.addMenuItem(this.searchBox, {x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
       this.changeTopBoxDown.addMenuItem(this.controlView, {x_fill: true, y_fill: false, x_align: St.Align.END, y_align: St.Align.MIDDLE, expand: true });
       this.changeTopBoxUp.addMenuItem(this.hover, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
@@ -3269,6 +3271,7 @@ MyApplet.prototype = {
       this.arrayBoxLayout.setVertical(true);
       this.categoriesBox.setVertical(true);
       this.favoritesObj.setVertical(true);
+
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.changeTopBox.addMenuItem(this.controlView, {x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
       this.topBoxSwaper.addMenuItem(this.searchBox, {x_fill: false, y_fill: false, x_align: St.Align.END, y_align: St.Align.MIDDLE, expand: true });
@@ -3323,6 +3326,7 @@ MyApplet.prototype = {
       this.arrayBoxLayout.setVertical(true);
       this.categoriesBox.setVertical(true);
       this.favoritesObj.setVertical(true);
+
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.topBoxSwaper.addMenuItem(this.hover, {x_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.START, expand: true });
       this.changeTopBoxUp.addMenuItem(this.controlView, {x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.START, expand: true });
@@ -3349,6 +3353,7 @@ MyApplet.prototype = {
       this.arrayBoxLayout.setVertical(true);
       this.categoriesBox.setVertical(false);
       this.favoritesObj.setVertical(true);
+
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.changeTopBoxUp.addMenuItem(this.hover, {x_fill: false, x_align: St.Align.START, y_align: St.Align.START, expand: false });
       this.changeTopBoxUp.addMenuItem(this.selectedAppBox, {x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
@@ -3378,6 +3383,7 @@ MyApplet.prototype = {
       this.arrayBoxLayout.setVertical(true);
       this.categoriesBox.setVertical(false);
       this.favoritesObj.setVertical(true);
+
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.changeTopBox.addMenuItem(this.controlView, {x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
       this.topBoxSwaper.addMenuItem(this.selectedAppBox, {x_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: false });
@@ -3406,6 +3412,7 @@ MyApplet.prototype = {
       this.arrayBoxLayout.setVertical(true);
       this.categoriesBox.setVertical(false);
       this.favoritesObj.setVertical(false);
+
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.changeTopBoxUp.addMenuItem(this.hover, {x_fill: false, x_align: St.Align.END, y_align: St.Align.MIDDLE, expand: true });
       this.changeTopBoxUp.addMenuItem(this.selectedAppBox, { x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
@@ -3436,6 +3443,8 @@ MyApplet.prototype = {
       this.categoriesBox.setVertical(true);
       this.favoritesObj.setVertical(true);
       this.accessibleBox.takePower(true);
+      this.accessibleBox.takeHover(true);
+      this.accessibleBox.takeControl(true);
 
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.changeTopBox.addMenuItem(this.searchBox, {x_fill: true, x_align: St.Align.END, y_align: St.Align.END, y_fill: false, expand: false });
@@ -3462,6 +3471,8 @@ MyApplet.prototype = {
       this.categoriesBox.setVertical(true);
       this.favoritesObj.setVertical(true);
       this.accessibleBox.takePower(true);
+      this.accessibleBox.takeHover(true);
+      this.accessibleBox.takeControl(true);
 
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.changeTopBox.addMenuItem(this.searchBox, {x_fill: true, x_align: St.Align.END, y_align: St.Align.END, y_fill: false, expand: false });
@@ -3493,8 +3504,9 @@ MyApplet.prototype = {
       this.accessibleBox.setNamesVisible(true);
       this.favoritesObj.scrollBox.setXAlign(St.Align.MIDDLE);
       this.allowFavName = true;
-
       this.accessibleBox.takePower(true);
+      this.accessibleBox.takeHover(true);
+      this.accessibleBox.takeControl(true);
 
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.changeTopBox.addMenuItem(this.panelAppsName, {x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
@@ -3522,15 +3534,20 @@ MyApplet.prototype = {
    },
 
    loadWindows: function() {
-      this.betterPanel.setVertical(true);
       this.operativePanel.setVertical(false);
+      this.betterPanel.setVertical(true);
+      this.arrayBoxLayout.setVertical(true);
       this.categoriesBox.setVertical(true);
       this.favoritesObj.setVertical(true);
-      this.searchBox.setLabelVisible(false);
+      this.operativePanel.actor.visible = false;
+      this.searchBox.setLabelVisible(true);
       this.panelAppsName.setVisible(true);
+      this.accessibleBox.setNamesVisible(false);
       this.favoritesObj.scrollBox.setXAlign(St.Align.MIDDLE);
       this.allowFavName = true;
       this.accessibleBox.takePower(true);
+      this.accessibleBox.takeHover(true);
+      this.accessibleBox.takeControl(true);
 
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.bttChanger.registerCallBack(Lang.bind(this, this._onPanelWindowsChange));
@@ -3561,7 +3578,9 @@ MyApplet.prototype = {
       this.favoritesObj.scrollBox.setXAlign(St.Align.MIDDLE);
       this.styleGnoMenuPanel.actor.set_style_class_name('menu-gno-operative-box-left');
       this.allowFavName = true;
-      this.gnoMenuBox.takePower(true);
+      this.accessibleBox.takePower(true);
+      this.accessibleBox.takeHover(true);
+      this.accessibleBox.takeControl(true);
 
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.changeTopBox.addMenuItem(this.controlView, {x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
@@ -3594,7 +3613,9 @@ MyApplet.prototype = {
       this.favoritesObj.scrollBox.setXAlign(St.Align.MIDDLE);
       this.styleGnoMenuPanel.actor.set_style_class_name('menu-gno-operative-box-right');
       this.allowFavName = true;
-      this.gnoMenuBox.takePower(true);
+      this.accessibleBox.takePower(true);
+      this.accessibleBox.takeHover(true);
+      this.accessibleBox.takeControl(true);
 
       this.operativePanel.addMenuItem(this.categoriesBox, { x_fill: true, y_fill: true, expand: false });
       this.changeTopBox.addMenuItem(this.controlView, {x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
@@ -3626,7 +3647,9 @@ MyApplet.prototype = {
       this.operativePanel.actor.visible = false;
       this.arrayBoxLayout.setVertical(true);
       this.gnoMenuBox.setVertical(false);
-      this.gnoMenuBox.takePower(true);
+      this.accessibleBox.takePower(true);
+      this.accessibleBox.takeHover(true);
+      this.accessibleBox.takeControl(true);
 
       this.favoritesObj.scrollBox.setXAlign(St.Align.MIDDLE);
       this.styleGnoMenuPanel.actor.set_style_class_name('menu-gno-operative-box-top');
@@ -3660,7 +3683,9 @@ MyApplet.prototype = {
       this.operativePanel.actor.visible = false;
       this.arrayBoxLayout.setVertical(true);
       this.gnoMenuBox.setVertical(false);
-      this.gnoMenuBox.takePower(true);
+      this.accessibleBox.takePower(true);
+      this.accessibleBox.takeHover(true);
+      this.accessibleBox.takeControl(true);
 
       this.favoritesObj.scrollBox.setXAlign(St.Align.MIDDLE);
       this.styleGnoMenuPanel.actor.set_style_class_name('menu-gno-operative-box-bottom');
@@ -4629,8 +4654,8 @@ MyApplet.prototype = {
          placesResults.push(devices[i].name);
       let recentResults = new Array();
       for(let i = 0; i < this._recentButtons.length; i++) {
-         if(!(this._recentButtons[i] instanceof MenuItems.RecentClearButton) && this._recentButtons[i].button_name.toLowerCase().indexOf(pattern) != -1)
-            recentResults.push(this._recentButtons[i].button_name);
+         if(!(this._recentButtons[i] instanceof MenuItems.RecentClearButton) && this._recentButtons[i].name.toLowerCase().indexOf(pattern) != -1)
+            recentResults.push(this._recentButtons[i].name);
       }
 
       let acResults = new Array(); // search box autocompletion results

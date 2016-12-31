@@ -1154,9 +1154,9 @@ PowerBox.prototype = {
          if(this._bttChanger)
             this._bttChanger.setActive(false);
       }));
-      this.separatorPower = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
-      this.separatorPower.setVisible(false);
-      this.separatorPower.setSpace(20);
+      this._separatorPower = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      this._separatorPower.setVisible(false);
+      this._separatorPower.setSpace(20);
       //Lock screen "preferences-desktop-screensaver"
       let button = new MenuItems.SystemButton(this.parent, null, "system-lock-screen", _("Lock screen"), _("Lock the screen"), this.iconSize, false);
       button.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
@@ -1182,15 +1182,24 @@ PowerBox.prototype = {
       button.connect('active-changed', Lang.bind(this, this._onActiveChanged));
       this._powerButtons.push(button);
 
+      this._activeBar = new ConfigurableMenus.ConfigurablePopupMenuSection();
+      this._activeBar.setVertical(false);
+
+      this._bttChanger = new MenuItems.ButtonChangerMenuItem(this.parent, "forward", this.iconSize, ["Show Down", "Options"], 0);
+      this._bttChanger.registerCallBack(Lang.bind(this, this._onPowerChange));
+      this._bttChanger.setTextVisible(false);
+      this._separatorBox = new ConfigurableMenus.ConfigurablePopupMenuSection();
+      this._separatorBox.setVertical(true);
+
       this.setTheme(theme);
    },
 
    _onActiveChanged: function(button, active) {
-      this.emit('active-changed', button, active);
+      //this.emit('active-changed', button, active);
    },
 
    destroy: function(symbolic) {
-      this.separatorPower.destroy();
+      this._separatorPower.destroy();
       for(let i = 0; i < this._powerButtons.length; i++) {
          this._powerButtons[i].destroy();
       }
@@ -1204,11 +1213,11 @@ PowerBox.prototype = {
    },
 
    setSeparatorSpace: function(space) {
-      this.separatorPower.setSpace(space);
+      this._separatorPower.setSpace(space);
    },
 
    setSeparatorLine: function(haveLine) {
-      this.separatorPower.setVisible(haveLine);
+      this._separatorPower.setVisible(haveLine);
    },
 
    refresh: function() {
@@ -1224,56 +1233,56 @@ PowerBox.prototype = {
             this._setVerticalButtons(true);
             this._insertNormalButtons(St.Align.MIDDLE);
             this._setTextVisible(false);
-            this._setIconsVisible(true);
+            this.setIconVisible(true);
             break;
          case "vertical-list":
             this.actor.set_vertical(true);
             this._setVerticalButtons(false);
             this._insertNormalButtons(St.Align.START);
             this._setTextVisible(true);
-            this._setIconsVisible(true);
+            this.setIconVisible(true);
             break;
          case "vertical-grid":
             this.actor.set_vertical(true);
             this._setVerticalButtons(true);
             this._insertNormalButtons(St.Align.MIDDLE);
             this._setTextVisible(true);
-            this._setIconsVisible(true);
+            this.setIconVisible(true);
             break;
          case "vertical-text":
             this.actor.set_vertical(true);
             this._setVerticalButtons(true);
             this._insertNormalButtons(St.Align.START);
             this._setTextVisible(true);
-            this._setIconsVisible(false);
+            this.setIconVisible(false);
             break;
          case "horizontal-icon":
             this.actor.set_vertical(false);
             this._setVerticalButtons(true);
             this._insertNormalButtons(St.Align.MIDDLE);
             this._setTextVisible(false);
-            this._setIconsVisible(true);
+            this.setIconVisible(true);
             break;
          case "horizontal-list":
             this.actor.set_vertical(false);
             this._setVerticalButtons(false);
             this._insertNormalButtons(St.Align.MIDDLE);
             this._setTextVisible(true);
-            this._setIconsVisible(true);
+            this.setIconVisible(true);
             break;
          case "horizontal-grid":
             this.actor.set_vertical(false);
             this._setVerticalButtons(true);
             this._insertNormalButtons(St.Align.MIDDLE);
             this._setTextVisible(true);
-            this._setIconsVisible(true);
+            this.setIconVisible(true);
             break;
          case "horizontal-text":
             this.actor.set_vertical(false);
             this._setVerticalButtons(false);
             this._insertNormalButtons(St.Align.MIDDLE);
             this._setTextVisible(true);
-            this._setIconsVisible(false);
+            this.setIconVisible(false);
 
             break;
          case "retractable":
@@ -1281,14 +1290,14 @@ PowerBox.prototype = {
             this._setVerticalButtons(false);
             this._insertRetractableButtons(St.Align.START);
             this._setTextVisible(true);
-            this._setIconsVisible(true);
+            this.setIconVisible(true);
             break;
          case "retractable-text":
             this.actor.set_vertical(true);
             this._setVerticalButtons(false);
             this._insertRetractableButtons(St.Align.START);
             this._setTextVisible(true);
-            this._setIconsVisible(false);
+            this.setIconVisible(false);
             break;
       }
    },
@@ -1304,43 +1313,37 @@ PowerBox.prototype = {
    },
 
    _removeButtons: function() {
-      let parentBtt = this.separatorPower.actor.get_parent();
-      if(parentBtt)
-         parentBtt.remove_actor(this.separatorPower.actor);
+      this.removeMenuItem(this._separatorPower);
       for(let i = 0; i < this._powerButtons.length; i++) {
-         parentBtt = this._powerButtons[i].actor.get_parent();
-         if(parentBtt)
-            parentBtt.remove_actor(this._powerButtons[i].actor);
+         this._powerButtons[i].removeFromParentContainer();
       }
       this.actor.set_height(-1);
-      this.actor.destroy_all_children();
-      this.activeBar = null;
-      this.separator = null;
+
+      this._activeBar.removeMenuItem(this._bttChanger);
+      this.removeMenuItem(this._activeBar);
+      this.removeMenuItem(this._separatorBox);
    },
 
    _insertNormalButtons: function(aling) {
       if((this.theme != "horizontal-icon")&&(this.theme != "horizontal-list")&&(this.theme != "horizontal-grid")&&(this.theme != "horizontal-text"))
-         this.actor.add_actor(this.separatorPower.actor);
+         this.addMenuItem(this._separatorPower);
       for(let i = 0; i < this._powerButtons.length; i++) {
-         this.actor.add(this._powerButtons[i].actor, { x_fill: true, x_align: aling, expand: true });
+         this.addMenuItem(this._powerButtons[i], { x_fill: true, x_align: aling, expand: true });
          this._powerButtons[i].setTheme(this.theme);
       }
    },
 
   _insertRetractableButtons: function(aling) {
-      this.actor.add_actor(this.separatorPower.actor);
-      this.activeBar = new St.BoxLayout({ vertical: false });
-      this.separator = new St.BoxLayout({ vertical: true });
-      this.separator.style = "padding-left: "+(this.iconSize)+"px;margin:auto;";
-      this._bttChanger = new MenuItems.ButtonChangerMenuItem(this.parent, "forward", this.iconSize, ["Show Down", "Options"], 0);
-      this._bttChanger.registerCallBack(Lang.bind(this, this._onPowerChange));
-      this._bttChanger.setTextVisible(false);
-      this.activeBar.add(this._powerButtons[2].actor, { x_fill: false, x_align: aling });
-      this.activeBar.add(this._bttChanger.actor, { x_fill: true, x_align: aling });
-      this.actor.add(this.activeBar, { x_fill: false, y_fill: false, x_align: aling, y_align: aling, expand: true });
-      this.separator.add(this._powerButtons[0].actor, { x_fill: true, x_align: aling, y_align: aling });
-      this.separator.add(this._powerButtons[1].actor, { x_fill: true, x_align: aling, y_align: aling });
-      this.actor.add(this.separator, { x_fill: false, x_align: aling, y_align: aling, expand: true });
+      this.addMenuItem(this._separatorPower);
+      this._separatorBox.actor.style = "padding-left: "+(this.iconSize)+"px;margin:auto;";
+
+      this._activeBar.addMenuItem(this._powerButtons[2], { x_fill: false, x_align: aling });
+      this._activeBar.addMenuItem(this._bttChanger, { x_fill: true, x_align: aling });
+
+      this.addMenuItem(this._activeBar, { x_fill: false, y_fill: false, x_align: aling, y_align: aling, expand: true });
+      this._separatorBox.addMenuItem(this._powerButtons[0], { x_fill: true, x_align: aling, y_align: aling });
+      this._separatorBox.addMenuItem(this._powerButtons[1], { x_fill: true, x_align: aling, y_align: aling });
+      this.addMenuItem(this._separatorBox, { x_fill: false, x_align: aling, y_align: aling, expand: true });
       this._powerButtons[0].setTheme(this.theme);
       this._powerButtons[1].setTheme(this.theme);
       this._powerButtons[2].setTheme(this.theme);
@@ -1354,38 +1357,38 @@ PowerBox.prototype = {
    },
 
    _adjustSize: function(actor) {
-      if(actor.get_width() + this.iconSize + 16 > this.activeBar.get_width()) {
-         this.activeBar.set_width(actor.get_width() + this.iconSize + 16);
+      if(actor.get_width() + this.iconSize + 16 > this._activeBar.actor.get_width()) {
+         this._activeBar.actor.set_width(actor.get_width() + this.iconSize + 16);
       }
       if(actor.get_height()*3 + 16 > this.actor.get_height()) {
          this.actor.set_height(actor.get_height()*3 + 16);
       }
    },
 
-  _onPowerChange: function(actor, event) {
-     this._powerButtons[0].actor.visible = !this._powerButtons[0].actor.visible;
-     this._powerButtons[1].actor.visible = !this._powerButtons[1].actor.visible;
-     if(this.powerSelected != -1) {
-        this._powerButtons[this.powerSelected].setActive(false);
-        this.powerSelected = -1;
-        if(this._bttChanger)
-           this._bttChanger.setActive(true);
-     }
-  },
-
-  _setIconsVisible: function(visibleIcon) {
-      for(let i = 0; i < this._powerButtons.length; i++) {
-         this._powerButtons[i].setIconVisible(visibleIcon);
+   _onPowerChange: function(actor, event) {
+      this._powerButtons[0].actor.visible = !this._powerButtons[0].actor.visible;
+      this._powerButtons[1].actor.visible = !this._powerButtons[1].actor.visible;
+      if(this.powerSelected != -1) {
+         this._powerButtons[this.powerSelected].setActive(false);
+         this.powerSelected = -1;
+         if(this._bttChanger)
+            this._bttChanger.setActive(true);
       }
    },
 
-  _setTextVisible: function(visibleText) {
+   setIconVisible: function(show) {
+      for(let i = 0; i < this._powerButtons.length; i++) {
+         this._powerButtons[i].setIconVisible(show);
+      }
+   },
+
+   _setTextVisible: function(visibleText) {
       for(let i = 0; i < this._powerButtons.length; i++) {
          this._powerButtons[i].setTextVisible(visibleText);
       }
    },
 
-  _setVerticalButtons: function(vertical) {
+   _setVerticalButtons: function(vertical) {
       for(let i = 0; i < this._powerButtons.length; i++) {
          this._powerButtons[i].setVertical(vertical);
       }
@@ -1399,14 +1402,14 @@ PowerBox.prototype = {
    },
 
    setIconSize: function(iconSize) {
-      this.iconSize = iconSize;
-      this.actor.set_height(-1);
+     this.iconSize = iconSize;
+     this.actor.set_height(-1);
       if(this._powerButtons) {
          for(let i = 0; i < this._powerButtons.length; i++)
             this._powerButtons[i].setIconSize(this.iconSize);
       } 
-      if(this.activeBar) {
-         this.separator.style = "padding-left: "+(this.iconSize)+"px;margin:auto;";
+      if(this._activeBar) {
+         this._separatorBox.actor.style = "padding-left: "+(this.iconSize)+"px;margin:auto;";
          Mainloop.idle_add(Lang.bind(this, function() {
             this._adjustSize(this._powerButtons[0].actor);
             this._adjustSize(this._powerButtons[1].actor);
@@ -1477,12 +1480,12 @@ PowerBox.prototype = {
          this._powerButtons[this.powerSelected].setActive(false);
          this.powerSelected = -1;
       }
-      if((this.activeBar)&&(this._bttChanger))
+      if((this._activeBar)&&(this._bttChanger))
          this._bttChanger.activateSelected("Show Down");
    },
 
    navegatePowerBox: function(symbol, actor) {
-      if(this.activeBar) {
+      if(this._activeBar) {
          if((symbol == Clutter.KEY_Up) || (symbol == Clutter.KEY_Left)) {
             if(this.powerSelected == -1) {
                this._bttChanger.setActive(false);
@@ -1552,7 +1555,14 @@ PowerBox.prototype = {
          }
       }
       return true;
-   }
+   },
+
+   destroy: function(parent, activeDateTime) {
+      this._separatorBox.destroy();
+      this._activeBar.destroy();
+      this.actor.destroy();
+      this.emit('destroy');
+   },
 };
 Signals.addSignalMethods(PowerBox.prototype);
 
@@ -1817,7 +1827,7 @@ GnoMenuBox.prototype = {
    },
 
    _onActiveChanged: function(button, active) {
-      this.emit('active-changed', button, active);
+      //this.emit('active-changed', button, active);
    },
 
    refresh: function() {
@@ -1869,32 +1879,32 @@ GnoMenuBox.prototype = {
             this._setVerticalButtons(false);
             this._insertButtons();
             this._setTextVisible(false);
-            this._setIconsVisible(true);
+            this.setIconVisible(true);
             break;
          case "text":
             this._setVerticalButtons(true);
             this._insertButtons();
             this._setTextVisible(true);
-            this._setIconsVisible(false);
+            this.setIconVisible(false);
             break;
          case "list":
             this._setVerticalButtons(false);
             this._insertButtons();
             this._setTextVisible(true);
-            this._setIconsVisible(true);
+            this.setIconVisible(true);
             break;
          case "grid":
             this._setVerticalButtons(true);
             this._insertButtons();
             this._setTextVisible(true);
-            this._setIconsVisible(true);
+            this.setIconVisible(true);
             break;
       }
    },
 
-   _setIconsVisible: function(visibleIcon) {
+   setIconVisible: function(show) {
       for(let i = 0; i < this._actionButtons.length; i++) {
-         this._actionButtons[i].setIconVisible(visibleIcon);
+         this._actionButtons[i].setIconVisible(show);
       }
    },
 
@@ -2451,10 +2461,6 @@ AccessibleBox.prototype = {
       this.vertical = vertical;
       this.iconSize = iconSize;
       this.iconsVisible = true;
-      this.takingHover = false;
-      this.takeHover(true);
-      this.takeControl(true);
-
       this.refreshAccessibleItems();
 
       this.actor.connect('key-focus-in', Lang.bind(this, function(actor, event) {
@@ -2515,13 +2521,10 @@ AccessibleBox.prototype = {
       this.itemsApplications.setLabelVisible(visible);
    },
 
-   setIconsVisible: function(visible) {
-      let buttoms = this.getItems();
-      if(this.iconsVisible != visible) {
-         this.iconsVisible = visible;
-         for(let i = 0; i < buttoms.length; i++) {
-            buttoms[i].setIconVisible(visible);
-         }
+   setIconVisible: function(show) {
+      if(this.iconsVisible != show) {
+         this.iconsVisible = show;
+         ConfigurableMenus.ConfigurablePopupMenuSection.prototype.setIconVisible.call(this, show);
       }
    },
 
@@ -2613,7 +2616,7 @@ AccessibleBox.prototype = {
       this.initItemsPlaces();
       //this.itemsDevices.refresh();
       this.initItemsSystem();
-      this.setIconsVisible(this.iconsVisible);
+      this.setIconVisible(this.iconsVisible);
       this.parent._updateSize();
    },
 

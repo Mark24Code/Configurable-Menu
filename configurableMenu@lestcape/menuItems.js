@@ -309,10 +309,10 @@ PackageItem.prototype = {
       if(this.actor.get_vertical() != vertical) {
          this.setTextMaxWidth(this.textWidth);
          this.actor.set_vertical(vertical);
-         let parentL = this.label.get_parent();
-         if(parentL) parentL.remove_actor(this.label);
-         parentL = this.labelDesc.get_parent();
-         if(parentL) parentL.remove_actor(this.labelDesc);
+         let parent = this.label.get_parent();
+         if(parent) parent.remove_actor(this.label);
+         parent = this.labelDesc.get_parent();
+         if(parent) parent.remove_actor(this.labelDesc);
          if(vertical) {
             this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
             this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
@@ -964,10 +964,10 @@ ApplicationButton.prototype = {
 
    setVertical: function(vertical) {
       this.actor.set_vertical(vertical);
-      let parentL = this.label.get_parent();
-      if(parentL) parentL.remove_actor(this.label);
-      parentL = this.labelDesc.get_parent();
-      if(parentL) parentL.remove_actor(this.labelDesc);
+      let parent = this.label.get_parent();
+      if(parent) parent.remove_actor(this.label);
+      parent = this.labelDesc.get_parent();
+      if(parent) parent.remove_actor(this.labelDesc);
       this.setTextMaxWidth(this.textWidth);
       if(vertical) {
          this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
@@ -1112,12 +1112,12 @@ PlaceButtonAccessible.prototype = {
 
    setVertical: function(vertical) {
       this.actor.set_vertical(vertical);
-      let parentL = this.label.get_parent();
-      if(parentL) parentL.remove_actor(this.label);
-      parentL = this.labelDesc.get_parent();
-      if(parentL) parentL.remove_actor(this.labelDesc);
-      parentL = this.nameEntry.get_parent();
-      if(parentL) parentL.remove_actor(this.nameEntry);
+      let parent = this.label.get_parent();
+      if(parent) parent.remove_actor(this.label);
+      parent = this.labelDesc.get_parent();
+      if(parent) parent.remove_actor(this.labelDesc);
+      parent = this.nameEntry.get_parent();
+      if(parent) parent.remove_actor(this.nameEntry);
       this.setTextMaxWidth(this.textWidth);
       if(vertical) {
          this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
@@ -1543,10 +1543,10 @@ RecentButton.prototype = {
    setVertical: function(vertical) {
       this.actor.set_vertical(vertical);
       this.setTextMaxWidth(this.textWidth);
-      let parentL = this.label.get_parent();
-      if(parentL) parentL.remove_actor(this.label);
-      parentL = this.labelDesc.get_parent();
-      if(parentL) parentL.remove_actor(this.labelDesc);
+      let parent = this.label.get_parent();
+      if(parent) parent.remove_actor(this.label);
+      parent = this.labelDesc.get_parent();
+      if(parent) parent.remove_actor(this.labelDesc);
       if(vertical) {
          this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
@@ -1620,10 +1620,10 @@ RecentClearButton.prototype = {
    setVertical: function(vertical) {
       this.actor.set_vertical(vertical);
       this.setTextMaxWidth(this.textWidth);
-      let parentL = this.label.get_parent();
-      if(parentL) parentL.remove_actor(this.label);
-      parentL = this.labelDesc.get_parent();
-      if(parentL) parentL.remove_actor(this.labelDesc);
+      let parent = this.label.get_parent();
+      if(parent) parent.remove_actor(this.label);
+      parent = this.labelDesc.get_parent();
+      if(parent) parent.remove_actor(this.labelDesc);
       if(vertical) {
          this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
@@ -1736,10 +1736,10 @@ TransientButton.prototype = {
    setVertical: function(vertical) {
       this.setTextMaxWidth(this.textWidth);
       this.actor.set_vertical(vertical);
-      let parentL = this.label.get_parent();
-      if(parentL) parentL.remove_actor(this.label);
-      parentL = this.labelDesc.get_parent();
-      if(parentL) parentL.remove_actor(this.labelDesc);
+      let parent = this.label.get_parent();
+      if(parent) parent.remove_actor(this.label);
+      parent = this.labelDesc.get_parent();
+      if(parent) parent.remove_actor(this.labelDesc);
       if(vertical) {
          this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
@@ -1864,7 +1864,6 @@ FavoritesButton.prototype = {
 
       this.setIconSize(iconSize);
       this.setGIcon(this.app.get_app_info().get_icon());
-      this._icon.show();
 
       this.setLabelStyle('menu-application-button-label');
 
@@ -1974,12 +1973,12 @@ FavoritesButton.prototype = {
       this.actor.set_vertical(vertical);
       this.setTextMaxWidth(this.textWidth);
       if(this.allowName) {      
-         let parentL = this.label.get_parent();
-         if(parentL) parentL.remove_actor(this.label);
-         parentL = this.labelDesc.get_parent();
-         if(parentL) parentL.remove_actor(this.labelDesc);
-         parentL = this.nameEntry.get_parent();
-         if(parentL) parentL.remove_actor(this.nameEntry);
+         let parent = this.label.get_parent();
+         if(parent) parent.remove_actor(this.label);
+         parent = this.labelDesc.get_parent();
+         if(parent) parent.remove_actor(this.labelDesc);
+         parent = this.nameEntry.get_parent();
+         if(parent) parent.remove_actor(this.nameEntry);
          if(vertical) {
             this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
             this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
@@ -2043,7 +2042,6 @@ SystemButton.prototype = {
 
       this.setIconSize(iconSize);
       this.setIconName(icon);
-      this._icon.show();
       this.setLabelStyle('menu-application-button-label');
       this.setText(this.title);
       this.label.clutter_text.line_wrap_mode = Pango.WrapMode.CHAR;//WORD_CHAR;
@@ -2135,7 +2133,7 @@ SystemButton.prototype = {
                this.actor.add_style_class_name('menu-system-button-' + this.theme);
             this.actor.remove_style_pseudo_class('active');
          }
-         this.emit('active-changed', active);
+         //this.emit('active-changed', active);
       }
    }
 };
@@ -2193,10 +2191,10 @@ SearchItem.prototype = {
    setVertical: function(vertical) {
       this.actor.set_vertical(vertical);
       this.setTextMaxWidth(this.textWidth);
-      let parentL = this.label.get_parent();
-      if(parentL) parentL.remove_actor(this.label);
-      parentL = this.labelDesc.get_parent();
-      if(parentL) parentL.remove_actor(this.labelDesc);
+      let parent = this.label.get_parent();
+      if(parent) parent.remove_actor(this.label);
+      parent = this.labelDesc.get_parent();
+      if(parent) parent.remove_actor(this.labelDesc);
       if(vertical) {
          this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
          this.textBox.add(this.labelDesc, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });  
@@ -2418,6 +2416,7 @@ ButtonChangerMenuItem.prototype = {
       this.setIconType(St.IconType.FULLCOLOR);
       this._icon.set_style_class_name('popup-menu-icon');
       this.actor.pack_start = true;
+      this.setIconVisible(true);
 
       this.actor.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
       this.actor.connect('enter-event', Lang.bind(this, function() {
@@ -2432,11 +2431,6 @@ ButtonChangerMenuItem.prototype = {
 
    registerCallBack: function(callBackOnSelectedChange) {
       this.callBackOnSelectedChange = callBackOnSelectedChange;
-   },
-
-   setIconSize: function(iconSize) {
-      if(this.icon)
-         this.icon.set_icon_size(iconSize);
    },
 
    setTextVisible: function(visible) {
@@ -2467,7 +2461,7 @@ ButtonChangerMenuItem.prototype = {
                this.actor.add_style_class_name('menu-swap-button' + this.theme);
             }
          }
-         this.emit('active-changed', active);
+         //this.emit('active-changed', active);
       }
    },
  
