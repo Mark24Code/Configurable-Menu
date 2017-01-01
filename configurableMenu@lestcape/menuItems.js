@@ -240,7 +240,7 @@ PackageItem.prototype = {
    __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
 
    _init: function(parent, pkg, packageName, gIconInstaller, iconSize, textWidth, appDesc, vertical, appWidth) {
-      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, "");
+      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, "", {focusOnHover: false});
       this.actor.set_style_class_name('menu-application-button');
       this.iconSize = iconSize;
       this.parent = parent;
@@ -323,14 +323,14 @@ PackageItem.prototype = {
          }
       }
    },
-
+/*
    setActive: function(active){
       if(active)
          this.actor.set_style_class_name("menu-application-button-selected");
       else
          this.actor.set_style_class_name('menu-application-button');
    },
-
+*/
    setString: function(string) {
       this.string = string;
       let webText = _("Package %s").format(this.packageName);
@@ -541,10 +541,10 @@ CategoryButton.prototype = {
       this.actor.add_style_class_name('menu-category-button-' + this.theme);
       this.actor._delegate = this;
    },
-
+/*
    setActive: function(active) {
    },
-
+*/
    _setCategoryProperties: function(category) {
       let labelName;
       let icon = null;
@@ -2108,7 +2108,7 @@ SystemButton.prototype = {
 
    executeAction: function(actor, event) {
       if((this.actionCallBack)&&((!event)||(event.get_button()==1))) {
-         this.setActive(false);
+         //this.setActive(false);
          this.actionCallBack();
       }
    },
@@ -2117,7 +2117,7 @@ SystemButton.prototype = {
       this.textBox.style = "max-width: "+maxWidth+"px;";
       this.textWidth = maxWidth;
    },
-
+/*
    setActive: function(active) {
       if(this.active != active) {
          this.active = active;
@@ -2136,6 +2136,7 @@ SystemButton.prototype = {
          //this.emit('active-changed', active);
       }
    }
+*/
 };
 //Signals.addSignalMethods(SystemButton.prototype);
 
@@ -2147,7 +2148,7 @@ SearchItem.prototype = {
    __proto__: ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype,
 
    _init: function(parent, provider, path, icon_path, iconSize, textWidth, appDesc, vertical) {
-      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, "");
+      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, "", {focusOnHover: false});
       this.actor.set_style_class_name('menu-application-button');
       this.parent = parent;
       this.provider = provider;
@@ -2204,14 +2205,14 @@ SearchItem.prototype = {
          this.textBox.add(this.labelDesc, { x_align: St.Align.START, x_fill: false, y_fill: false, expand: true });
       }
    },
-
+/*
    setActive: function(active){
       if(active)
          this.actor.set_style_class_name("menu-application-button-selected");
       else
          this.actor.set_style_class_name('menu-application-button');
    },
-
+*/
    setString: function(string) {
       this.string = string;
       let webText = _("Search %s for %s").format(this.provider, string);
@@ -2283,7 +2284,7 @@ DriveMenuItem.prototype = {
 
       this.actor.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
       this.actor.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
-      this.actor.connect('notify::hover', Lang.bind(this, this._onHoverChanged));
+      //this.actor.connect('notify::hover', Lang.bind(this, this._onHoverChanged));
       this.actor.connect('key-focus-in', Lang.bind(this, this._onKeyFocusIn));
       this.actor.connect('key-focus-out', Lang.bind(this, this._onKeyFocusOut));
       this.app = this._createAppWrapper(this.place);
@@ -2327,7 +2328,7 @@ DriveMenuItem.prototype = {
          this.place.launch();
       ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype.activate.call(this, event, keepMenu);
    },
-
+/*
    setActive: function(active) {
       if(active) {
          this.actor.set_style_class_name('menu-application-button-selected');
@@ -2342,7 +2343,7 @@ DriveMenuItem.prototype = {
          this.hover.refreshFace();
       }
    },
-
+*/
    _createAppWrapper: function(place) {
       // We need this fake app to help standar works.
       this.app = {
@@ -2400,7 +2401,7 @@ ButtonChangerMenuItem.prototype = {
    __proto__: ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype,
 
    _init: function(parent, icon, iconSize, labels, selected) {
-      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, labels[selected]);
+      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, labels[selected], {focusOnHover: false});
       this.theme = "";
       this.visible = true;
       this.actor.set_style_class_name('menu-category-button');
@@ -2421,11 +2422,11 @@ ButtonChangerMenuItem.prototype = {
       this.actor.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
       this.actor.connect('enter-event', Lang.bind(this, function() {
          global.set_cursor(Cinnamon.Cursor.POINTING_HAND);
-         this.setActive(true);
+         //this.setActive(true);
       }));
       this.actor.connect('leave-event', Lang.bind(this, function() {
          global.unset_cursor();
-         this.setActive(false);
+         //this.setActive(false);
       }));
    },
 
@@ -2447,7 +2448,7 @@ ButtonChangerMenuItem.prototype = {
       this.actor.set_style_class_name('menu-category-button');
       this.actor.add_style_class_name('menu-swap-button-' + this.theme);
    },
-
+/*
    setActive: function(active) {
       if(this.active != active) {
          this.active = active;
@@ -2464,19 +2465,19 @@ ButtonChangerMenuItem.prototype = {
          //this.emit('active-changed', active);
       }
    },
- 
+ */
    _onButtonReleaseEvent: function(actor, event) {
       if(!this.parent.pressed) {
          if(event.get_button() == 1) {
-            this.setActive(false);
+            //this.setActive(false);
             this.activateNext();
             Mainloop.idle_add(Lang.bind(this, function() {
                let [mx, my] = event.get_coords();
                let [ax, ay] = actor.get_transformed_position();
                let aw = actor.get_width();
                let ah = actor.get_height();
-               if((mx > ax)&&(mx < ax + aw)&&(my > ay)&&(my < ay + ah))
-                  this.setActive(true);
+               //if((mx > ax)&&(mx < ax + aw)&&(my > ay)&&(my < ay + ah))
+               //   this.setActive(true);
             }));
          }
       }
@@ -2547,7 +2548,7 @@ HoverIconBox.prototype = {
          this.label.get_parent().remove_actor(this.label);
 
          userBox.add(this.label, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE, expand: true });
-         this.menu.addActor(userBox);
+         //this.menu.addActor(userBox);
 
          this.notificationsSwitch = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Notifications"), null, null, this._toggleNotifications, { focusOnHover: false });
          this.notificationsSwitch.actor.style = "padding-top: "+(2)+"px;padding-bottom: "+(2)+"px;padding-left: "+(1)+"px;padding-right: "+(1)+"px;margin:auto;";
@@ -2672,7 +2673,7 @@ HoverIconBox.prototype = {
 
    closeMenu: function() {
       //this.menu.close(true);
-      this.setActive(false);
+      //this.setActive(false);
       this.actor.remove_style_pseudo_class('open');
    },
     
@@ -2768,37 +2769,5 @@ HoverIconBox.prototype = {
          this.actor.remove_actor(this._icon);
       if((this._userIcon)&&(this._userIcon.get_parent() == this.actor))
          this.actor.remove_actor(this._userIcon);
-   }
-};
-
-// This is only a clone for the dalcde update
-// we used it here to support old cinnamon versions.
-function PopupIconMenuItem() {
-   this._init.apply(this, arguments);
-}
-
-PopupIconMenuItem.prototype = {
-   __proto__: ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype,
-
-   _init: function(text, iconName, iconType, params) {
-      ConfigurableMenus.ConfigurablePopupBaseMenuItem.prototype._init.call(this, params);
-      if(iconType != St.IconType.FULLCOLOR)
-          iconType = St.IconType.SYMBOLIC;
-      this.label = new St.Label({text: text});
-      this._icon = new St.Icon({ style_class: 'popup-menu-icon',
-         icon_name: iconName,
-         icon_type: iconType});
-      this.addActor(this._icon, {span: 0});
-      this.addActor(this.label);
-   },
-
-   setIconSymbolicName: function(iconName) {
-      this._icon.set_icon_name(iconName);
-      this._icon.set_icon_type(St.IconType.SYMBOLIC);
-   },
-
-   setIconName: function(iconName) {
-      this._icon.set_icon_name(iconName);
-      this._icon.set_icon_type(St.IconType.FULLCOLOR);
    }
 };

@@ -2586,7 +2586,10 @@ MyApplet.prototype = {
 
          let items = this._applet_context_menu.getMenuItems();
 
-         this.listView = new MenuItems.PopupIconMenuItem(_("List View"), 'view-list-symbolic', St.IconType.SYMBOLIC);
+         this.listView = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("List View"), {focusOnHover: false});
+         this.listView.setIconName("view-list-symbolic");
+         this.listView.setIconVisible(true);
+         this.listView.setIconType(St.IconType.SYMBOLIC);
          this.listView.connect('activate', Lang.bind(this, function() {
             this.iconView = !this.iconView;
             this._changeView();
@@ -2596,7 +2599,10 @@ MyApplet.prototype = {
             this.listView.setSensitive(this.iconView);
          }
 
-         this.gridView = new MenuItems.PopupIconMenuItem(_("Grid View"), 'view-grid-symbolic', St.IconType.SYMBOLIC);
+         this.gridView = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Grid View"), {focusOnHover: false});
+         this.gridView.setIconName("view-grid-symbolic");
+         this.gridView.setIconVisible(true);
+         this.gridView.setIconType(St.IconType.SYMBOLIC);
          this.gridView.connect('activate', Lang.bind(this, function() {
             this.iconView = !this.iconView;
             this._changeView();
@@ -2611,7 +2617,7 @@ MyApplet.prototype = {
             this._applet_context_menu.addMenuItem(this.separatorResize);
          }
 
-         this.allowResize = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Allow resizing"), 'changes-prevent', 'changes-allow', false);
+         this.allowResize = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Allow resizing"), 'changes-prevent', 'changes-allow', false, {focusOnHover: false});
          this.allowResize.connect('activate', Lang.bind(this, function() {
             Mainloop.idle_add(Lang.bind(this, function() {
                this.controlingSize = !this.controlingSize;
@@ -2622,7 +2628,7 @@ MyApplet.prototype = {
             this._applet_context_menu.addMenuItem(this.allowResize);
          }
 
-         this.fullScreenMenu = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Full Screen"), 'view-restore', 'view-fullscreen', false);
+         this.fullScreenMenu = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Full Screen"), 'view-restore', 'view-fullscreen', false, {focusOnHover: false});
          this.fullScreenMenu.connect('activate', Lang.bind(this, function() {
             Mainloop.idle_add(Lang.bind(this, function() {
                this.fullScreen = !this.fullScreen;
@@ -2654,7 +2660,7 @@ MyApplet.prototype = {
       let items = this._applet_context_menu.getMenuItems();
 
       if(this.context_menu_item_remove == null) {
-         this.context_menu_item_remove = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Remove '%s'").format(_(this._meta.name)));
+         this.context_menu_item_remove = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Remove '%s'").format(_(this._meta.name)), {focusOnHover: false});
          this.context_menu_item_remove.setIconName("edit-delete");
          this.context_menu_item_remove.setIconVisible(true);
          this.context_menu_item_remove.setIconType(St.IconType.SYMBOLIC);
@@ -2663,7 +2669,7 @@ MyApplet.prototype = {
          }));
       }
       if(this.context_menu_item_about == null) {
-         this.context_menu_item_about = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("About..."));
+         this.context_menu_item_about = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("About..."), {focusOnHover: false});
          this.context_menu_item_about.setIconName("dialog-question");
          this.context_menu_item_about.setIconVisible(true);
          this.context_menu_item_about.setIconType(St.IconType.SYMBOLIC);
@@ -2680,7 +2686,7 @@ MyApplet.prototype = {
 
       if(!this._meta["hide-configuration"] && GLib.file_test(this._meta["path"] + "/settings-schema.json", GLib.FileTest.EXISTS)) {
          if(this.context_menu_item_configure == null) {            
-             this.context_menu_item_configure = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Configure..."));
+             this.context_menu_item_configure = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Configure..."), {focusOnHover: false});
              this.context_menu_item_configure.setIconName("system-run");
              this.context_menu_item_configure.setIconVisible(true);
              this.context_menu_item_configure.setIconType(St.IconType.SYMBOLIC);
@@ -2905,7 +2911,7 @@ MyApplet.prototype = {
       this.styleGnoMenuPanel = new ConfigurableMenus.ConfigurablePopupMenuSection();
       this.styleGnoMenuPanel.setVertical(true);
       this.styleGnoMenuPanel.actor.style_class = 'menu-gno-operative-box-left';
-      this.panelAppsName = new ConfigurableMenus.ConfigurablePopupMenuItem(_("Favorites"));
+      this.panelAppsName = new ConfigurableMenus.ConfigurablePopupMenuItem(_("Favorites"), {focusOnHover: false});
       this.panelAppsName.setLabelStyle('menu-selected-app-title');
 
       this.searchBox = new ConfigurableMenus.ConfigurableEntryItem(_("Filter:"), _("Type to search..."));
@@ -2983,11 +2989,7 @@ MyApplet.prototype = {
          this.bttChanger.registerCallBack(null);
          this.bttChanger.setTheme(this.theme);
 
-         this.menu.addMenuItem(this.section);
-         //FIXME: This is wrong, but what we can do to set y_fill = true?
-         this.menu.box.remove_actor(this.section.actor);
-         this.menu.box.add(this.section.actor, {x_fill: true, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
-
+         this.menu.addMenuItem(this.section, {x_fill: true, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
          this.rightPane.addMenuItem(this.beginBox);     
 //search
          this.topBoxSwaper.addMenuItem(this.changeTopBox, {x_fill: true, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
@@ -3014,7 +3016,7 @@ MyApplet.prototype = {
          this.menuBox.actor.add_style_class_name('menu-main-box-' + this.theme);
          this.menuBox.addMenuItem(this.mainBox, {x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
 
-         this.section.actor.add(this.menuBox.actor, {x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
+         this.section.addMenuItem(this.menuBox, {x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
          this.extendedBox.addMenuItem(this.standardBox, { x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
 
          this.separatorTop.setStyleClass('menu-separator-top-' + this.theme);

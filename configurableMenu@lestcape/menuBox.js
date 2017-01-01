@@ -367,7 +367,6 @@ FavoritesBoxExtended.prototype = {
       vertical = (vertical == true);
       this._parent = parent;
       this._favRefresh = true;
-      this._lastFocus = null;
       this._firstElement = null;
       this.scrollBox = new ConfigurableMenus.ScrollItemsBox(this, this.box, vertical, St.Align.START);
       this.actor = this.scrollBox.actor;
@@ -390,17 +389,10 @@ FavoritesBoxExtended.prototype = {
       let focusedActor = global.stage.get_key_focus();
    },
 
-   _onEnterEvent: function(actor) {
-      this._lastFocus = global.stage.get_key_focus();
-   },
-
    _navegateFocusOut: function(actor) {
       let focus = global.stage.get_key_focus();
       if(actor.contains(focus)) {
-         if(this._lastFocus)
-            this._lastFocus.grab_key_focus();
-         else
-            global.stage.set_key_focus(null);
+         this.actor.grab_key_focus();
       }
    },
 
@@ -513,7 +505,6 @@ FavoritesBoxExtended.prototype = {
                this.activeHoverElement(actor);
             }));
          }
-         menuItem.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
          let childrens = this.box.get_children();
          let currentNumberItems = childrens[0].get_children().length;
          for(let i = 1; i < childrens.length; i++) {
@@ -1037,7 +1028,7 @@ ControlBox.prototype = {
       btt.add_style_class_name('menu-control-button');
       btt.connect('notify::hover', Lang.bind(this, function(actor) {
          if(!this.parent.actorResize) {
-            this.setActive(actor, actor.hover);
+            //this.setActive(actor, actor.hover);
             if(actor.get_hover()) {
                switch(actor) {
                   case this.bttViewList:
@@ -1074,15 +1065,15 @@ ControlBox.prototype = {
             }
          }
       }));
-      this.actor.connect('key-focus-in', Lang.bind(this, function(actor) {
+      /*this.actor.connect('key-focus-in', Lang.bind(this, function(actor) {
          this.setActive(actor, true);
       }));
       this.actor.connect('key-focus-out', Lang.bind(this, function(actor) {
          this.setActive(actor, false);
-      }));
+      }));*/
       return btt;
    },
-
+/*
    setActive: function(actor, active) {
       let activeChanged = active != this.active;
       if(activeChanged) {
@@ -1096,7 +1087,7 @@ ControlBox.prototype = {
          //this.emit('active-changed', active);
       }
    },
-
+*/
    navegateControlBox: function(symbol, actor) {
    },
 
@@ -1138,21 +1129,21 @@ PowerBox.prototype = {
                this.powerSelected = 0;
             if(this.activeBar)
                this.powerSelected = 2;
-            this._powerButtons[this.powerSelected].setActive(true);
+            //this._powerButtons[this.powerSelected].setActive(true);
             if(this.signalKeyPowerID == 0)
                this.signalKeyPowerID = this.actor.connect('key-press-event', Lang.bind(this.parent, this.parent._onMenuKeyPress));
          }
       }));
       this.actor.connect('key-focus-out', Lang.bind(this, function(actor, event) {
-         for(let cSys in this._powerButtons)
-            this._powerButtons[cSys].setActive(false);
+         //for(let cSys in this._powerButtons)
+         //   this._powerButtons[cSys].setActive(false);
          if(this.signalKeyPowerID > 0) {
             this.actor.disconnect(this.signalKeyPowerID);
             this.signalKeyPowerID = 0;
          }
          this.powerSelected = -1;
-         if(this._bttChanger)
-            this._bttChanger.setActive(false);
+         //if(this._bttChanger)
+         //   this._bttChanger.setActive(false);
       }));
       this._separatorPower = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
       this._separatorPower.setVisible(false);
@@ -1196,14 +1187,6 @@ PowerBox.prototype = {
 
    _onActiveChanged: function(button, active) {
       //this.emit('active-changed', button, active);
-   },
-
-   destroy: function(symbolic) {
-      this._separatorPower.destroy();
-      for(let i = 0; i < this._powerButtons.length; i++) {
-         this._powerButtons[i].destroy();
-      }
-      this.actor.destroy();
    },
 
    setIconSymbolic: function(symbolic) {
@@ -1320,6 +1303,7 @@ PowerBox.prototype = {
       this.actor.set_height(-1);
 
       this._activeBar.removeMenuItem(this._bttChanger);
+
       this.removeMenuItem(this._activeBar);
       this.removeMenuItem(this._separatorBox);
    },
@@ -1338,6 +1322,7 @@ PowerBox.prototype = {
       this._separatorBox.actor.style = "padding-left: "+(this.iconSize)+"px;margin:auto;";
 
       this._activeBar.addMenuItem(this._powerButtons[2], { x_fill: false, x_align: aling });
+
       this._activeBar.addMenuItem(this._bttChanger, { x_fill: true, x_align: aling });
 
       this.addMenuItem(this._activeBar, { x_fill: false, y_fill: false, x_align: aling, y_align: aling, expand: true });
@@ -1369,10 +1354,10 @@ PowerBox.prototype = {
       this._powerButtons[0].actor.visible = !this._powerButtons[0].actor.visible;
       this._powerButtons[1].actor.visible = !this._powerButtons[1].actor.visible;
       if(this.powerSelected != -1) {
-         this._powerButtons[this.powerSelected].setActive(false);
+         //this._powerButtons[this.powerSelected].setActive(false);
          this.powerSelected = -1;
-         if(this._bttChanger)
-            this._bttChanger.setActive(true);
+         //if(this._bttChanger)
+         //   this._bttChanger.setActive(true);
       }
    },
 
@@ -1452,8 +1437,8 @@ PowerBox.prototype = {
    },
 
    _onEnterEvent: function(actor, event) {
-      if(this.powerSelected != -1)
-         this._powerButtons[this.powerSelected].setActive(false);
+      //if(this.powerSelected != -1)
+      //   this._powerButtons[this.powerSelected].setActive(false);
       this.parent.arrayBoxLayout.scrollBox.setAutoScrolling(false);
       this.parent.categoriesBox.scrollBox.setAutoScrolling(false);
       //this.parent.favoritesScrollBox.setAutoScrolling(false);
@@ -1461,7 +1446,7 @@ PowerBox.prototype = {
       this.parent.categoriesBox.scrollBox.setAutoScrolling(this.parent.autoscroll_enabled);
       //this.parent.favoritesScrollBox.setAutoScrolling(this.autoscroll_enabled);
       this.powerSelected = this.indexOf(actor);
-      this._powerButtons[this.powerSelected].setActive(true);
+      //this._powerButtons[this.powerSelected].setActive(true);
       if(this.parent.appMenu) {
          this.parent.appMenu.close();
          this.parent._clearPrevCatSelection();
@@ -1470,14 +1455,14 @@ PowerBox.prototype = {
 
    _onLeaveEvent: function(actor, event) {
       if(this.powerSelected != -1) {
-         this._powerButtons[this.powerSelected].setActive(false);
+         //this._powerButtons[this.powerSelected].setActive(false);
          this.powerSelected = -1;
       }
    },
 
    disableSelected: function() {
       if(this.powerSelected != -1) {
-         this._powerButtons[this.powerSelected].setActive(false);
+         //this._powerButtons[this.powerSelected].setActive(false);
          this.powerSelected = -1;
       }
       if((this._activeBar)&&(this._bttChanger))
@@ -1488,45 +1473,45 @@ PowerBox.prototype = {
       if(this._activeBar) {
          if((symbol == Clutter.KEY_Up) || (symbol == Clutter.KEY_Left)) {
             if(this.powerSelected == -1) {
-               this._bttChanger.setActive(false);
+              // this._bttChanger.setActive(false);
                this.powerSelected = 2;
-               this._powerButtons[this.powerSelected].setActive(true);
+              // this._powerButtons[this.powerSelected].setActive(true);
             } else if(this.powerSelected == 0) {
-               this._powerButtons[this.powerSelected].setActive(false);
+              // this._powerButtons[this.powerSelected].setActive(false);
                this.powerSelected = -1;
-               this._bttChanger.setActive(true);
+              // this._bttChanger.setActive(true);
             } else {
-               this._powerButtons[this.powerSelected].setActive(false);
+               //this._powerButtons[this.powerSelected].setActive(false);
                if(this._powerButtons[this.powerSelected - 1].actor.visible) {
                   this.powerSelected--;
-                  this._powerButtons[this.powerSelected].setActive(true);
+                //  this._powerButtons[this.powerSelected].setActive(true);
                } else {
                   this.powerSelected = -1;
-                  this._bttChanger.setActive(true);
+                //  this._bttChanger.setActive(true);
                }
             }
          }
          else if((symbol == Clutter.KEY_Down) || (symbol == Clutter.KEY_Right)) {
             if(this.powerSelected == -1) {
-               this._bttChanger.setActive(false);
+               //this._bttChanger.setActive(false);
                if(this._powerButtons[0].actor.visible)
                   this.powerSelected = 0;
                else
                   this.powerSelected = 2;
-               this._powerButtons[this.powerSelected].setActive(true);
+              // this._powerButtons[this.powerSelected].setActive(true);
             } else if(this.powerSelected == 2) {
-               this._powerButtons[this.powerSelected].setActive(false);
+               //this._powerButtons[this.powerSelected].setActive(false);
                this.powerSelected = -1;
-               this._bttChanger.setActive(true);
+              // this._bttChanger.setActive(true);
             } else {
-               this._powerButtons[this.powerSelected].setActive(false);
+              // this._powerButtons[this.powerSelected].setActive(false);
                this.powerSelected++;
-               this._powerButtons[this.powerSelected].setActive(true);
+              // this._powerButtons[this.powerSelected].setActive(true);
             }
          }
          else if((symbol == Clutter.KEY_Return) || (symbol == Clutter.KP_Enter)) {
             if(this.powerSelected != -1) {
-               this._powerButtons[this.powerSelected].setActive(false);
+             //  this._powerButtons[this.powerSelected].setActive(false);
                this._powerButtons[this.powerSelected].executeAction();
             } else {
                this._bttChanger.activateNext();
@@ -1534,23 +1519,21 @@ PowerBox.prototype = {
          }
       } else {
          if((symbol == Clutter.KEY_Up) || (symbol == Clutter.KEY_Left)) {
-            this._powerButtons[this.powerSelected].setActive(false);
+          //  this._powerButtons[this.powerSelected].setActive(false);
             if(this.powerSelected - 1 < 0)
                this.powerSelected = this._powerButtons.length -1;
             else
                this.powerSelected--;
-            this._powerButtons[this.powerSelected].setActive(true);
-         }
-         else if((symbol == Clutter.KEY_Down) || (symbol == Clutter.KEY_Right)) {
-            this._powerButtons[this.powerSelected].setActive(false);
+         //   this._powerButtons[this.powerSelected].setActive(true);
+         } else if((symbol == Clutter.KEY_Down) || (symbol == Clutter.KEY_Right)) {
+         //   this._powerButtons[this.powerSelected].setActive(false);
             if(this.powerSelected + 1 < this._powerButtons.length)
                this.powerSelected++;
             else
                this.powerSelected = 0;
-            this._powerButtons[this.powerSelected].setActive(true);
-         }
-         else if((symbol == Clutter.KEY_Return) || (symbol == Clutter.KP_Enter)) {
-            this._powerButtons[this.powerSelected].setActive(false);
+          //  this._powerButtons[this.powerSelected].setActive(true);
+         } else if((symbol == Clutter.KEY_Return) || (symbol == Clutter.KP_Enter)) {
+          //  this._powerButtons[this.powerSelected].setActive(false);
             this._powerButtons[this.powerSelected].executeAction();
          }
       }
@@ -1558,6 +1541,7 @@ PowerBox.prototype = {
    },
 
    destroy: function(parent, activeDateTime) {
+      this._separatorPower.destroy();
       this._separatorBox.destroy();
       this._activeBar.destroy();
       this.actor.destroy();
@@ -1951,7 +1935,7 @@ GnoMenuBox.prototype = {
       let selected = '';
       if(active)
          selected = '-selected';
-      button.setActive(active);
+      //button.setActive(active);
       switch(this.parent.styleGnoMenuPanel.actor.style_class) {
          case 'menu-gno-operative-box-left':
               button.actor.add_style_class_name('menu-gno-button-left' + selected);
