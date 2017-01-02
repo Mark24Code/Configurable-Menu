@@ -1028,7 +1028,7 @@ ControlBox.prototype = {
       btt.add_style_class_name('menu-control-button');
       btt.connect('notify::hover', Lang.bind(this, function(actor) {
          if(!this.parent.actorResize) {
-            //this.setActive(actor, actor.hover);
+            this.setActive(actor, actor.hover);
             if(actor.get_hover()) {
                switch(actor) {
                   case this.bttViewList:
@@ -1065,15 +1065,15 @@ ControlBox.prototype = {
             }
          }
       }));
-      /*this.actor.connect('key-focus-in', Lang.bind(this, function(actor) {
+      this.actor.connect('key-focus-in', Lang.bind(this, function(actor) {
          this.setActive(actor, true);
       }));
       this.actor.connect('key-focus-out', Lang.bind(this, function(actor) {
          this.setActive(actor, false);
-      }));*/
+      }));
       return btt;
    },
-/*
+
    setActive: function(actor, active) {
       let activeChanged = active != this.active;
       if(activeChanged) {
@@ -1087,7 +1087,7 @@ ControlBox.prototype = {
          //this.emit('active-changed', active);
       }
    },
-*/
+
    navegateControlBox: function(symbol, actor) {
    },
 
@@ -1129,21 +1129,21 @@ PowerBox.prototype = {
                this.powerSelected = 0;
             if(this.activeBar)
                this.powerSelected = 2;
-            //this._powerButtons[this.powerSelected].setActive(true);
+            this._powerButtons[this.powerSelected].setActive(true);
             if(this.signalKeyPowerID == 0)
                this.signalKeyPowerID = this.actor.connect('key-press-event', Lang.bind(this.parent, this.parent._onMenuKeyPress));
          }
       }));
       this.actor.connect('key-focus-out', Lang.bind(this, function(actor, event) {
-         //for(let cSys in this._powerButtons)
-         //   this._powerButtons[cSys].setActive(false);
+         for(let cSys in this._powerButtons)
+            this._powerButtons[cSys].setActive(false);
          if(this.signalKeyPowerID > 0) {
             this.actor.disconnect(this.signalKeyPowerID);
             this.signalKeyPowerID = 0;
          }
          this.powerSelected = -1;
-         //if(this._bttChanger)
-         //   this._bttChanger.setActive(false);
+         if(this._bttChanger)
+            this._bttChanger.setActive(false);
       }));
       this._separatorPower = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
       this._separatorPower.setVisible(false);
@@ -1354,10 +1354,10 @@ PowerBox.prototype = {
       this._powerButtons[0].actor.visible = !this._powerButtons[0].actor.visible;
       this._powerButtons[1].actor.visible = !this._powerButtons[1].actor.visible;
       if(this.powerSelected != -1) {
-         //this._powerButtons[this.powerSelected].setActive(false);
+         this._powerButtons[this.powerSelected].setActive(false);
          this.powerSelected = -1;
-         //if(this._bttChanger)
-         //   this._bttChanger.setActive(true);
+         if(this._bttChanger)
+            this._bttChanger.setActive(true);
       }
    },
 
@@ -1437,8 +1437,8 @@ PowerBox.prototype = {
    },
 
    _onEnterEvent: function(actor, event) {
-      //if(this.powerSelected != -1)
-      //   this._powerButtons[this.powerSelected].setActive(false);
+      if(this.powerSelected != -1)
+         this._powerButtons[this.powerSelected].setActive(false);
       this.parent.arrayBoxLayout.scrollBox.setAutoScrolling(false);
       this.parent.categoriesBox.scrollBox.setAutoScrolling(false);
       //this.parent.favoritesScrollBox.setAutoScrolling(false);
@@ -1446,7 +1446,7 @@ PowerBox.prototype = {
       this.parent.categoriesBox.scrollBox.setAutoScrolling(this.parent.autoscroll_enabled);
       //this.parent.favoritesScrollBox.setAutoScrolling(this.autoscroll_enabled);
       this.powerSelected = this.indexOf(actor);
-      //this._powerButtons[this.powerSelected].setActive(true);
+      this._powerButtons[this.powerSelected].setActive(true);
       if(this.parent.appMenu) {
          this.parent.appMenu.close();
          this.parent._clearPrevCatSelection();
@@ -1455,14 +1455,14 @@ PowerBox.prototype = {
 
    _onLeaveEvent: function(actor, event) {
       if(this.powerSelected != -1) {
-         //this._powerButtons[this.powerSelected].setActive(false);
+         this._powerButtons[this.powerSelected].setActive(false);
          this.powerSelected = -1;
       }
    },
 
    disableSelected: function() {
       if(this.powerSelected != -1) {
-         //this._powerButtons[this.powerSelected].setActive(false);
+         this._powerButtons[this.powerSelected].setActive(false);
          this.powerSelected = -1;
       }
       if((this._activeBar)&&(this._bttChanger))
@@ -1473,45 +1473,45 @@ PowerBox.prototype = {
       if(this._activeBar) {
          if((symbol == Clutter.KEY_Up) || (symbol == Clutter.KEY_Left)) {
             if(this.powerSelected == -1) {
-              // this._bttChanger.setActive(false);
+               this._bttChanger.setActive(false);
                this.powerSelected = 2;
-              // this._powerButtons[this.powerSelected].setActive(true);
+               this._powerButtons[this.powerSelected].setActive(true);
             } else if(this.powerSelected == 0) {
-              // this._powerButtons[this.powerSelected].setActive(false);
+               this._powerButtons[this.powerSelected].setActive(false);
                this.powerSelected = -1;
-              // this._bttChanger.setActive(true);
+               this._bttChanger.setActive(true);
             } else {
-               //this._powerButtons[this.powerSelected].setActive(false);
+               this._powerButtons[this.powerSelected].setActive(false);
                if(this._powerButtons[this.powerSelected - 1].actor.visible) {
                   this.powerSelected--;
-                //  this._powerButtons[this.powerSelected].setActive(true);
+                  this._powerButtons[this.powerSelected].setActive(true);
                } else {
                   this.powerSelected = -1;
-                //  this._bttChanger.setActive(true);
+                  this._bttChanger.setActive(true);
                }
             }
          }
          else if((symbol == Clutter.KEY_Down) || (symbol == Clutter.KEY_Right)) {
             if(this.powerSelected == -1) {
-               //this._bttChanger.setActive(false);
+               this._bttChanger.setActive(false);
                if(this._powerButtons[0].actor.visible)
                   this.powerSelected = 0;
                else
                   this.powerSelected = 2;
-              // this._powerButtons[this.powerSelected].setActive(true);
+               this._powerButtons[this.powerSelected].setActive(true);
             } else if(this.powerSelected == 2) {
-               //this._powerButtons[this.powerSelected].setActive(false);
+               this._powerButtons[this.powerSelected].setActive(false);
                this.powerSelected = -1;
-              // this._bttChanger.setActive(true);
+               this._bttChanger.setActive(true);
             } else {
-              // this._powerButtons[this.powerSelected].setActive(false);
+               this._powerButtons[this.powerSelected].setActive(false);
                this.powerSelected++;
-              // this._powerButtons[this.powerSelected].setActive(true);
+               this._powerButtons[this.powerSelected].setActive(true);
             }
          }
          else if((symbol == Clutter.KEY_Return) || (symbol == Clutter.KP_Enter)) {
             if(this.powerSelected != -1) {
-             //  this._powerButtons[this.powerSelected].setActive(false);
+               this._powerButtons[this.powerSelected].setActive(false);
                this._powerButtons[this.powerSelected].executeAction();
             } else {
                this._bttChanger.activateNext();
@@ -1519,21 +1519,21 @@ PowerBox.prototype = {
          }
       } else {
          if((symbol == Clutter.KEY_Up) || (symbol == Clutter.KEY_Left)) {
-          //  this._powerButtons[this.powerSelected].setActive(false);
+            this._powerButtons[this.powerSelected].setActive(false);
             if(this.powerSelected - 1 < 0)
                this.powerSelected = this._powerButtons.length -1;
             else
                this.powerSelected--;
-         //   this._powerButtons[this.powerSelected].setActive(true);
+            this._powerButtons[this.powerSelected].setActive(true);
          } else if((symbol == Clutter.KEY_Down) || (symbol == Clutter.KEY_Right)) {
-         //   this._powerButtons[this.powerSelected].setActive(false);
+            this._powerButtons[this.powerSelected].setActive(false);
             if(this.powerSelected + 1 < this._powerButtons.length)
                this.powerSelected++;
             else
                this.powerSelected = 0;
-          //  this._powerButtons[this.powerSelected].setActive(true);
+            this._powerButtons[this.powerSelected].setActive(true);
          } else if((symbol == Clutter.KEY_Return) || (symbol == Clutter.KP_Enter)) {
-          //  this._powerButtons[this.powerSelected].setActive(false);
+            this._powerButtons[this.powerSelected].setActive(false);
             this._powerButtons[this.powerSelected].executeAction();
          }
       }
@@ -1935,7 +1935,7 @@ GnoMenuBox.prototype = {
       let selected = '';
       if(active)
          selected = '-selected';
-      //button.setActive(active);
+      button.setActive(active);
       switch(this.parent.styleGnoMenuPanel.actor.style_class) {
          case 'menu-gno-operative-box-left':
               button.actor.add_style_class_name('menu-gno-button-left' + selected);

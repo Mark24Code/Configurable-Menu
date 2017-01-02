@@ -2537,11 +2537,10 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
    },
 
    _onHoverChanged: function(actor) {
-      Main.notify(" " + actor);
-      /*this.setActive(actor.hover);
+      this.setActive(actor.hover);
       if((this._vectorBlocker)&&(actor.hover)&&(this.menu)) {
          this._vectorBlocker.executeInActors(this.actor, this.menu.actor);
-      }*/
+      }
    },
 
    _onMapped: function() {
@@ -2618,7 +2617,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       if(this.menu && this.menu.IsOpen && this.menu.isInFloatingState())
          this.setActive(false);
    },
-/*
+
    setActive: function(active) {
       if(this.active != active) {
          if(this._showArrowOnActivation) {
@@ -2637,7 +2636,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
          ConfigurableBasicPopupMenuItem.prototype.setActive.call(this, active);
       }
    },
-*/
+
    _onButtonReleaseEvent: function(actor, event) {
       if(event.get_button() == 1) {
          if(this.menu && !this._openMenuOnActivation) {
@@ -3697,7 +3696,7 @@ ConfigurableMenu.prototype = {
 
    _onVectorBoxReleased: function(vector, actor) {
       if(actor && actor._delegate && !actor._delegate.active && this.actor._delegate.setActive) {
-         //actor._delegate.setActive(true);
+         actor._delegate.setActive(true);
       }
    },
 
@@ -4066,8 +4065,8 @@ ConfigurableMenu.prototype = {
          }
          if(close) {
             this.close(true);
-            /*if((this.launcher)&&(this.launcher.setActive))
-               this.launcher.setActive(true);*/
+            if((this.launcher)&&(this.launcher.setActive))
+               this.launcher.setActive(true);
             return true;
          }
       }
@@ -4467,7 +4466,7 @@ ConfigurableMenu.prototype = {
          this._topMenu.addChildMenu(this);
       return this._topMenu;
    },
-/*
+
    setActive: function(active) {
       if(active != this.active) {
          this.active = active;
@@ -4485,7 +4484,7 @@ ConfigurableMenu.prototype = {
       }
       return this._activeMenuItem;
    },
-*/
+
    allowBorders: function(allow) {
       if(allow)
          this.menu.actor.set_style('padding: 0px; border-left: none; border-right: none; border-top: none; border-bottom: none;');
@@ -4905,7 +4904,7 @@ ConfigurablePopupMenuSection.prototype = {
    getTopMenu: function() {
       return this._topMenu;
    },
-/*
+
    setActive: function(active) {
       if(active != this.active) {
          this.active = active;
@@ -4923,7 +4922,7 @@ ConfigurablePopupMenuSection.prototype = {
       }
       return this._activeMenuItem;
    },
-*/
+
    addMenuItem: function(menuItem, params, position) {
       this._setIconVisible(menuItem);
       this._setDesaturateItemIcon(menuItem);
@@ -4941,7 +4940,7 @@ ConfigurablePopupMenuSection.prototype = {
    setVectorBox: function(vectorBlocker) {
       if(this._vectorBlocker != vectorBlocker) {
          this._vectorBlocker = vectorBlocker;
-         let items = this._getAllMenuItems();
+         let items = this.getMenuItems();
          for(let pos in items) {
             this._setVectorBox(items[pos]);
          }
@@ -5130,7 +5129,7 @@ ArrayBoxLayout.prototype = {
       return this.box.get_focus_chain().filter(x =>
              !(x._delegate instanceof ConfigurableSeparatorMenuItem));
    },
-/*
+
    setActive: function(active) {
       if(active != this.active) {
          this.active = active;
@@ -5148,7 +5147,7 @@ ArrayBoxLayout.prototype = {
       }
       return this._activeMenuItem;
    },
-*/
+
    contains: function(actor) {
       if(this.actor.contains(actor))
          return true;
@@ -6363,7 +6362,7 @@ ConfigurableGridSection.prototype = {
    _onScrollEvent: function() {
       Main.notify("scroll");
    },
-/*
+
    setActive: function(active) {
       if(active != this.active) {
          this.active = active;
@@ -6380,7 +6379,7 @@ ConfigurableGridSection.prototype = {
       }
       return this._activeMenuItem;
    },
-*/
+
    _onMapped: function(actor, event) {
       //this._topMenu = this._getTopMenu(this.actor.get_parent());
       //this._topMenu.connect('resize-mode-changed',  Lang.bind(this, this._onResizeModeChanged));
@@ -7245,8 +7244,8 @@ ConfigurableMenuApplet.prototype = {
          }
          if((close)||(event.get_key_symbol() == Clutter.Escape)) {
             this.close(true);
-            /*if((this.launcher)&&(this.launcher.setActive))
-               this.launcher.setActive(true);*/
+            if((this.launcher)&&(this.launcher.setActive))
+               this.launcher.setActive(true);
             this.closeSubmenu();
             return true;
          }

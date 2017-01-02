@@ -1787,8 +1787,7 @@ MyApplet.prototype = {
                this.changeTopBox.addMenuItem(this.changeTopBoxUp);
                this.changeBottomBox.addMenuItem(this.changeBottomBoxDown);
                this.changeBottomBox.addMenuItem(this.changeBottomBoxUp);
-            }
-            else {
+            } else {
                this.topBoxSwaper.actor.set_style_class_name('menu-top-box-' + this.theme);
                this.bottomBoxSwaper.actor.set_style_class_name('menu-bottom-box-' + this.theme);
                this.beginBox.addMenuItem(this.topBoxSwaper);
