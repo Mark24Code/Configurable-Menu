@@ -1978,6 +1978,10 @@ ConfigurableEntryItem.prototype = {
       this.actor.add(this.searchEntry, { x_align: St.Align.START, y_align: St.Align.MIDDLE, x_fill: true, y_fill: false, expand: true });
    },
 
+   _onButtonReleaseEvent: function(actor, event) {
+      return true;
+   },
+
    setLabelVisible: function(visible) {
       this.label.visible = visible;
    },
@@ -2402,13 +2406,14 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
                this._onMapped();
             if(this.menu.setFloatingState)
                this.menu.setFloatingState(this._floatingMenu);
-            if(this.menu._updateTopMenu)
-               this.menu._updateTopMenu();
+            if(this.menu.setLauncher)
+               this.menu.setLauncher(this);
          }
          this.emit('menu-changed', oldMenu, this.menu);
          if(oldMenu && this._withMenu)
             oldMenu.destroy();
-      }
+      } else if(this.menu)
+         this.menu.repositionActor(this.actor);
    },
 
    preservedSelection: function(preserve) {
@@ -2449,7 +2454,6 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
             this.menu.setFloatingState(floating);
       }
    },
-
 
    openMenuOnActivation: function(open) {
       this._openMenuOnActivation = open;
@@ -2500,6 +2504,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
                case St.Side.TOP:
                case St.Side.BOTTOM:
                case St.Side.LEFT:
+                  Main.notify("set left");
                   if(this._triangle) {
                      if(this._triangle.rotation_angle_z != 0)
                         this._triangle.rotation_angle_z = 0;
@@ -2511,6 +2516,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
                   break;
                case St.Side.RIGHT:
                   if(this._triangle) {
+                     Main.notify("set right");
                      if(this._triangle.rotation_angle_z != 180)
                         this._triangle.rotation_angle_z = 180;
                      if(this._arrowSide != St.Side.RIGHT) {
@@ -2814,7 +2820,7 @@ ConfigurableMenuManager.prototype = {
       if(open) {
          if(this._activeMenu && this._activeMenu.isChildMenu(menu)) {
             this._menuStack.push(this._activeMenu);
-         } else if((!focus || !menu.actor.contains(focus))) {
+         } else if(!this._activeMenu && (!focus || !menu.actor.contains(focus))) {
             menu.actor.grab_key_focus();
             if(menu.sourceActor)
                menu.sourceActor.grab_key_focus();
@@ -2837,8 +2843,8 @@ ConfigurableMenuManager.prototype = {
          // FIXME: this is buggy and open the menu and closed it several times.
          if(hadFocus)
             focus.grab_key_focus();
-         else
-            menu.actor.grab_key_focus();
+         /*else
+            menu.actor.grab_key_focus();*/
       } else if(menu == this._activeMenu) {
          if(this.grabbed)
             this._ungrab();
@@ -2847,7 +2853,7 @@ ConfigurableMenuManager.prototype = {
          if(this._grabbedFromKeynav) {
             if(this._preGrabInputMode == Cinnamon.StageInputMode.FOCUSED)
                global.stage_input_mode = Cinnamon.StageInputMode.FOCUSED;
-            if(hadFocus && menu.sourceActor)
+            if(hadFocus && menu.sourceActor && menu.actor.contains(focus))
                menu.sourceActor.grab_key_focus();
             else if(focus)
                focus.grab_key_focus();
@@ -3338,7 +3344,7 @@ ConfigurablePopupMenuBase.prototype = {
          menu.disconnect(menuItem._subMenuActiveChangeId);
          menuItem._subMenuActiveChangeId = null;
       //}
-      //if(menuItem._subMenuActiveChangeId) {
+      //if(menuItem._subMenuDestroyId) {
          menu.disconnect(menuItem._subMenuDestroyId);
          menuItem._subMenuDestroyId = null;
       //}
@@ -4676,7 +4682,6 @@ ConfigurableMenu.prototype = {
    },
 
    setLauncher: function(launcher) {
-      this.close();      
       this.launcher = launcher;
       if(this.launcher) {
          this.sourceActor = this.launcher.actor;
@@ -4737,25 +4742,27 @@ ConfigurableMenu.prototype = {
    setMaxHeight: function() {
       let scale = this.getScale();
       if(Main.panelManager) {
-         let [x, y] = this.launcher.actor.get_transformed_position();
+         if(this.launcher && this.launcher.actor) {
+            let [x, y] = this.launcher.actor.get_transformed_position();
 
-         let i = 0;
-         let monitor;
-         for(; i < global.screen.get_n_monitors(); i++) {
-            monitor = global.screen.get_monitor_geometry(i);
-            if(x >= monitor.x && x < monitor.x + monitor.width &&
-               x >= monitor.y && y < monitor.y + monitor.height) {
-               break;
+            let i = 0;
+            let monitor;
+            for(; i < global.screen.get_n_monitors(); i++) {
+               monitor = global.screen.get_monitor_geometry(i);
+               if(x >= monitor.x && x < monitor.x + monitor.width &&
+                  x >= monitor.y && y < monitor.y + monitor.height) {
+                  break;
+               }
             }
-         }
 
-         let maxHeight = monitor.height - this.actor.get_theme_node().get_length('-boxpointer-gap');
+            let maxHeight = monitor.height - this.actor.get_theme_node().get_length('-boxpointer-gap');
 
-         let panels = Main.panelManager.getPanelsInMonitor(i);
-         for(let j in panels) {
-            maxHeight -= panels[j].actor.height;
+            let panels = Main.panelManager.getPanelsInMonitor(i);
+            for(let j in panels) {
+               maxHeight -= panels[j].actor.height;
+            }
+            this.actor.style = ('max-height: ' + maxHeight / scale + 'px;');
          }
-         this.actor.style = ('max-height: ' + maxHeight / scale + 'px;');
       } else {
          let monitor = Main.layoutManager.primaryMonitor;
          let maxHeight = Math.round(monitor.height - Main.panel.actor.height - this.actor.get_theme_node().get_length('-boxpointer-gap'));

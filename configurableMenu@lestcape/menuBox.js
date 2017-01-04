@@ -1771,14 +1771,6 @@ GnoMenuBox.prototype = {
       }
    },
 
-   destroy: function() {
-      this.separatorTop.destroy();
-      for(let i = 0; i < this._actionButtons.length; i++) {
-         this._actionButtons[i].destroy();
-      }
-      this.actor.destroy();
-   },
-   
    _createActionButtons: function() {
       this._actionButtons = new Array();
       let button = new MenuItems.SystemButton(this.parent, null, "emblem-favorite", _("Favorites"), _("Favorites"), this.iconSize, true);
@@ -2083,7 +2075,15 @@ GnoMenuBox.prototype = {
       this.scrollActor.scrollToActor(this._actionButtons[this._gnoMenuSelected].actor);
       this._onEnterEvent(this._actionButtons[this._gnoMenuSelected].actor);
       return true;
-   }
+   },
+
+   destroy: function() {
+      this.separatorTop.destroy();
+      for(let i = 0; i < this._actionButtons.length; i++) {
+         this._actionButtons[i].destroy();
+      }
+      this.actor.destroy();
+   },
 };
 Signals.addSignalMethods(GnoMenuBox.prototype);
 

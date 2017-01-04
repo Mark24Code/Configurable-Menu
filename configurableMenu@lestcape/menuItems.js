@@ -511,16 +511,13 @@ function CategoryButton() {
 }
 
 CategoryButton.prototype = {
-   __proto__: ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype,
+   __proto__: ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype,
 
    _init: function(category, iconSize, iconVisible) {
-      ConfigurableMenus.ConfigurableBasicPopupMenuItem.prototype._init.call(this, "", {hover: false});
+      ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype._init.call(this, "", false, true, {hover: false, focusOnHover: false});
+
       this.category = category;
       this.iconSize = iconSize;
-      this.arrowIcon = new St.Icon({icon_name: '', icon_type: St.IconType.SYMBOLIC,
-                                    reactive: true, track_hover: true, style_class: 'popup-menu-icon' });
-      this.arrowOrientation = St.Side.RIGHT;
-      this.haveArrow = false;
       this.setLabelStyle('menu-category-button-label');
       this.label.clutter_text.line_wrap_mode = Pango.WrapMode.CHAR;//WORD_CHAR;
       this.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;//END;
@@ -570,6 +567,7 @@ CategoryButton.prototype = {
    },
 
    setArrow: function(haveArrow, always, orientation) {
+      this.setArrowVisible(haveArrow);
    /*   this.haveArrow = haveArrow;
       this.haveArrowalways = always;
      // Main.notify("haveArrow:" + haveArrow);
@@ -587,22 +585,6 @@ CategoryButton.prototype = {
             this.actor.add(this.arrowIcon, { x_fill: false, expand: false, x_align: St.Align.END });
          }
       }*/
-   },
-
-   setArrowVisible: function(visible) {
-      //if(this.haveArrow) {
-      //   if(visible) {
-      //      if(this.arrowOrientation == St.Side.RIGHT)
-      //         this.arrowIcon.set_icon_name('media-playback-start');
-      //      else if(this.arrowOrientation == St.Side.LEFT)
-      //         this.arrowIcon.set_icon_name('media-playback-start-rtl');
-      //   } else {
-      //      this.arrowIcon.set_icon_name('');
-      //   }
-      //} else {
-      //   this.arrowIcon.set_icon_name('');
-      //}
-      this.arrowIcon.visible = (visible||this.haveArrowalways);
    },
 
    setVertical: function(vertical) {
