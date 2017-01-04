@@ -2047,8 +2047,8 @@ SystemButton.prototype = {
       this.label.clutter_text.line_wrap_mode = Pango.WrapMode.CHAR;//WORD_CHAR;
       this.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
       this.label.clutter_text.set_line_alignment(Pango.Alignment.CENTER);
-      //this.label.clutterText.set_single_line_mode(false);
-      //this.label.clutterText.set_line_wrap(true);
+      //this.label.clutter_text.set_single_line_mode(false);
+      //this.label.clutter_text.set_line_wrap(true);
 
       this.labelDesc = new St.Label({ style_class: 'menu-application-button-label' });
       this.labelDesc.visible = false;

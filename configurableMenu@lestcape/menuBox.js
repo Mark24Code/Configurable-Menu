@@ -52,7 +52,7 @@ function PlacesGnomeBox() {
 PlacesGnomeBox.prototype = {
    __proto__: ConfigurableMenus.ConfigurablePopupMenuSection.prototype,
 
-   _init: function(parent, selectedAppBox, hover, iconSize, iconView, scrollBox, textButtonWidth) {
+   _init: function(parent, selectedAppBox, hover, iconSize, iconView, textButtonWidth) {
       ConfigurableMenus.ConfigurablePopupMenuSection.prototype._init.call(this);
       this.parent = parent;
       this.selectedAppBox = selectedAppBox;
@@ -61,43 +61,44 @@ PlacesGnomeBox.prototype = {
       this.iconView = iconView;
       this.textButtonWidh = textButtonWidth;
       this.appButtonDescription = this.appButtonDescription;
-      this.scrollBox = scrollBox;
+
+      this.actor = new St.BoxLayout({ vertical: true, style_class: 'menu-accessible-box' });
+      this.scrollActor = new ConfigurableMenus.ScrollItemsBox(this, this.box, true, St.Align.START);
+      this.actor.add(this.scrollActor.actor, { y_fill: true, expand: true });
+
       this._listPlaces = new Array();
       Main.placesManager.connect('mounts-updated', Lang.bind(this, this._refreshMount));
       this.refreshPlaces();
    },
 
-   destroy: function() {
-      this.separator1.destroy();
-      this.separator2.destroy();
-      for(let i = 0; i < this._listPlaces.length; i++) {
-         this._listPlaces[i].destroy();
-      }
-      this.actor.destroy();
-   },
-
    refreshPlaces: function() {
-      this.actor.destroy_all_children();
-      this.specialPlaces = new St.BoxLayout({ vertical: true });
+      this.box.destroy_all_children();
+
+      this.specialPlaces = new ConfigurableMenus.ConfigurablePopupMenuSection();
       this._addPlaces(this.specialPlaces, this.parent._listSpecialBookmarks());
-      this.actor.add(this.specialPlaces, {x_fill: true, expand: true});
+      this.addMenuItem(this.specialPlaces, {x_fill: true, expand: true});
+
       this.separator1 = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
       this.separator1.setVisible(true);
       this.separator1.setSpace(20);
-      this.actor.add_actor(this.separator1.actor);
-      this.bookmarksPlaces = new St.BoxLayout({ vertical: true });
+      this.addMenuItem(this.separator1);
+
+      this.bookmarksPlaces = new ConfigurableMenus.ConfigurablePopupMenuSection();
       this._addPlaces(this.bookmarksPlaces, Main.placesManager.getBookmarks());
-      this.actor.add(this.bookmarksPlaces, {x_fill: true, expand: true});
+      this.addMenuItem(this.bookmarksPlaces, {x_fill: true, expand: true});
+
       this.separator2 = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
       this.separator2.setVisible(true);
       this.separator2.setSpace(20);
-      this.actor.add_actor(this.separator2.actor);
-      this.removablePlaces = new St.BoxLayout({ vertical: true });
-      this.actor.add(this.removablePlaces, {x_fill: true, expand: true});
+      this.addMenuItem(this.separator2);
+
+      this.removablePlaces = new ConfigurableMenus.ConfigurablePopupMenuSection();
+      this.addMenuItem(this.removablePlaces, {x_fill: true, expand: true});
+
       this._refreshMount();
    },
 
-   _addPlaces: function(actor, places) {
+   _addPlaces: function(box, places) {
       for(let i = 0; i < places.length; i++) {
          let place = places[i];
          let button = new MenuItems.PlaceButton(this.parent, this.scrollBox, place, this.iconView,
@@ -116,10 +117,8 @@ PlacesGnomeBox.prototype = {
          }));
          //if(this._applicationsBoxWidth > 0)
          //   button.container.set_width(this._applicationsBoxWidth);
-         actor.add(button.actor, {x_fill: true, expand: true});
-         actor.add(button.menu.actor, {x_fill: true, expand: true});
-
          this._listPlaces.push(button);
+         box.addMenuItem(button, {x_fill: true, expand: true});
       }
    },
 
@@ -137,17 +136,17 @@ PlacesGnomeBox.prototype = {
    //},
 
    _removeRemovable: function() {
-      let placesChilds = this.removablePlaces.get_children();
+      let placesChilds = this.removablePlaces.getMenuItems();
+      this.removablePlaces.removeAllMenuItems();
       for(let i = 0; i < placesChilds.length; i++) {
          for(let j = 0; j < this._listPlaces.length; j++) {
-            if(this._listPlaces[j].actor == placesChilds[i]) {
+            if(this._listPlaces[j].actor == placesChilds[i].actor) {
                this._listPlaces.splice(j,1);
                break;
             }
          }
-         break;
+         placesChilds[i].destroy();
       }
-      this.removablePlaces.destroy_all_children();
    },
 
    _refreshMount: function() {
@@ -167,7 +166,7 @@ PlacesGnomeBox.prototype = {
                   //this.hover.refreshPlace(button.place);
                   //this.parent.appMenuClose();
                }));
-               this.removablePlaces.add_actor(drive.actor);
+               this.removablePlaces.addMenuItem(drive);
                this._listPlaces.push(drive);
             }
          }
@@ -176,7 +175,16 @@ PlacesGnomeBox.prototype = {
          global.logError(e);
          Main.notify("ErrorDevice:", e.message);
       }
-   }
+   },
+
+   destroy: function() {
+      this.separator1.destroy();
+      this.separator2.destroy();
+      for(let i = 0; i < this._listPlaces.length; i++) {
+         this._listPlaces[i].destroy();
+      }
+      this.actor.destroy();
+   },
 };
 
 function FavoritesBoxLine() {
@@ -522,7 +530,7 @@ FavoritesBoxExtended.prototype = {
       }
    },
 
-   removeAll: function() {
+   destroyAllMenuItems: function() {
       try {
          this._firstElement = null;
          if(this._dragPlaceholder) {
@@ -2347,7 +2355,7 @@ DevicesBox.prototype = {
 
    refresh: function() {
       let any = false;
-      this.removeAll();
+      this.destroyAllMenuItems();
       if(this.showRemovable) {
          try {
             let mounts = Main.placesManager.getMounts();
@@ -2594,8 +2602,8 @@ AccessibleBox.prototype = {
    },
 
    refreshAccessibleItems: function() {
-      this.itemsPlaces.removeAll();
-      this.itemsApplications.removeAll();
+      this.itemsPlaces.destroyAllMenuItems();
+      this.itemsApplications.destroyAllMenuItems();
 
       this.initItemsPlaces();
       //this.itemsDevices.refresh();

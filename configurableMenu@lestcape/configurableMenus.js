@@ -3314,6 +3314,15 @@ ConfigurablePopupMenuBase.prototype = {
             this._activeMenuItem = submenuItem;
             this.emit('active-changed', submenuItem);
          }));
+         menuItem._subMenuDestroyId = menu.connect('destroy', Lang.bind(this, function(menu) {
+            if(menu) {
+               if(menu instanceof ConfigurablePopupMenuSection)
+                  this._disconnectSubMenuSignals(menu, menu);
+               else if(menu.launcher && menu.launcher instanceof ConfigurablePopupSubMenuMenuItem)
+                  this._disconnectSubMenuSignals(menu.launcher, menu);
+            }
+         }));
+
       } else {
          global.logError("Try to reconnected menu: " + menu + " signals in menuitem: " + menuItem);
       }
@@ -3328,6 +3337,10 @@ ConfigurablePopupMenuBase.prototype = {
       //if(menuItem._subMenuActiveChangeId) {
          menu.disconnect(menuItem._subMenuActiveChangeId);
          menuItem._subMenuActiveChangeId = null;
+      //}
+      //if(menuItem._subMenuActiveChangeId) {
+         menu.disconnect(menuItem._subMenuDestroyId);
+         menuItem._subMenuDestroyId = null;
       //}
       } catch(e) {
          global.logError("Try to disconnect unexisting menu: " + menu + " signals in menuitem: " + menuItem);
@@ -3548,7 +3561,7 @@ ConfigurablePopupMenuBase.prototype = {
       return this.getMenuItems().length;
    },
 
-   removeAll: function() {
+   destroyAllMenuItems: function() {
       let children = this.getMenuItems();
       for(let i = 0; i < children.length; i++) {
          let item = children[i];
@@ -3572,7 +3585,7 @@ ConfigurablePopupMenuBase.prototype = {
    },
 
    destroy: function() {
-      this.removeAll();
+      this.destroyAllMenuItems();
       this.actor.destroy();
       this.emit('destroy');
    }
@@ -4578,7 +4591,7 @@ ConfigurableMenu.prototype = {
       ConfigurablePopupMenuBase.prototype.addMenuItem.call (this, menuItem, params, position);
    },
 
-   clearAll: function() {
+   removeAllMenuItems: function() {
       let children = this.getMenuItems();
       children.map(function(child) {
          this.removeMenuItem(child);
@@ -4930,7 +4943,7 @@ ConfigurablePopupMenuSection.prototype = {
       ConfigurablePopupMenuBase.prototype.addMenuItem.call(this, menuItem, params, position);
    },
 
-   clearAll: function() {
+   removeAllMenuItems: function() {
       let children = this.getMenuItems();
       children.map(function(child) {
          this.removeMenuItem(child);
@@ -6187,7 +6200,7 @@ ConfigurableGridSection.prototype = {
       this.box.queue_relayout();
    },
 
-   clearAll: function() {
+   removeAllMenuItems: function() {
       this._menuItems.map(function(child) {
          this.removeMenuItem(child);
       }, this);
@@ -6196,7 +6209,7 @@ ConfigurableGridSection.prototype = {
       this._nColumns = 1;
    },
 
-   removeAll: function() {
+   destroyAllMenuItems: function() {
       this._menuItems.map(function(child) {
          child.destroy();
       });
@@ -6894,7 +6907,7 @@ ConfigurableGridSection.prototype = {
       return nextItem.actor;
    },
 
-   clearAll: function() {
+   removeAllMenuItems: function() {
       this._menuItems.map(function(child) {
          this.removeMenuItem(child);
       }, this);
@@ -6903,7 +6916,7 @@ ConfigurableGridSection.prototype = {
       this._nColumns = 1;
    },
 
-   removeAll: function() {
+   destroyAllMenuItems: function() {
       this._menuItems.map(function(child) {
          child.destroy();
       });
@@ -8094,7 +8107,7 @@ MenuFactory.prototype = {
    // it will also connect the factoryItem to be automatically destroyed when the menu dies.
    _attachToMenu: function(shellItem, factoryItem) {
       // Cleanup: remove existing childs (just in case)
-      shellItem.removeAll();
+      shellItem.destroyAllMenuItems();
 
       // Fill the menu for the first time
       factoryItem.getChildren().forEach(function(child) {

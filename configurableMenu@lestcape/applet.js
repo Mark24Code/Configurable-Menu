@@ -2773,7 +2773,7 @@ MyApplet.prototype = {
       if(this.menu.isOpen)
          this.menu.closeClean();
       //this._disconnectSearch();
-      this.menu.removeAll();
+      this.menu.destroyAllMenuItems();
    },
 
    _releaseComponents: function() {
@@ -2810,7 +2810,7 @@ MyApplet.prototype = {
          this.categoriesBox.removeFromParentContainer();
       if(this.arrayBoxLayout) {
          this.arrayBoxLayout.removeFromParentContainer();
-         this.arrayBoxLayout.clearAll();
+         this.arrayBoxLayout.removeAllMenuItems();
       }
       if(this.accessibleBox)
          this.accessibleBox.removeFromParentContainer();
@@ -3764,9 +3764,8 @@ MyApplet.prototype = {
       this.betterPanel.setVertical(true);
       this.changeTopBoxDown.setVertical(true);
       //this.selectedAppBox.setAlign(St.Align.START);
-      this.placesScrollBox = new ConfigurableMenus.ScrollItemsBox(this, this.placesBox.actor, true, St.Align.START);
-      this.placesObj = new MenuBox.PlacesGnomeBox(this, this.selectedAppBox, this.hover, 22, this.iconView, this.placesScrollBox, this.textButtonWidth);
-      this.placesBox.actor.add_actor(this.placesObj.actor);
+      this.placesObj = new MenuBox.PlacesGnomeBox(this, this.selectedAppBox, this.hover, 22, this.iconView, this.textButtonWidth);
+      this.placesBox.addMenuItem(this.placesObj);
 
       this.mainBox.addMenuItem(this.extendedBox, { x_fill: true, y_fill: true, y_align: St.Align.START, expand: true });
       this.standardBox.addMenuItem(this.rightPane, { x_fill: true, y_fill: true, expand: true });
@@ -3778,7 +3777,7 @@ MyApplet.prototype = {
 
       
       this.betterPanel.addMenuItem(this.separatorTop);
-      this.betterPanel.addMenuItem(this.placesScrollBox, {x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
+      this.betterPanel.addMenuItem(this.placesBox, {x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
       this.betterPanel.addMenuItem(this.categoriesBox, {x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
       this.betterPanel.addMenuItem(this.favoritesObj, {x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
       
@@ -3887,7 +3886,7 @@ MyApplet.prototype = {
             this.appletMenu = null;
             this.categoriesExcludes = null;
             this.categoriesIncludes = null;
-            this.placesObj.actor.destroy();
+            this.placesObj.destroy();
             this.placesObj = null;
          }
 
@@ -4033,7 +4032,7 @@ MyApplet.prototype = {
                this.favoritesObj.actor.visible = false;
                this.controlView.actor.visible = false;
                this.categoriesBox.actor.visible = true;
-               this.placesScrollBox.actor.visible = false;
+               this.placesBox.actor.visible = false;
                this.categoriesIncludes = null;
                this.categoriesExcludes = new Array();
                this.categoriesExcludes.push("Places");
@@ -4051,7 +4050,7 @@ MyApplet.prototype = {
                this.endVerticalBox.actor.visible = false;
                this.controlView.actor.visible = false;
                this.categoriesBox.actor.visible = false;
-               this.placesScrollBox.actor.visible = false;
+               this.placesBox.actor.visible = false;
                this.excludeCategories();
             } else if(this.appletMenu.getActorForName("Places") == actor) {
                this._activeGnomeMenu(actor);
@@ -4064,7 +4063,7 @@ MyApplet.prototype = {
                this.favoritesObj.actor.visible = false;
                this.controlView.actor.visible = false;
                this.categoriesBox.actor.visible = true;
-               this.placesScrollBox.actor.visible = true;
+               this.placesBox.actor.visible = true;
                this.excludeCategories();
             } else if(this.appletMenu.getActorForName("System") == actor) {
                this._activeGnomeMenu(actor);
@@ -4077,7 +4076,7 @@ MyApplet.prototype = {
                this.favoritesObj.actor.visible = false;
                this.controlView.actor.visible = this.showView;
                this.categoriesBox.actor.visible = true;
-               this.placesScrollBox.actor.visible = false;
+               this.placesBox.actor.visible = false;
                this.excludeCategories();
             }
             if((this.appMenu) && (this.menu.isOpen)&&(this.searchBox.isActive())) {
@@ -4716,7 +4715,7 @@ MyApplet.prototype = {
       if(this.fRef) return false;
       this.fRef = true;
 
-      this.favoritesObj.removeAll();
+      this.favoritesObj.destroyAllMenuItems();
       if(this.favoritesObj.getNumberLines() != this.favoritesNumberOfLines)
          this.favoritesObj.setNumberLines(this.favoritesNumberOfLines);
          
@@ -4758,7 +4757,7 @@ MyApplet.prototype = {
    _refreshApps: function() {
       for(let i = 0; i < this._categoryButtons.length; i++)
          this._categoryButtons[i].actor.destroy();
-      this.standarAppGrid.removeAll();
+      this.standarAppGrid.destroyAllMenuItems();
       this._applicationsButtons.map(function(child) {
          child.destroy();
       });
@@ -4769,7 +4768,7 @@ MyApplet.prototype = {
       this._activeContainer = null;
 
       //Remove all categories
-      this.categoriesBox.removeAll();
+      this.categoriesBox.destroyAllMenuItems();
       this._allAppsCategoryButton = new MenuItems.CategoryButton(null, this.iconCatSize, this.showCategoriesIcons);
       this._addEnterEvent(this._allAppsCategoryButton, Lang.bind(this, function() {
          if(!this.searchBox.isActive()) {
