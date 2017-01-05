@@ -1028,6 +1028,12 @@ ConfigurablePointer.prototype = {
        if(!alignment)
           alignment = this._arrowAlignment;
       if(!sourceActor) Main.notify("Error")
+      /*if(sourceActor._delegate && sourceActor._delegate.categoryName == "System") {
+         if(this.nameT != sourceActor._delegate.categoryName)
+            Main.notify(sourceActor._delegate.categoryName);
+         this.nameT = sourceActor._delegate.categoryName;
+      }*/
+
       // Position correctly relative to the sourceActor
       let themeNode = sourceActor.get_theme_node();
       let sourceContentBox = themeNode.get_content_box(sourceActor.get_allocation_box());
@@ -2504,7 +2510,6 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
                case St.Side.TOP:
                case St.Side.BOTTOM:
                case St.Side.LEFT:
-                  Main.notify("set left");
                   if(this._triangle) {
                      if(this._triangle.rotation_angle_z != 0)
                         this._triangle.rotation_angle_z = 0;
@@ -2516,7 +2521,6 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
                   break;
                case St.Side.RIGHT:
                   if(this._triangle) {
-                     Main.notify("set right");
                      if(this._triangle.rotation_angle_z != 180)
                         this._triangle.rotation_angle_z = 180;
                      if(this._arrowSide != St.Side.RIGHT) {
@@ -2625,6 +2629,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
    },
 
    setActive: function(active) {
+      this.emit("ready-opened");
       if(this.active != active) {
          if(this._showArrowOnActivation) {
             if(active)
@@ -2645,6 +2650,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
 
    _onButtonReleaseEvent: function(actor, event) {
       if(event.get_button() == 1) {
+         this.emit("ready-opened");
          if(this.menu && !this._openMenuOnActivation) {
             if((!this.menu.isOpen)&&(this.menu._floating)) {
                this.menu.repositionActor(this.actor);
@@ -7039,6 +7045,12 @@ ConfigurableMenuApplet.prototype = {
                menuItem.menu.fixToCorner(menuItem.menu.fixCorner);
          }
       }
+   },
+
+   setPanelHeight: function(panel_height) {
+      /*for(let i = 0; i < this.categories.length; i++) {
+         this.categories[i].on_panel_height_changed(panel_height);
+      }*/
    },
 
    _updatePanelVisibility: function() {

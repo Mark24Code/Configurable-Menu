@@ -107,7 +107,7 @@ PlacesGnomeBox.prototype = {
             button.actor.style_class = "menu-category-button-selected";
             this.selectedAppBox.setSelectedText(button.app.get_name(), button.app.get_description());
             this.hover.refreshPlace(button.place);
-            this.parent.appMenuClose();
+            //this.parent.appMenuClose();
             this.parent._clearPrevCatSelection();
          }));
          button.actor.connect('leave-event', Lang.bind(this, function() {
@@ -159,7 +159,7 @@ PlacesGnomeBox.prototype = {
             if(mounts[i].isRemovable()) {
                drive = new MenuItems.DriveMenuItem(this.parent, this.selectedAppBox, this.hover, mounts[i], this.iconSize, true);
                drive.actor.connect('enter-event', Lang.bind(this, function() {
-                  this.parent.appMenuClose();
+                  //this.parent.appMenuClose();
                   this.parent._clearPrevCatSelection();
                   //drive.actor.style_class = "menu-category-button-selected";
                   //this.selectedAppBox.setSelectedText(button.app.get_name(), button.app.get_description());

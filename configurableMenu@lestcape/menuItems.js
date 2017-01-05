@@ -388,7 +388,10 @@ function GnomeCategoryButton() {
 }
 
 GnomeCategoryButton.prototype = {
+   __proto__: ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype,
+
    _init: function(parent, name, icon, symbolic, orientation, panel_height) {
+      ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype._init.call(this, "", false, true, {hover: true, focusOnHover: false});
       this.parent = parent;
       this.categoryName = name;
       if(symbolic)
@@ -398,87 +401,86 @@ GnomeCategoryButton.prototype = {
       this.__icon_name = icon;
       this._panelHeight = panel_height ? panel_height : 25;
       this._scaleMode = global.settings.get_boolean('panel-scale-text-icons') && global.settings.get_boolean('panel-resizable');
-      this.actor = new St.BoxLayout({ style_class: 'applet-box', reactive: true, track_hover: true });
+      this.actor.set_style_class_name('applet-box');
       this.actor.add_style_class_name('menu-applet-category-box');
       this.actor.connect('enter-event', Lang.bind(this, this._changeHover, true));
       this.actor.connect('leave-event', Lang.bind(this, this._changeHover, false));
-      this._applet_icon_box = new St.Bin();
-      this.actor.add(this._applet_icon_box, { y_align: St.Align.MIDDLE, y_fill: false });
-      this._applet_label = new St.Label({ reactive: true, track_hover: true, style_class: 'applet-label'});
+      this.label.style_class = 'applet-label';
+      this.label.reactive = true;
+      this.label.track_hover = true;
       this._label_height = (this._panelHeight / Applet.DEFAULT_PANEL_HEIGHT) * Applet.PANEL_FONT_DEFAULT_HEIGHT;
-      this._applet_label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
-      this.actor.add(this._applet_label, { y_align: St.Align.MIDDLE, y_fill: false });
+      this.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+
+      this.setIconVisible(true);
       this.setIconSymbolic(symbolic);
       this.set_applet_label(_(name));
       this.actor._delegate = this;
-   },
-
-   destroy: function() {
-      this.actor.destroy();
+      this._openMenuOnActivation = true;
    },
 
    _changeHover: function(actor, event, hover) {
       if(hover) {
-         if(this._applet_icon)
-            this._applet_icon.add_style_pseudo_class('hover');
-         this._applet_label.add_style_pseudo_class('hover');
+         this._icon.add_style_pseudo_class('hover');
+         this.label.add_style_pseudo_class('hover');
       } else {
-         if(this._applet_icon)
-            this._applet_icon.remove_style_pseudo_class('hover');
-         this._applet_label.remove_style_pseudo_class('hover');
+         this._icon.remove_style_pseudo_class('hover');
+         this.label.remove_style_pseudo_class('hover');
       }
    },
 
    handleDragOver: function(source, actor, x, y, time) {
-      if(!this.parent.menu.isOpen)
-         this.parent.menu.open();
-      if(this._applet_icon)
-         this._applet_icon.add_style_pseudo_class('hover');
-      this.parent.onCategorieGnomeChange(this.actor);
+      this.emit("ready-opened");
+      if(this._icon)
+         this._icon.add_style_pseudo_class('hover');
+      if(!this.menu.isOpen)
+         this.menu.open();
       return DND.DragMotionResult.NO_DROP;
    },
 
    set_applet_icon_symbolic_name: function(icon_name) {
       if(this._scaleMode) {
          let height = (this._panelHeight / DEFAULT_PANEL_HEIGHT) * Applet.PANEL_SYMBOLIC_ICON_DEFAULT_HEIGHT;
-         this._applet_icon = new St.Icon({icon_name: icon_name, icon_size: height, icon_type: St.IconType.SYMBOLIC,
-                                          reactive: true, track_hover: true, style_class: 'system-status-icon' });
+         this.setIconName(icon_name);
+         this.setIconSize(height);
+         this.setIconType(St.IconType.SYMBOLIC);
+         this._icon.style_class = 'system-status-icon';
       } else {
-         this._applet_icon = new St.Icon({icon_name: icon_name, icon_type: St.IconType.SYMBOLIC, reactive: true,
-                                          track_hover: true, style_class: 'system-status-icon' });
+         this.setIconName(icon_name);
+         this.setIconSize(-1);
+         this.setIconType(St.IconType.SYMBOLIC);
+         this._icon.style_class = 'system-status-icon';
       }
-      this._applet_icon_box.child = this._applet_icon;
       this.__icon_type = St.IconType.SYMBOLIC;
       this.__icon_name = icon_name;
    },
 
    set_applet_icon_name: function(icon_name) {
       if(this._scaleMode) {
-         this._applet_icon = new St.Icon({icon_name: icon_name, icon_size: this._panelHeight * Applet.COLOR_ICON_HEIGHT_FACTOR,
-                                          icon_type: St.IconType.FULLCOLOR, reactive: true, track_hover: true, style_class: 'applet-icon' });
+         this.setIconName(icon_name);
+         this.setIconSize(this._panelHeight * Applet.COLOR_ICON_HEIGHT_FACTOR);
+         this.setIconType(St.IconType.FULLCOLOR);
+         this._icon.style_class = 'applet-icon';
       } else {
-         this._applet_icon = new St.Icon({icon_name: icon_name, icon_size: 22, icon_type: St.IconType.FULLCOLOR,
-                                          reactive: true, track_hover: true, style_class: 'applet-icon' });
+         this.setIconName(icon_name);
+         this.setIconSize(22);
+         this.setIconType(St.IconType.FULLCOLOR);
+         this._icon.style_class = 'applet-icon';
       }
-      this._applet_icon_box.child = this._applet_icon;
       this.__icon_type = St.IconType.FULLCOLOR;
       this.__icon_name = icon_name;
    },
 
    set_applet_label: function(text) {
-      this._applet_label.set_text(text);
+      this.label.set_text(text);
       if(text && text != "")
-         this._applet_label.set_margin_left(6.0);
+         this.label.set_margin_left(6.0);
       else
-         this._applet_label.set_margin_left(0);
+         this.label.set_margin_left(0);
    },
 
    on_panel_height_changed: function(panel_height) {
       this._panelHeight = panel_height;
       this._scaleMode = global.settings.get_boolean('panel-scale-text-icons') && global.settings.get_boolean('panel-resizable');
-      if(this._applet_icon_box.child) {
-         this._applet_icon_box.child.destroy();
-      }
       switch(this.__icon_type) {
          case St.IconType.FULLCOLOR:
             this.set_applet_icon_name(this.__icon_name);
@@ -496,8 +498,6 @@ GnomeCategoryButton.prototype = {
 
    setIconSymbolic: function(symbolic) {
       if((this.__icon_name)&&(this.__icon_name != "")) {
-         if(this._applet_icon)
-            this._applet_icon.destroy();
          if(symbolic)
             this.set_applet_icon_symbolic_name(this.__icon_name);
          else

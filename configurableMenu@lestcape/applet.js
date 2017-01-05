@@ -1,3 +1,9 @@
+//set_applet_label
+//this.appletMenu
+//this.appletMenu.getActorForName
+//this.onCategoryGnomeChange
+//connectCategories
+
 // Cinnamon Applet: Configurable Menu
 //
 // Authors: Lester Carballo Pérez(https://github.com/lestcape) and Garibaldo(https://github.com/Garibaldo).
@@ -108,10 +114,12 @@ function MyApplet() {
 }
 
 MyApplet.prototype = {
-   __proto__: Applet.TextIconApplet.prototype,
+   //__proto__: Applet.TextIconApplet.prototype,
+   __proto__: Applet.Applet.prototype,
 
-   _init: function(metadata, orientation, panel_height, instance_id) {
-      Applet.TextIconApplet.prototype._init.call(this, orientation, panel_height, instance_id);
+   _init: function(metadata, orientation, panelHeight, instanceId) {
+      //Applet.TextIconApplet.prototype._init.call(this, orientation, panelHeight, instanceId);
+      Applet.Applet.prototype._init.call(this, orientation, panelHeight, instanceId);
       try {
          this.metadata = metadata;
          this.uuid = metadata["uuid"];
@@ -163,9 +171,9 @@ MyApplet.prototype = {
          this.set_applet_tooltip(_("Menu"));
          this.RecentManager = new DocInfo.DocManager();
          if(this.orientation == St.Side.TOP)
-            this.actor.add_style_class_name('menu-applet-panel-top-box');
+            this.actor.set_style_class_name('menu-applet-panel-top-box');
          else
-            this.actor.add_style_class_name('menu-applet-panel-bottom-box'); 
+            this.actor.set_style_class_name('menu-applet-panel-bottom-box'); 
 
          this.menuManager = new ConfigurableMenus.ConfigurableMenuManager(this);
          this._updateMenuSection();
@@ -176,7 +184,7 @@ MyApplet.prototype = {
 
          //this._keyFocusNotifyIDSignal = global.stage.connect('notify::key-focus', Lang.bind(this, this._onKeyFocusChanged));
 
-         this.settings = new Settings.AppletSettings(this, this.uuid, instance_id);
+         this.settings = new Settings.AppletSettings(this, this.uuid, instanceId);
 
          this.settings.bindProperty(Settings.BindingDirection.IN, "theme", "theme", this._onSelectedThemeChange, null);
 
@@ -454,10 +462,10 @@ MyApplet.prototype = {
       } catch(e) {
          global.logWarning("Could not load icon file \""+this.menuIcon+"\" for menu button");
       }
-      if(this.menuLabel != "")
+      /*if(this.menuLabel != "")
          this.set_applet_label(_(this.menuLabel));
       else
-         this.set_applet_label("");
+         this.set_applet_label("");*/
    },
 
 /* cinnamon 2.2
@@ -1831,7 +1839,7 @@ MyApplet.prototype = {
       if(this.appletMenu) {
          if(this.appMenu)
             this.appMenu.close();
-         this.appletMenu.getActorForName("Favorites").visible = this.showFavorites;
+         //this.appletMenu.getActorForName("Favorites").visible = this.showFavorites;
       }
       if(this.gnoMenuBox)
          this.gnoMenuBox.showFavorites(this.showFavorites);
@@ -2152,16 +2160,7 @@ MyApplet.prototype = {
    },
 
    _updateLayout: function() {
-      /*if(this.accessibleBox) {
-         this.accessibleBox.destroy();
-         this.accessibleBox = null;
-      }
-      if(this.gnoMenuBox) {
-         this.gnoMenuBox.destroy();
-         this.gnoMenuBox = null;
-      }*/
-      if(this.appMenu)
-         this._appletGenerateGnomeMenu(false);
+      this._appletGenerateApplicationMenu(false);
       this._display();
       this._setVisibleBoxPointer();
       this._setFixMenuCorner();
@@ -2193,7 +2192,7 @@ MyApplet.prototype = {
          this.separatorBottom.setSpace(this.separatorSize);
       }
       if(this.appletMenu) {
-         this.appletMenu.getActorForName("Favorites").visible = this.showFavorites;
+         //this.appletMenu.getActorForName("Favorites").visible = this.showFavorites;
       }
       this.favoritesObj.actor.visible = this.showFavorites;
       this.selectedAppBox.setTitleVisible(this.showAppTitle);
@@ -2406,8 +2405,8 @@ MyApplet.prototype = {
          this.menu.setSize(this.width, this.height);
          this._setVisiblePointer(this.showBoxPointer);
          this.menu.fixToCorner(this.fixMenuCorner);
-         if(this.appletMenu)
-            this.onCategorieGnomeChange(this.appletMenu.getActorForName("Main"));
+         /*if(this.appletMenu)
+            this.onCategoryGnomeChange(this.appletMenu.getActorForName("Main"));*/
       }
       this._updateSize();
    },
@@ -2553,13 +2552,44 @@ MyApplet.prototype = {
          this.menuManager.removeMenu(this.menu);
          this.menu.destroy();
       }
+      if(this.appletMenu) {
+         this.appletMenu.destory();
+      }
+      this.menuManager.setCloseSubMenu(true);
+
+      this.appletMenu = new ConfigurableMenus.ConfigurableMenuApplet(this, this.orientation, this.menuManager);
+      this.appletMenu.actor.connect('key-press-event', Lang.bind(this, this._onMenuKeyPress));
+      this.appletMenu.open();
+
       this.menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, this.orientation, true);
 
       this.menu.actor.connect('button-release-event', Lang.bind(this, this._onMenuButtonRelease));
       this.menu.actor.connect('allocation_changed', Lang.bind(this, this._onAllocationChanged));
       this.menu.connect('open-state-changed', Lang.bind(this, this._onOpenStateChanged));
       this.menu.actor.add_style_class_name('menu-background');
-      this.menuManager.addMenu(this.menu);
+
+
+      this.mainMenu = new ConfigurableMenus.ConfigurablePopupSubMenuMenuItem(_("Menu"), false, true, {hover: true, focusOnHover: false});
+      this.mainMenu.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
+      this.mainMenu.setFloatingSubMenu(true);
+      this.mainMenu.setMenu(this.menu);
+      this.appletMenu.addMenuItem(this.mainMenu);
+      this.mainMenu._openMenuOnActivation = true
+
+      this.gFavorites = new MenuItems.GnomeCategoryButton(this, "Favorites", "", false, this.orientation, this._panelHeight);
+      this.gFavorites.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
+      this.gFavorites.setFloatingSubMenu(true);
+      this.gFavorites.setMenu(this.menu);
+
+      this.gPlaces = new MenuItems.GnomeCategoryButton(this, "Places", "", false, this.orientation, this._panelHeight);
+      this.gPlaces.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
+      this.gPlaces.setFloatingSubMenu(true);
+      this.gPlaces.setMenu(this.menu);
+
+      this.gSystem = new MenuItems.GnomeCategoryButton(this, "System", "", false, this.orientation, this._panelHeight);
+      this.gSystem.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
+      this.gSystem.setFloatingSubMenu(true);
+      this.gSystem.setMenu(this.menu);
 
       if(this._appMenu) {
          if(this._appMenu.isOpen)
@@ -2861,6 +2891,16 @@ MyApplet.prototype = {
          this.extendedBox.removeFromParentContainer();
       if(this.styleGnoMenuPanel)
          this.styleGnoMenuPanel.removeFromParentContainer();
+      if(this.placesObj)
+         this.placesObj.removeFromParentContainer();
+      if(this.placesBox)
+         this.placesBox.removeFromParentContainer();
+      if(this.gFavorites)
+         this.gFavorites.removeFromParentContainer();
+      if(this.gPlaces)
+         this.gPlaces.removeFromParentContainer();
+      if(this.gSystem)
+         this.gSystem.removeFromParentContainer();
    },
 
    _constructActors: function() {
@@ -2951,6 +2991,9 @@ MyApplet.prototype = {
 //end
       this.bttChanger = new MenuItems.ButtonChangerMenuItem(this, "forward", 20, [_("All Applications"), _("Favorites")], 0);
 
+      this.placesObj = new MenuBox.PlacesGnomeBox(this, this.selectedAppBox, this.hover, 22, this.iconView, this.textButtonWidth);
+      this.placesBox = new ConfigurableMenus.ConfigurablePopupMenuSection();
+
       this.bttChanger.actor.connect('key-press-event', Lang.bind(this, this._onMenuKeyPress));
       this.hover.actor.connect('key-press-event', Lang.bind(this, this._onMenuKeyPress));
       this.hover.menu.actor.connect('key-press-event', Lang.bind(this, this._onMenuKeyPress));
@@ -2968,6 +3011,8 @@ MyApplet.prototype = {
    },
 
    _display: function() {
+      this.categoriesExcludes = null;
+      this.categoriesIncludes = null;
       try {
          this.displayed = false;
          this.allowFavName = false;
@@ -3755,15 +3800,23 @@ MyApplet.prototype = {
    },
 
    loadClassicGnome: function() {
-      this._appletGenerateGnomeMenu(true);
+      this._appletGenerateApplicationMenu(true);
+      this.placesBox = new ConfigurableMenus.ConfigurablePopupMenuSection();
+      this.placesBox.setVertical(true);
+      this.placesBox.actor.style_class = 'menu-applications-box';
+      this.placesBox.actor.add_style_class_name('menu-applications-box-' + this.theme);
+      this.placesBox.actor.set_style('padding: 0px; border-left: none; border-right: none; border-top: none; border-bottom: none;');
+
       this.appMenu.addMenuItem(this.flotingSection);
       this.flotingSection.actor.add(this.operativePanel.actor, { x_fill: true, y_fill: false, x_align: St.Align.START, y_align: St.Align.START, expand: true });
       this.allowFavName = true;
       this.betterPanel.setVertical(true);
       this.changeTopBoxDown.setVertical(true);
       //this.selectedAppBox.setAlign(St.Align.START);
-      this.placesObj = new MenuBox.PlacesGnomeBox(this, this.selectedAppBox, this.hover, 22, this.iconView, this.textButtonWidth);
       this.placesBox.addMenuItem(this.placesObj);
+      this.appletMenu.addMenuItem(this.gFavorites);
+      this.appletMenu.addMenuItem(this.gPlaces);
+      this.appletMenu.addMenuItem(this.gSystem);
 
       this.mainBox.addMenuItem(this.extendedBox, { x_fill: true, y_fill: true, y_align: St.Align.START, expand: true });
       this.standardBox.addMenuItem(this.rightPane, { x_fill: true, y_fill: true, expand: true });
@@ -3877,41 +3930,6 @@ MyApplet.prototype = {
          this._updateSize();
    },
 
-   _appletGenerateGnomeMenu: function(generate) {
-      try {
-         if(this.appletMenu) {
-            this.appletMenu.destroy();
-            this.appletMenu = null;
-            this.categoriesExcludes = null;
-            this.categoriesIncludes = null;
-            this.placesObj.destroy();
-            this.placesObj = null;
-         }
-
-         if(generate) {
-            this.appletMenu = new ConfigurableMenus.ConfigurableAppletMenu(this);
-            this.appletMenu.actor.connect('key-press-event', Lang.bind(this, this._onMenuKeyPress));
-            let newGnomeCat = new MenuItems.GnomeCategoryButton(this, "Favorites", "", false, this.orientation, this._panelHeight);
-            this.appletMenu.addCategory(newGnomeCat);
-            newGnomeCat = new MenuItems.GnomeCategoryButton(this, "Places", "", false, this.orientation, this._panelHeight);
-            this.appletMenu.addCategory(newGnomeCat);
-            newGnomeCat = new MenuItems.GnomeCategoryButton(this, "System", "", false, this.orientation, this._panelHeight);
-            this.appletMenu.addCategory(newGnomeCat);
-            this.appletMenu.connectCategories('button-press-event', Lang.bind(this, this.onCategorieGnomeChange));
-            this.appletMenu.connectCategories('enter-event', Lang.bind(this, this.onCategorieGnomeChange));
-
-            this.placesBox = new ConfigurableMenus.ConfigurablePopupMenuSection();
-            this.placesBox.setVertical(true);
-            this.placesBox.actor.style_class = 'menu-applications-box';
-            this.placesBox.actor.add_style_class_name('menu-applications-box-' + this.theme);
-            this.placesBox.actor.set_style('padding: 0px; border-left: none; border-right: none; border-top: none; border-bottom: none;');
-         }
-         this._appletGenerateApplicationMenu(generate);
-      } catch(e) {
-         Main.notify("Gnome error", e.message);
-      }
-   },
-
    _appletGenerateApplicationMenu: function(generate) {
       try {
       if(generate && !this.appMenu) {
@@ -3954,15 +3972,9 @@ MyApplet.prototype = {
                this._categoryButtons[i].actor.visible = true;
             }
          }
-      }
-   },
-
-   repositionGnomeCategory: function() {
-      if(this.appletMenu) {
-         if(this.repositionActor) {
-            this.onCategorieGnomeChange(this.repositionActor);
-         } else {
-            this.onCategorieGnomeChange(this.appletMenu.getActorForName("Main"));
+      } else if(!this.categoriesIncludes && !this.categoriesExcludes) {
+         for(let i = 0; i < this._categoryButtons.length; i++) {
+            this._categoryButtons[i].actor.visible = true;
          }
       }
    },
@@ -3994,100 +4006,78 @@ MyApplet.prototype = {
       return false;
    },
 
-   onCategorieGnomeChange: function(actor, event) {
+   onCategoryGnomeChange: function(menuItem) {
       try {
-         if(this.appletMenu) {
-            if(this.menu.isOpen) {
-               if(this.appMenu)
-                  this.appMenu.close();
-               if((event)&&((event.type() == Clutter.EventType.BUTTON_PRESS)||(event.type() == Clutter.EventType.BUTTON_RELEASE))) {
-                  if((event.get_button() == 1)&&(this.repositionActor != actor))
-                     return true;
-               }
-            }
-            this.menu.repositionActor(actor);
-            this._activeContainer = null;
-            this.closeApplicationsContextMenus(false);
-            //select the display;
-            if(this.appletMenu.getActorForName("Main") == actor) {
-               this._activeGnomeMenu(actor);
-               //this.searchBox.grabKeyFocus();
-               this.powerBox.actor.visible = false;
-               this.endVerticalBox.actor.visible = false;
-               this.hover.actor.visible = this.showHoverIcon;
-               this.favoritesObj.actor.visible = false;
-               this.controlView.actor.visible = false;
-               this.categoriesBox.actor.visible = true;
-               this.placesBox.actor.visible = false;
-               this.categoriesIncludes = null;
-               this.categoriesExcludes = new Array();
-               this.categoriesExcludes.push("Places");
-               this.categoriesExcludes.push("Recently");
-               this.categoriesExcludes.push("Preferences");
-               this.categoriesExcludes.push("Administration");
-               this.excludeCategories();
-            } else if(this.appletMenu.getActorForName("Favorites") == actor) {
-               this._activeGnomeMenu(actor);
-               this.categoriesIncludes = new Array();
-               this.categoriesExcludes = null;
-               this.hover.actor.visible = this.showHoverIcon;
-               this.favoritesObj.actor.visible = true;
-               this.powerBox.actor.visible = false;
-               this.endVerticalBox.actor.visible = false;
-               this.controlView.actor.visible = false;
-               this.categoriesBox.actor.visible = false;
-               this.placesBox.actor.visible = false;
-               this.excludeCategories();
-            } else if(this.appletMenu.getActorForName("Places") == actor) {
-               this._activeGnomeMenu(actor);
-               this.categoriesIncludes = new Array();
-               if(this.RecentManager._infosByTimestamp.length != 0)
-                  this.categoriesIncludes.push("Recently");
-               this.powerBox.actor.visible = false;
-               this.endVerticalBox.actor.visible = false;
-               this.hover.actor.visible = this.showHoverIcon;
-               this.favoritesObj.actor.visible = false;
-               this.controlView.actor.visible = false;
-               this.categoriesBox.actor.visible = true;
-               this.placesBox.actor.visible = true;
-               this.excludeCategories();
-            } else if(this.appletMenu.getActorForName("System") == actor) {
-               this._activeGnomeMenu(actor);
-               this.categoriesIncludes = new Array();
-               this.categoriesIncludes.push("Preferences");
-               this.categoriesIncludes.push("Administration");
-               this.powerBox.actor.visible = this.showPowerButtons;
-               this.endVerticalBox.actor.visible = true;
-               this.hover.actor.visible = this.showHoverIcon;
-               this.favoritesObj.actor.visible = false;
-               this.controlView.actor.visible = this.showView;
-               this.categoriesBox.actor.visible = true;
-               this.placesBox.actor.visible = false;
-               this.excludeCategories();
-            }
-            if((this.appMenu) && (this.menu.isOpen)&&(this.searchBox.isActive())) {
-               this.appMenu.open();
-            }
-            this._updateSize();
-            this.repositionActor = actor;
+         if(this.appletMenu.getMenuItems().length > 1) {
+         menuItem.setMenu(this.menu);
+         //this.menu.repositionActor(menuItem.actor);
+         this._activeContainer = null;
+         this.closeApplicationsContextMenus(false);
+         //select the display;
+         if(menuItem == this.mainMenu) {
+            this.powerBox.actor.visible = false;
+            this.endVerticalBox.actor.visible = false;
+            this.hover.actor.visible = this.showHoverIcon;
+            this.favoritesObj.actor.visible = false;
+            this.controlView.actor.visible = false;
+            this.categoriesBox.actor.visible = true;
+            this.placesBox.actor.visible = false;
+            this.categoriesIncludes = null;
+            this.categoriesExcludes = new Array();
+            this.categoriesExcludes.push("Places");
+            this.categoriesExcludes.push("Recently");
+            this.categoriesExcludes.push("Preferences");
+            this.categoriesExcludes.push("Administration");
+            this.excludeCategories();
+         } else if(menuItem == this.gFavorites) {
+            this.categoriesIncludes = new Array();
+            this.categoriesExcludes = null;
+            this.hover.actor.visible = this.showHoverIcon;
+            this.favoritesObj.actor.visible = true;
+            this.powerBox.actor.visible = false;
+            this.endVerticalBox.actor.visible = false;
+            this.controlView.actor.visible = false;
+            this.categoriesBox.actor.visible = false;
+            this.placesBox.actor.visible = false;
+            this.excludeCategories();
+         } else if(menuItem == this.gPlaces) {
+            this.categoriesIncludes = new Array();
+            if(this.RecentManager._infosByTimestamp.length != 0)
+               this.categoriesIncludes.push("Recently");
+            this.powerBox.actor.visible = false;
+            this.endVerticalBox.actor.visible = false;
+            this.hover.actor.visible = this.showHoverIcon;
+            this.favoritesObj.actor.visible = false;
+            this.controlView.actor.visible = false;
+            this.categoriesBox.actor.visible = true;
+            this.placesBox.actor.visible = true;
+            this.excludeCategories();
+         } else if(menuItem == this.gSystem) {
+            this.categoriesIncludes = new Array();
+            this.categoriesIncludes.push("Preferences");
+            this.categoriesIncludes.push("Administration");
+            this.powerBox.actor.visible = this.showPowerButtons;
+            this.endVerticalBox.actor.visible = true;
+            this.hover.actor.visible = this.showHoverIcon;
+            this.favoritesObj.actor.visible = false;
+            this.controlView.actor.visible = this.showView;
+            this.categoriesBox.actor.visible = true;
+            this.placesBox.actor.visible = false;
+            this.excludeCategories();
+         }
+         //this.menu.open();
+         this._updateSize();
          }
       } catch(e) {
          Main.notify("Error repos", e.message);
       }
-
       return false;
    },
-
-   _activeGnomeMenu: function(actor) {
-      if(this.appletMenu) {
-         this.appletMenu.activeCategoryActor(actor);
-      }
-   },
    
-   setPanelHeight: function(panel_height) {
-      Applet.TextIconApplet.prototype.setPanelHeight.call(this, panel_height);
+   setPanelHeight: function(panelHeight) {
+      Applet.TextIconApplet.prototype.setPanelHeight.call(this, panelHeight);
       if(this.appletMenu) {
-         this.appletMenu.setPanelHeight(panel_height);
+         this.appletMenu.setPanelHeight(panelHeight);
       }
    },
 
@@ -4877,7 +4867,7 @@ MyApplet.prototype = {
       if(this.appletMenu) {
          if(this.appMenu)
             this.appMenu.close();
-         this.appletMenu.getActorForName("Places").visible = this.showPlaces;
+         //this.appletMenu.getActorForName("Places").visible = this.showPlaces;
       }
       if(this.gnoMenuBox) {
          this.gnoMenuBox.showPlaces(this.showPlaces);
@@ -5167,9 +5157,7 @@ MyApplet.prototype = {
    _initialDisplay: function() {
       if(!this.displayed) {
          this.displayed = true;
-         for(let i = 0; i < this._categoryButtons.length; i++) {
-            this._categoryButtons[i].actor.show();
-         }
+         this.excludeCategories();
          for(let i = 0; i < this._favoritesButtons.length; i++) {
             this._favoritesButtons[i].actor.show();
          }
@@ -5224,14 +5212,11 @@ MyApplet.prototype = {
          this._allAppsCategoryButton.actor.add_style_class_name('menu-category-button-selected-' + this.theme);
          this._previousTreeSelectedActor = this._allAppsCategoryButton.actor;
          this._allAppsCategoryButton.setArrowVisible(true);
-         this.repositionGnomeCategory();
       }
       else {
          this.actor.remove_style_pseudo_class('active');
          //this._disconnectSearch();
          this._select_category(null, this._allAppsCategoryButton);
-         if(this.appMenu)
-            this.appMenu.close();
          if(this.bttChanger) 
             this.bttChanger.activateSelected(_("All Applications"));
         // Mainloop.idle_add(Lang.bind(this, function() {
@@ -5257,8 +5242,6 @@ MyApplet.prototype = {
                this.gnoMenuBox.setSelected(_("Favorites"));
             this.powerBox.disableSelected();
             //this.selectedAppBox.setDateTimeVisible(false);
-            this.repositionActor = null;
-            this._activeGnomeMenu();
             this.categoriesBox.scrollBox.scrollToActor(this._allAppsCategoryButton.actor);
             this.destroyVectorBox();
             this._restartAutoscroll();
@@ -5267,7 +5250,7 @@ MyApplet.prototype = {
    }
 };
 
-function main(metadata, orientation, panel_height, instance_id) {
-    let myApplet = new MyApplet(metadata, orientation, panel_height, instance_id);
+function main(metadata, orientation, panelHeight, instanceId) {
+    let myApplet = new MyApplet(metadata, orientation, panelHeight, instanceId);
     return myApplet;
 }
