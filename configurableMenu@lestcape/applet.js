@@ -2573,23 +2573,24 @@ MyApplet.prototype = {
       this.mainMenu.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
       this.mainMenu.setFloatingSubMenu(true);
       this.mainMenu.setMenu(this.menu);
+      this.mainMenu.openMenuOnActivation(false);
       this.appletMenu.addMenuItem(this.mainMenu);
-      this.mainMenu._openMenuOnActivation = true
+    
 
       this.gFavorites = new MenuItems.GnomeCategoryButton(this, "Favorites", "", false, this.orientation, this._panelHeight);
       this.gFavorites.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
       this.gFavorites.setFloatingSubMenu(true);
-      this.gFavorites.setMenu(this.menu);
+      this.gFavorites.openMenuOnActivation(true);
 
       this.gPlaces = new MenuItems.GnomeCategoryButton(this, "Places", "", false, this.orientation, this._panelHeight);
       this.gPlaces.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
       this.gPlaces.setFloatingSubMenu(true);
-      this.gPlaces.setMenu(this.menu);
+      this.gPlaces.openMenuOnActivation(true);
 
       this.gSystem = new MenuItems.GnomeCategoryButton(this, "System", "", false, this.orientation, this._panelHeight);
       this.gSystem.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
       this.gSystem.setFloatingSubMenu(true);
-      this.gSystem.setMenu(this.menu);
+      this.gSystem.openMenuOnActivation(true);
 
       if(this._appMenu) {
          if(this._appMenu.isOpen)
@@ -2828,8 +2829,6 @@ MyApplet.prototype = {
          this.favoritesObj.removeFromParentContainer();
       if(this.bttChanger)
          this.bttChanger.removeFromParentContainer();
-      if(this.section)
-         this.section.removeFromParentContainer();
       if(this.flotingSection)
          this.flotingSection.removeFromParentContainer();
       if(this.controlView)
@@ -2885,8 +2884,6 @@ MyApplet.prototype = {
          this.operativePanelExpanded.removeFromParentContainer();
       if(this.mainBox)
          this.mainBox.removeFromParentContainer();
-      if(this.menuBox)
-         this.menuBox.removeFromParentContainer();
       if(this.extendedBox)
          this.extendedBox.removeFromParentContainer();
       if(this.styleGnoMenuPanel)
@@ -2940,9 +2937,7 @@ MyApplet.prototype = {
       this.operativePanelExpanded.setVertical(true);
       this.mainBox = new ConfigurableMenus.ConfigurablePopupMenuSection();
       this.mainBox.setVertical(false);
-      this.menuBox = new ConfigurableMenus.ConfigurablePopupMenuSection();
-      this.menuBox.setVertical(false);
-      this.menuBox.actor.set_style_class_name('menu-main-box');
+      this.mainBox.actor.set_style_class_name('menu-main-box');
       this.extendedBox = new ConfigurableMenus.ConfigurablePopupMenuSection();
       this.extendedBox.setVertical(true);
       this.styleGnoMenuPanel = new ConfigurableMenus.ConfigurablePopupMenuSection();
@@ -2970,7 +2965,6 @@ MyApplet.prototype = {
 
       this.selectedAppBox = new MenuBox.SelectedAppBox(this, this.showTimeDate);
 
-      this.section = new ConfigurableMenus.ConfigurablePopupMenuSection();
       this.flotingSection = new ConfigurableMenus.ConfigurablePopupMenuSection();
       this.separatorTop = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
       this.separatorMiddle = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
@@ -3030,8 +3024,7 @@ MyApplet.prototype = {
       try {
          this.bttChanger.registerCallBack(null);
          this.bttChanger.setTheme(this.theme);
-
-         this.menu.addMenuItem(this.section, {x_fill: true, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
+         this.menu.addMenuItem(this.mainBox, {x_fill: true, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
          this.rightPane.addMenuItem(this.beginBox);     
 //search
          this.topBoxSwaper.addMenuItem(this.changeTopBox, {x_fill: true, y_fill: true, x_align: St.Align.START, y_align: St.Align.START, expand: true });
@@ -3055,10 +3048,9 @@ MyApplet.prototype = {
          this.arrayBoxLayout.addMenuItem(this.packageAppGrid);
          this.pkg.setSearchBox(this.packageAppGrid.actor, this.packageAppSeparator.actor);
 
-         this.menuBox.actor.add_style_class_name('menu-main-box-' + this.theme);
-         this.menuBox.addMenuItem(this.mainBox, {x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
+         this.mainBox.actor.set_style_class_name('menu-main-box');
+         this.mainBox.actor.add_style_class_name('menu-main-box-' + this.theme);
 
-         this.section.addMenuItem(this.menuBox, {x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
          this.extendedBox.addMenuItem(this.standardBox, { x_fill: true, y_fill: true, y_align: St.Align.START, expand: true});
 
          this.separatorTop.setStyleClass('menu-separator-top-' + this.theme);
@@ -3940,12 +3932,12 @@ MyApplet.prototype = {
          this.appMenu.actor.connect('allocation_changed', Lang.bind(this, this._onAllocationChanged));
 
          this.menu.actor.set_style('padding: 0px; border-left: none; border-right: none; border-top: none; border-bottom: none;');
-         this.menuBox.actor.set_style('padding: 0px; border-left: none; border-right: none; border-top: none; border-bottom: none;');
+         this.mainBox.actor.set_style('padding: 0px; border-left: none; border-right: none; border-top: none; border-bottom: none;');
          this.categoriesBox.actor.set_style('padding: 0px; border-left: none; border-right: none; border-top: none; border-bottom: none;');
          this.favoritesObj.actor.set_style('padding: 0px; border-left: none; border-right: none; border-top: none; border-bottom: none;');
       } else {
          this.menu.actor.set_style(' ');
-         this.menu.box.set_style(' ');
+         this.mainBox.actor.set_style(' ');
          this.categoriesBox.actor.set_style(' ');
          this.favoritesObj.actor.set_style(' ');
          this.appMenu = null;
@@ -4009,64 +4001,65 @@ MyApplet.prototype = {
    onCategoryGnomeChange: function(menuItem) {
       try {
          if(this.appletMenu.getMenuItems().length > 1) {
-         menuItem.setMenu(this.menu);
-         //this.menu.repositionActor(menuItem.actor);
-         this._activeContainer = null;
-         this.closeApplicationsContextMenus(false);
-         //select the display;
-         if(menuItem == this.mainMenu) {
-            this.powerBox.actor.visible = false;
-            this.endVerticalBox.actor.visible = false;
-            this.hover.actor.visible = this.showHoverIcon;
-            this.favoritesObj.actor.visible = false;
-            this.controlView.actor.visible = false;
-            this.categoriesBox.actor.visible = true;
-            this.placesBox.actor.visible = false;
-            this.categoriesIncludes = null;
-            this.categoriesExcludes = new Array();
-            this.categoriesExcludes.push("Places");
-            this.categoriesExcludes.push("Recently");
-            this.categoriesExcludes.push("Preferences");
-            this.categoriesExcludes.push("Administration");
-            this.excludeCategories();
-         } else if(menuItem == this.gFavorites) {
-            this.categoriesIncludes = new Array();
-            this.categoriesExcludes = null;
-            this.hover.actor.visible = this.showHoverIcon;
-            this.favoritesObj.actor.visible = true;
-            this.powerBox.actor.visible = false;
-            this.endVerticalBox.actor.visible = false;
-            this.controlView.actor.visible = false;
-            this.categoriesBox.actor.visible = false;
-            this.placesBox.actor.visible = false;
-            this.excludeCategories();
-         } else if(menuItem == this.gPlaces) {
-            this.categoriesIncludes = new Array();
-            if(this.RecentManager._infosByTimestamp.length != 0)
-               this.categoriesIncludes.push("Recently");
-            this.powerBox.actor.visible = false;
-            this.endVerticalBox.actor.visible = false;
-            this.hover.actor.visible = this.showHoverIcon;
-            this.favoritesObj.actor.visible = false;
-            this.controlView.actor.visible = false;
-            this.categoriesBox.actor.visible = true;
-            this.placesBox.actor.visible = true;
-            this.excludeCategories();
-         } else if(menuItem == this.gSystem) {
-            this.categoriesIncludes = new Array();
-            this.categoriesIncludes.push("Preferences");
-            this.categoriesIncludes.push("Administration");
-            this.powerBox.actor.visible = this.showPowerButtons;
-            this.endVerticalBox.actor.visible = true;
-            this.hover.actor.visible = this.showHoverIcon;
-            this.favoritesObj.actor.visible = false;
-            this.controlView.actor.visible = this.showView;
-            this.categoriesBox.actor.visible = true;
-            this.placesBox.actor.visible = false;
-            this.excludeCategories();
-         }
-         //this.menu.open();
-         this._updateSize();
+            this.mainMenu.openMenuOnActivation(true);
+            menuItem.setMenu(this.menu);
+            //this.menu.repositionActor(menuItem.actor);
+            this._activeContainer = null;
+            this.closeApplicationsContextMenus(false);
+            //select the display;
+            if(menuItem == this.mainMenu) {
+               this.powerBox.actor.visible = false;
+               this.endVerticalBox.actor.visible = false;
+               this.hover.actor.visible = this.showHoverIcon;
+               this.favoritesObj.actor.visible = false;
+               this.controlView.actor.visible = false;
+               this.categoriesBox.actor.visible = true;
+               this.placesBox.actor.visible = false;
+               this.categoriesIncludes = null;
+               this.categoriesExcludes = new Array();
+               this.categoriesExcludes.push("Places");
+               this.categoriesExcludes.push("Recently");
+               this.categoriesExcludes.push("Preferences");
+               this.categoriesExcludes.push("Administration");
+               this.excludeCategories();
+            } else if(menuItem == this.gFavorites) {
+               this.categoriesIncludes = new Array();
+               this.categoriesExcludes = null;
+               this.hover.actor.visible = this.showHoverIcon;
+               this.favoritesObj.actor.visible = true;
+               this.powerBox.actor.visible = false;
+               this.endVerticalBox.actor.visible = false;
+               this.controlView.actor.visible = false;
+               this.categoriesBox.actor.visible = false;
+               this.placesBox.actor.visible = false;
+               this.excludeCategories();
+            } else if(menuItem == this.gPlaces) {
+               this.categoriesIncludes = new Array();
+               if(this.RecentManager._infosByTimestamp.length != 0)
+                  this.categoriesIncludes.push("Recently");
+               this.powerBox.actor.visible = false;
+               this.endVerticalBox.actor.visible = false;
+               this.hover.actor.visible = this.showHoverIcon;
+               this.favoritesObj.actor.visible = false;
+               this.controlView.actor.visible = false;
+               this.categoriesBox.actor.visible = true;
+               this.placesBox.actor.visible = true;
+               this.excludeCategories();
+            } else if(menuItem == this.gSystem) {
+               this.categoriesIncludes = new Array();
+               this.categoriesIncludes.push("Preferences");
+               this.categoriesIncludes.push("Administration");
+               this.powerBox.actor.visible = this.showPowerButtons;
+               this.endVerticalBox.actor.visible = true;
+               this.hover.actor.visible = this.showHoverIcon;
+               this.favoritesObj.actor.visible = false;
+               this.controlView.actor.visible = this.showView;
+               this.categoriesBox.actor.visible = true;
+               this.placesBox.actor.visible = false;
+               this.excludeCategories();
+            }
+         } else {
+            this.mainMenu.openMenuOnActivation(false);
          }
       } catch(e) {
          Main.notify("Error repos", e.message);
@@ -4867,7 +4860,7 @@ MyApplet.prototype = {
       if(this.appletMenu) {
          if(this.appMenu)
             this.appMenu.close();
-         //this.appletMenu.getActorForName("Places").visible = this.showPlaces;
+         this.gPlaces.actor.visible = this.showPlaces;
       }
       if(this.gnoMenuBox) {
          this.gnoMenuBox.showPlaces(this.showPlaces);

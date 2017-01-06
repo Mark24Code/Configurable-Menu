@@ -861,7 +861,6 @@ ConfigurablePointer.prototype = {
       this._fixScreen = fixScreen;
       this._screenActor = actor;
       this.trySetPosition(actor, this._arrowAlignment);
-      this._border.queue_repaint();
    },
 
    fixToCorner: function(fixCorner) {
@@ -869,7 +868,6 @@ ConfigurablePointer.prototype = {
       this._fixCorner = fixCorner;
       if(this._sourceActor)
          this.trySetPosition(this._sourceActor, this._arrowAlignment);
-      this._border.queue_repaint();
    },
 
    getCurrentMenuThemeNode: function() {
@@ -899,8 +897,9 @@ ConfigurablePointer.prototype = {
       //this.actor.show();
       this._sourceActor = sourceActor;
       this._arrowAlignment = alignment;
-      if(this.actor.visible) {
+      if(this.actor.visible && this.actor.mapped) {
          this._reposition(this._sourceActor, this._arrowAlignment);
+         this._border.queue_repaint();
       }
    },
 
@@ -912,6 +911,7 @@ ConfigurablePointer.prototype = {
       this._shiftY = y;
       if(this.actor.visible) {
          this._reposition(this._sourceActor, this._arrowAlignment);
+         this._border.queue_repaint();
       }
    },
 
@@ -2390,6 +2390,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       this._vectorBlocker = null;
       this._openMenuOnActivation = false;
       this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
+      this.actor.connect('allocation-changed', Lang.bind(this, this._onAllocationChanged));
       this._withMenu = withMenu;
       this._floatingMenu = false;
       if(this._withMenu) {
@@ -2418,8 +2419,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
          this.emit('menu-changed', oldMenu, this.menu);
          if(oldMenu && this._withMenu)
             oldMenu.destroy();
-      } else if(this.menu)
-         this.menu.repositionActor(this.actor);
+      }
    },
 
    preservedSelection: function(preserve) {
@@ -2558,6 +2558,12 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
          this.menu._updateTopMenu();
    },
 
+   _onAllocationChanged: function() {
+      if(this.menu && (this.menu.isOpen) && (this.menu.launcher == this)) {
+         //this.menu.repositionActor(this.actor);
+      }
+   },
+
    setArrowVisible: function(show) {
       this._triangle.visible = show;
       this.setArrowVisibleOnActivationOnly(this._showArrowOnActivation);
@@ -2651,8 +2657,9 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
    _onButtonReleaseEvent: function(actor, event) {
       if(event.get_button() == 1) {
          this.emit("ready-opened");
-         if(this.menu && !this._openMenuOnActivation) {
+         if(this.menu) {
             if((!this.menu.isOpen)&&(this.menu._floating)) {
+               //Main.notify(" " + this.actor);
                this.menu.repositionActor(this.actor);
             }
             this.menu.toggle(true);
@@ -4688,14 +4695,18 @@ ConfigurableMenu.prototype = {
    },
 
    setLauncher: function(launcher) {
-      this.launcher = launcher;
-      if(this.launcher) {
-         this.sourceActor = this.launcher.actor;
-         if(this._floating)
-            this._boxPointer.trySetPosition(this.launcher.actor, this._arrowAlignment);
-         else
-            this._boxPointer.clearPosition();
-         this._updateTopMenu();
+      if(this.launcher != launcher) {
+         if(this.launcher && this.launcher.setMenu && (this.launcher.menu == this))
+            this.launcher.setMenu(null);
+         this.launcher = launcher;
+         if(this.launcher) {
+            this.sourceActor = this.launcher.actor;
+            if(this._floating)
+               this._boxPointer.trySetPosition(this.sourceActor, this._arrowAlignment);
+            else
+               this._boxPointer.clearPosition();
+            this._updateTopMenu();
+         }
       }
    },
 
@@ -4795,6 +4806,8 @@ ConfigurableMenu.prototype = {
       if((this._floating)&&(this.launcher.actor)&&(this.launcher.actor != actor)) {
          this._boxPointer.trySetPosition(actor, this._arrowAlignment);
       }
+      //if(this.sourceActor != actor)
+      //   Main.notify("error " + actor + " " + this.sourceActor + " " + this.launcher.actor);
    },
 
    getCurrentMenuThemeNode: function() {
