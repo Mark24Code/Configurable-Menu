@@ -114,11 +114,9 @@ function MyApplet() {
 }
 
 MyApplet.prototype = {
-   //__proto__: Applet.TextIconApplet.prototype,
    __proto__: Applet.Applet.prototype,
 
    _init: function(metadata, orientation, panelHeight, instanceId) {
-      //Applet.TextIconApplet.prototype._init.call(this, orientation, panelHeight, instanceId);
       Applet.Applet.prototype._init.call(this, orientation, panelHeight, instanceId);
       try {
          this.metadata = metadata;
@@ -996,7 +994,7 @@ MyApplet.prototype = {
       else
          this.actor.add_style_class_name('menu-applet-panel-bottom-box');
 
-      this.menu.setArrowSide(orientation);
+      this.menu.setOrientation(orientation);
       this.popupOrientation = null;
       return true;
    },
@@ -1900,12 +1898,14 @@ MyApplet.prototype = {
 
    _setVisibleArrowCat: function() {
       for(let i = 0; i < this._categoryButtons.length; i++) {
-         this._setCategoryArrow(this._categoryButtons[i]);
+         this._categoryButtons[i].setArrowVisible(this.arrowCategoriesVisible);
+         this._categoryButtons[i].setArrowVisibleOnActivationOnly(this.arrowCategoriesSelected);
+         this._categoryButtons[i].setReservedArrowSpace(true);
       }
    },
 
    _setCategoryArrow: function(category) {
-      if(category) {
+      /*if(category) {
          if(this.categoriesBox.getVertical()) {
            if(this.theme == "whisker")
               category.setArrow(this.arrowCategoriesVisible, !this.arrowCategoriesSelected, St.Side.LEFT);
@@ -1918,7 +1918,7 @@ MyApplet.prototype = {
               category.setArrow(this.arrowCategoriesVisible, !this.arrowCategoriesSelected, St.Side.RIGHT)
          }
          category.setArrowVisible((this.arrowCategoriesVisible)&&(!this.arrowCategoriesSelected));
-      }
+      }*/
    },
 
    _setVisibleSeparatorLine: function() {
@@ -2342,8 +2342,10 @@ MyApplet.prototype = {
    },
 
    openMenu: function() {
-      this.menuIsOpening = true;
-      this.menu.open(false);
+      if(this._draggable && this._draggable.inhibit) {
+         this.menuIsOpening = true;
+         this.menu.open(false);
+      }
    },
 
    _updateActivateOnHover: function() {
@@ -2516,33 +2518,36 @@ MyApplet.prototype = {
          this.menu.close();   
          if(this._applet_context_menu.getMenuItems().length > 0) {
             this._applet_context_menu.setLauncher(this);
-            this._applet_context_menu.setArrowSide(this.orientation);
+            this._applet_context_menu.setOrientation(this.orientation);
             this._applet_context_menu.toggle();	
          }
       }
    },
 
    on_applet_clicked: function(event) {
-      this.menuIsOpening = true;
-      this.menu.toggle_with_options(false);
+      if(this._draggable && this._draggable.inhibit) {
+         this.menuIsOpening = true;
+         this.menu.toggle_with_options(false);
+      }
    },
 
    _onSourceKeyPress: function(actor, event) {
-      let symbol = event.get_key_symbol();
-
-      if(symbol == Clutter.KEY_space || symbol == Clutter.KEY_Return) {
-         this.menu.toggle();
-         return true;
-      } else if(symbol == Clutter.KEY_Escape && this.menu.isOpen) {
-         this.menu.close();
-         return true;
-      } else if(symbol == Clutter.KEY_Down) {
-         if(!this.menu.isOpen)
+      if(this._draggable && this._draggable.inhibit) {
+         let symbol = event.get_key_symbol();
+         if(symbol == Clutter.KEY_space || symbol == Clutter.KEY_Return) {
             this.menu.toggle();
-         this.menu.actor.navigate_focus(this.actor, Gtk.DirectionType.DOWN, false);
-         return true;
-      } else
-         return false;
+            return true;
+         } else if(symbol == Clutter.KEY_Escape && this.menu.isOpen) {
+            this.menu.close();
+            return true;
+         } else if(symbol == Clutter.KEY_Down) {
+            if(!this.menu.isOpen)
+               this.menu.toggle();
+            this.menu.actor.navigate_focus(this.actor, Gtk.DirectionType.DOWN, false);
+            return true;
+         } else
+            return false;
+      }
    },
 
    _updateMenuSection: function() {
@@ -2756,7 +2761,7 @@ MyApplet.prototype = {
                if(this.appMenu)
                   this.appMenu.close();
                this._applet_context_menu.setLauncher(this.menu);
-               this._applet_context_menu.setArrowSide(this.popupOrientation);
+               this._applet_context_menu.setOrientation(this.popupOrientation);
                this._applet_context_menu.toggle();
             }
          } else if(this._applet_context_menu.isOpen) {
@@ -2774,7 +2779,7 @@ MyApplet.prototype = {
          this.popupOrientation = St.Side.RIGHT;
          if(ax < monitor.x + monitor.width/2)
             this.popupOrientation = St.Side.LEFT;
-         this._setVisibleArrowCat();
+         //this._setVisibleArrowCat();
       }
    },
 
@@ -3007,6 +3012,7 @@ MyApplet.prototype = {
    _display: function() {
       this.categoriesExcludes = null;
       this.categoriesIncludes = null;
+      this.mainMenu.setMenu(this.menu);
       try {
          this.displayed = false;
          this.allowFavName = false;
@@ -3977,23 +3983,22 @@ MyApplet.prototype = {
             this._applet_context_menu.close();
 
          //this.appMenu.setLauncher(this.menu);
-         this.appMenu.setArrowSide(this.popupOrientation);
-         if(!this.appMenu.isOpen) {
+         //this.appMenu.setOrientation(this.popupOrientation);
+         if(this._draggable && this._draggable.inhibit) {
             this.appMenu.open();
+            if((categoryButton)&&(!this.subMenuAlign)) {
+               categoryButton.setFloatingSubMenu(true);
+               categoryButton.setMenu(this.appMenu);
+            } else {
+               //if(this.menu.sourceActor == this.appletMenu.getActorForName("Main"))
+               //   this.appMenu.repositionActor(this._allAppsCategoryButton.actor);
+               //else
+               this.appMenu.repositionActor(this.menu.actor);
+               this.appMenu.shiftPosition(0, 0);
+            }
+            //this._updateSize();
+            return true;
          }
-         if((categoryButton)&&(!this.subMenuAlign)) {
-            categoryButton.setFloatingSubMenu(true);
-            categoryButton.setArrowSide(St.Side.RIGHT);
-            categoryButton.setMenu(this.appMenu);
-         } else {
-            //if(this.menu.sourceActor == this.appletMenu.getActorForName("Main"))
-            //   this.appMenu.repositionActor(this._allAppsCategoryButton.actor);
-            //else
-            this.appMenu.repositionActor(this.menu.actor);
-            this.appMenu.shiftPosition(0, 0);
-         }
-         //this._updateSize();
-         return true;
       }
       return false;
    },
@@ -4153,7 +4158,7 @@ MyApplet.prototype = {
           let actor = this._categoryButtons[i].actor;
           actor.set_style_class_name('menu-category-button');
           actor.add_style_class_name('menu-category-button-' + this.theme);
-          this._categoryButtons[i].setArrowVisible(false);
+          //this._categoryButtons[i].setArrowVisible(false);
           if(this.categoriesIncludes) {
              if(this.categoriesIncludes.indexOf(this._categoryButtons[i].getCategoryID()) != -1)
                 actor.show();
@@ -4204,7 +4209,7 @@ MyApplet.prototype = {
             this._previousTreeSelectedActor.add_style_class_name('menu-category-button-' + this.theme);
             if(this._previousTreeSelectedActor._delegate) {
                try {
-                  this._previousTreeSelectedActor._delegate.setArrowVisible(false);
+                  //this._previousTreeSelectedActor._delegate.setArrowVisible(false);
                } catch(e) {}
                this._previousTreeSelectedActor._delegate.emit('leave-event');
             }
@@ -4216,7 +4221,7 @@ MyApplet.prototype = {
          for(let i = 0; i < this._categoryButtons.length; i++) {
             this._categoryButtons[i].actor.set_style_class_name('menu-category-button');
             this._categoryButtons[i].actor.add_style_class_name('menu-category-button-' + this.theme);
-            this._categoryButtons[i].setArrowVisible(false);
+            //this._categoryButtons[i].setArrowVisible(false);
          }
       }
      // this.lastActor = null;
@@ -4320,7 +4325,7 @@ MyApplet.prototype = {
       if(categoryButton) {
          categoryButton.actor.set_style_class_name('menu-category-button-selected');
          categoryButton.actor.add_style_class_name('menu-category-button-selected-' + this.theme);
-         categoryButton.setArrowVisible(true);
+         //categoryButton.setArrowVisible(true);
          if(dir) {
             this._displayButtons(this._listApplications(dir.get_menu_id()));
          } else if(categoryButton == this.placesButton) {
@@ -4827,6 +4832,7 @@ MyApplet.prototype = {
             this.categoriesBox.addMenuItem(this._categoryButtons[i]);
             this._setCategoryArrow(this._categoryButtons[i]);
          }
+         this._setVisibleArrowCat();
          this._clearPrevCatSelection(this._allAppsCategoryButton.actor);
          this._select_category(null, this._allAppsCategoryButton);
       } catch(e) {
@@ -5204,9 +5210,8 @@ MyApplet.prototype = {
          this._allAppsCategoryButton.actor.set_style_class_name('menu-category-button-selected');
          this._allAppsCategoryButton.actor.add_style_class_name('menu-category-button-selected-' + this.theme);
          this._previousTreeSelectedActor = this._allAppsCategoryButton.actor;
-         this._allAppsCategoryButton.setArrowVisible(true);
-      }
-      else {
+         //this._allAppsCategoryButton.setArrowVisible(true);
+      } else {
          this.actor.remove_style_pseudo_class('active');
          //this._disconnectSearch();
          this._select_category(null, this._allAppsCategoryButton);

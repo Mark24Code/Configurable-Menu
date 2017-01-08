@@ -163,6 +163,10 @@ ScrollItemsBox.prototype = {
       }
    },
 
+   getVertical: function(vertical) {
+      return this.actor.get_vertical();
+   },
+
    _createScroll: function(vertical) {
       let scrollBox;
       if(vertical) {
@@ -1092,13 +1096,13 @@ ConfigurablePointer.prototype = {
          resY = Math.max(resY, monitor.y + maxPHV);
          let topMenu = this._getTopMenu(sourceActor);
          if(Main.panelManager) {
-            if(((maxHeightBottom == 0)||(maxHeightTop==0))&&(topMenu)&&(topMenu._arrowSide == St.Side.TOP)) {
+            if(((maxHeightBottom == 0)||(maxHeightTop==0))&&(topMenu)&&(topMenu.getOrientation() == St.Side.TOP)) {
                resY = Math.min(resY, monitor.y + monitor.height - (natHeight));
             } else {
                resY = Math.min(resY, monitor.y + monitor.height - (maxPHV + natHeight));
             }
          } else {
-            if((!Main.panel2)&&(topMenu)&&(topMenu._arrowSide == St.Side.TOP)) {
+            if((!Main.panel2)&&(topMenu)&&(topMenu.getOrientation() == St.Side.TOP)) {
                resY = Math.min(resY, monitor.y + monitor.height - (natHeight));
             } else {
                resY = Math.min(resY, monitor.y + monitor.height - (maxPHV + natHeight));
@@ -1696,7 +1700,7 @@ ConfigurablePopupBaseMenuItem.prototype = {
       this.active = false;
       this.preserveSelection = false;
       this._activatable = params.reactive && params.activate;
-      this.sensitive = true;
+      this._sensitive = true;
       this.focusOnHover = params.focusOnHover;
       this._desaturateIcon = false;
 
@@ -1720,7 +1724,7 @@ ConfigurablePopupBaseMenuItem.prototype = {
    getContainer: function() {
       let parentBox = this.actor.get_parent();
       while(parentBox) {
-         if(parentBox._delegate)
+         if(parentBox._delegate && parentBox._delegate instanceof ConfigurablePopupMenuBase)
              return parentBox._delegate;
          parentBox = parentBox.get_parent();
       }
@@ -1783,10 +1787,10 @@ ConfigurablePopupBaseMenuItem.prototype = {
    setSensitive: function(sensitive) {
       if(!this._activatable)
          return;
-      if(this.sensitive == sensitive)
+      if(this._sensitive == sensitive)
          return;
 
-      this.sensitive = sensitive;
+      this._sensitive = sensitive;
       this.actor.reactive = sensitive;
       this.actor.can_focus = sensitive;
 
@@ -2375,18 +2379,18 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       ConfigurableBasicPopupMenuItem.prototype._init.call(this, text, params);
       this.actor._delegate = this;
       this.actor.add_style_class_name('popup-submenu-menu-item');
-      this._arrowSide = St.Side.LEFT;
-      this._hide_expander = (hideExpander == true);
       this._triangle = new St.Icon({ 
           icon_name: "media-playback-start",
           icon_type: St.IconType.SYMBOLIC,
           style_class: 'popup-menu-icon'
       });
+      this._arrowSide = St.Side.RIGHT;
+      this._automaticArrowSide = true;
       this._triangle.rotation_center_z_gravity = Clutter.Gravity.CENTER;
-      if(this._hide_expander)
-         this._triangle.hide();
-
-      this.actor.add(this._triangle, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
+      this._triangle.rotation_angle_z = 0;
+      this._reserveArrowSpace = false;
+      this.setArrowVisible(!(hideExpander == true));
+      this.actor.add(this._triangle, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false, y_fill:false, expand:true });
       this._vectorBlocker = null;
       this._openMenuOnActivation = false;
       this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
@@ -2399,22 +2403,40 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       }
    },
 
+   setAutomaticArrowSide: function(automatic) {
+      this._automaticArrowSide = automatic;
+   },
+
+   setSensitive: function(sensitive) {
+      if(this.menu)
+         this.menu.close();
+      ConfigurableBasicPopupMenuItem.prototype.setSensitive.call(this, sensitive);
+   },
+
    setMenu: function(menu) {
       if(this.menu != menu) {
-         if(this.menu && this._menuOpenId) {
-            this.menu.disconnect(this._menuOpenId);
-            this._menuOpenId = null;
+         if(this.menu) {
+            if(this._menuOpenId) {
+               this.menu.disconnect(this._menuOpenId);
+               this._menuOpenId = null;
+            }
+            if(this._menuFloatingId) {
+               this.menu.disconnect(this._menuFloatingId);
+               this._menuFloatingId = null;
+            }
          }
          let oldMenu = this.menu;
          this.menu = menu;
          if(this.menu) {
             this._menuOpenId = this.menu.connect('open-state-changed', Lang.bind(this, this._subMenuOpenStateChanged));
+            this._menuFloatingId = this.menu.connect('floating-state-changed', Lang.bind(this, this._subMenuFloatingStateChanged));
             if(this.actor.mapped)
                this._onMapped();
             if(this.menu.setFloatingState)
                this.menu.setFloatingState(this._floatingMenu);
             if(this.menu.setLauncher)
                this.menu.setLauncher(this);
+            this._estimateArrowSide();
          }
          this.emit('menu-changed', oldMenu, this.menu);
          if(oldMenu && this._withMenu)
@@ -2425,7 +2447,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
    preservedSelection: function(preserve) {
       this.preserveSelection = preserve;
    },
-
+/*
    _createArrowIcon: function(side) {
       let iconName;
       switch (side) {
@@ -2452,7 +2474,7 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       });
       return arrow;
    },
-
+*/
    setFloatingSubMenu: function(floating) {
       if(this._floatingMenu != floating) {
          this._floatingMenu = floating;
@@ -2505,38 +2527,37 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
 
    setArrowSide: function(side) {
       if(this._arrowSide != side) {
-         if(this.menu && this.menu._floating) {
-            switch (side) {
-               case St.Side.TOP:
-               case St.Side.BOTTOM:
-               case St.Side.LEFT:
-                  if(this._triangle) {
-                     if(this._triangle.rotation_angle_z != 0)
-                        this._triangle.rotation_angle_z = 0;
-                     if(this._arrowSide == St.Side.RIGHT) {
-                        this.actor.remove_actor(this._triangle);
-                        this.actor.add(this._triangle, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false });
-                     }
-                  }
-                  break;
-               case St.Side.RIGHT:
-                  if(this._triangle) {
-                     if(this._triangle.rotation_angle_z != 180)
-                        this._triangle.rotation_angle_z = 180;
-                     if(this._arrowSide != St.Side.RIGHT) {
-                        this.actor.remove_actor(this._triangle);
-                        let childs = this.actor.get_children();
-                        if(childs.length > 0) {
-                           this.actor.insert_before(this._triangle, childs[childs.length-1]);
-                        } else {
-                           this.actor.add(this._triangle);
-                        }
-                     }
-                  }
-                  break;
-            }
+         switch (side) {
+            case St.Side.TOP:
+            case St.Side.BOTTOM:
+            case St.Side.RIGHT:
+               this._triangle.rotation_angle_z = 0;
+               this.actor.remove_actor(this._triangle);
+               this.actor.add(this._triangle, { x_align: St.Align.END, y_align: St.Align.MIDDLE, x_fill:false, y_fill:false, expand:true });
+               break;
+            case St.Side.LEFT:
+               this._triangle.rotation_angle_z = 180;
+               this.actor.remove_actor(this._triangle);
+               let childs = this.actor.get_children();
+               if(childs.length > 0) {
+                  this.actor.insert_before(this._triangle, childs[0]);
+               } else {
+                  this.actor.add(this._triangle);
+               }
+               break;
          }
          this._arrowSide = side;
+      }
+      if(this.menu && this.menu.isInFloatingState()) {
+         /*if(this._arrowSide == St.Side.TOP) 
+            Main.notify("St.Side.TOP");
+         if(this._arrowSide == St.Side.BOTTOM) 
+            Main.notify("St.Side.BOTTOM");
+         if(this._arrowSide == St.Side.RIGHT) 
+            Main.notify("St.Side.RIGHT");
+         if(this._arrowSide == St.Side.LEFT) 
+            Main.notify("St.Side.LEFT");*/
+         this.menu.setOrientation(this.getReverseArrowSide());
       }
    },
 
@@ -2554,43 +2575,181 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
    },
 
    _onMapped: function() {
-      if(this.menu && this.menu._updateTopMenu)
-         this.menu._updateTopMenu();
+      this._estimateArrowSide();
+   },
+
+   _estimateArrowSide: function() {
+      if(this._automaticArrowSide) {
+         let container = this.getContainer();
+         let vertical = (container && container.getVertical());
+         if(this.menu && !this.menu.isInFloatingState()) {
+            this.setArrowSide(this._estimateArrowSideFromSubMenu(vertical));
+         } else {
+            this.setArrowSide(this._estimateArrowSideFromMonitor(vertical));
+         }
+      }
+   },
+
+   _estimateArrowSideFromSubMenu: function(vertical) {
+      if(this.menu) {
+         let [ax, ay] = this.actor.get_transformed_position();
+         let [mx, my] = this.menu.actor.get_transformed_position();
+         let arrowSide = St.Side.LEFT;
+         if(vertical) {
+            if(ax < mx)
+               arrowSide = St.Side.RIGHT;
+         } else {
+            arrowSide = St.Side.TOP;
+            if(ay < my)
+               arrowSide = St.Side.BOTTOM;
+         }
+         return arrowSide;
+      }
+      return null;
+   },
+
+   _estimateArrowSideFromMonitor: function(vertical) {
+      let monitor = Main.layoutManager.findMonitorForActor(this.actor);
+      let [ax, ay] = this.actor.get_transformed_position();
+      let arrowSide = St.Side.LEFT;
+      if(vertical) {
+         if(2*ax + this.actor.width < 2*monitor.x + monitor.width)
+            arrowSide = St.Side.RIGHT;
+      } else {
+         arrowSide = St.Side.TOP;
+         if(2*ay + this.actor.height < 2*monitor.y + monitor.height)
+            arrowSide = St.Side.BOTTOM;
+      }
+      return arrowSide;
+   },
+
+   getReverseArrowSide: function() {
+      return this._reverseArrowSide(this._arrowSide);
+   },
+
+   _reverseArrowSide: function(side) {
+      switch (side) {
+         case St.Side.TOP:
+            return St.Side.BOTTOM;
+         case St.Side.RIGHT:
+            return St.Side.LEFT;
+         case St.Side.BOTTOM:
+            return St.Side.TOP;
+         case St.Side.LEFT:
+            return St.Side.RIGHT;
+      }
+      return St.Side.LEFT;
    },
 
    _onAllocationChanged: function() {
       if(this.menu && (this.menu.isOpen) && (this.menu.launcher == this)) {
-         //this.menu.repositionActor(this.actor);
+         this.menu.repositionActor();
       }
    },
 
    setArrowVisible: function(show) {
-      this._triangle.visible = show;
+      if(this._showArrowOnActivation) {
+         this.setArrowVisibleOnActivationOnly(this._showArrowOnActivation);
+      } else {
+         if(this._reserveArrowSpace) {
+            if(show)
+               this._triangle.icon_name = 'media-playback-start';
+            else
+               this._triangle.icon_name = null;
+            this._triangle.visible = true;
+         } else {
+            this._triangle.icon_name = 'media-playback-start';
+            this._triangle.visible = show;
+         }
+      }
+   },
+
+   setReservedArrowSpace: function(reserved) {
+      this._reserveArrowSpace = reserved;
+      this.setArrowVisible(this._triangle.visible && this._triangle.icon_name);
       this.setArrowVisibleOnActivationOnly(this._showArrowOnActivation);
    },
 
    setArrowVisibleOnActivationOnly: function(show) {
       this._showArrowOnActivation = show;
-      if(this._showArrowOnActivation)
-         this._triangle.icon_name = null;
-      else {
-         this._triangle.icon_name = 'media-playback-start';
+      if(this._showArrowOnActivation) {
+         if(this._reserveArrowSpace) {
+            if(this.active)
+               this._triangle.icon_name = 'media-playback-start';
+            else
+               this._triangle.icon_name = null;
+            this._triangle.visible = true;
+         } else {
+            this._triangle.icon_name = 'media-playback-start';
+            this._triangle.visible = this.active;
+         }
+      } else {
+         this.setArrowVisible(this._triangle.visible && this._triangle.icon_name);
       }
    },
 
+   _subMenuFloatingStateChanged: function(menu, floating) {
+      this._estimateArrowSide();
+   },
+
    _subMenuOpenStateChanged: function(menu, open) {
-      if(open) {
+     /* if(open) {
          this.actor.add_style_pseudo_class('open');
-         if((!this._hide_expander)&&(this.menu && !this.menu._floating)) {
-             let rotationAngle = 90;
-             if(this.actor.get_direction() == St.TextDirection.RTL)
-                rotationAngle = 270;
-             this._triangle.rotation_angle_z = rotationAngle;
+         if(menu.getReverseOrientation) {
+            let side = menu.getReverseOrientation();
+            if(menu.isInFloatingState()) {
+               Main.notify("hi" + side + " " + St.Side.RIGHT + " " + St.Side.LEFT);
+               switch (side) {
+               case St.Side.TOP:
+                  this._triangle.rotation_angle_z = 90;
+                  break;
+               case St.Side.BOTTOM:
+                  this._triangle.rotation_angle_z = 270;
+                  break;
+               case St.Side.RIGHT:
+                  this._triangle.rotation_angle_z = 0;
+                  break;
+               case St.Side.LEFT:
+                  this._triangle.rotation_angle_z = 0;
+                  break;
+               }
+            } else {
+               switch (side) {
+               case St.Side.TOP:
+                  this._triangle.rotation_angle_z = 90;
+                  break;
+               case St.Side.BOTTOM:
+                  this._triangle.rotation_angle_z = 270;
+                  break;
+               case St.Side.RIGHT:
+                  this._triangle.rotation_angle_z = 0;
+                  break;
+               case St.Side.LEFT:
+                  this._triangle.rotation_angle_z = 0;
+                  break;
+               }
+            }
          }
       } else {
          this.actor.remove_style_pseudo_class('open');
-         this._triangle.rotation_angle_z = 0;
-      }
+         if(menu.getReverseOrientation && !menu.isInFloatingState()) {
+            let side = menu.getReverseOrientation();
+            switch (side) {
+            case St.Side.TOP:
+               this._triangle.rotation_angle_z = 90;
+               break;
+            case St.Side.BOTTOM:
+               this._triangle.rotation_angle_z = 270;
+               break;
+            case St.Side.RIGHT:
+               this._triangle.rotation_angle_z = 0;
+               break;
+            case St.Side.LEFT:
+               this._triangle.rotation_angle_z = 180;
+               break;
+            }
+         }
+      }*/
       this.emit('open-state-changed', menu, open);
    },
 
@@ -2617,11 +2776,9 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
    },
 
    activate: function(event) {
-      /*if((!this.menu.isOpen)&&(this.menu._floating)) {
-         this.menu.repositionActor(this.actor);
-      }*/
-      if(this.menu)
-         this.menu.open(true);
+      /*if(this.menu)
+         this.menu.open(true);*/
+      this.setActive(true);
    },
 
    _onKeyFocusInit: function(actor) {
@@ -2636,13 +2793,9 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
 
    setActive: function(active) {
       this.emit("ready-opened");
-      if(this.active != active) {
-         if(this._showArrowOnActivation) {
-            if(active)
-               this._triangle.icon_name = 'media-playback-start';
-            else
-               this._triangle.icon_name = null;
-         }
+      if(this.actor.reactive && (this.active != active)) {
+         if(this._showArrowOnActivation)
+            this.setArrowVisibleOnActivationOnly(this._showArrowOnActivation);
          if(this.menu && this._openMenuOnActivation) {
             if((!this.menu.isOpen)&&(this.menu._floating)) {
                this.menu.repositionActor(this.actor);
@@ -2659,7 +2812,6 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
          this.emit("ready-opened");
          if(this.menu) {
             if((!this.menu.isOpen)&&(this.menu._floating)) {
-               //Main.notify(" " + this.actor);
                this.menu.repositionActor(this.actor);
             }
             this.menu.toggle(true);
@@ -2671,9 +2823,15 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
 
    destroy: function() {
       if(this.actor) {
-         if(this.menu && (this._menuOpenId != 0)) {
-            this.menu.disconnect(this._menuOpenId);
-            this._menuOpenId = 0;
+         if(this.menu) {
+            if(this._menuOpenId != 0) {
+               this.menu.disconnect(this._menuOpenId);
+               this._menuOpenId = 0;
+            }
+            if(this._menuFloatingId != 0) {
+               this.menu.disconnect(this._menuFloatingId);
+               this._menuFloatingId = 0;
+            }
          }
          if(this._withMenu)
             this.menu.destroy();
@@ -3211,6 +3369,8 @@ function ConfigurablePopupMenuBase() {
 ConfigurablePopupMenuBase.prototype = {
    _init: function(sourceActor, styleClass) {
       this.sourceActor = sourceActor;
+      //By default in cinnamon a menu it's a context menu with bottom orientation.
+      this._orientation = St.Side.BOTTOM;
 
       if(styleClass !== undefined) {
          this.box = new St.BoxLayout({ style_class: styleClass, vertical: true });
@@ -3238,6 +3398,26 @@ ConfigurablePopupMenuBase.prototype = {
 
       this._activeMenuItem = null;
       this._childMenus = [];
+   },
+
+   setVertical: function(vertical) {
+      this.box.set_vertical(vertical);
+   },
+
+   getVertical: function() {
+      return this.box.get_vertical();
+   },
+
+   isInFloatingState: function() {
+      return false;
+   },
+
+   setOrientation: function(orientation) {
+      this._orientation = orientation;
+   },
+
+   getOrientation: function() {
+      return this._orientation;
    },
 
    addAction: function(title, callback) {
@@ -3627,14 +3807,14 @@ ConfigurableMenu.prototype = {
       ConfigurablePopupMenuBase.prototype._init.call (this, (launcher ? launcher.actor: null), 'popup-menu-content');
       try {
          this._arrowAlignment = arrowAlignment;
-         this._arrowSide = orientation;
+         this._orientation = orientation;
          this._effectType = "none";
          this._effectTime = POPUP_ANIMATION_TIME;
          this._automaticOpenControl = true;
          this._paintId = 0;
          this._paintCount = 0;
          this._reactive = true;
-         this._floating = false;
+         this._floating = null;
          this._topMenu = null;
          this._showItemIcon = true;
          this._desaturateItemIcon = false;
@@ -3732,8 +3912,9 @@ ConfigurableMenu.prototype = {
       }
    },
 
-   _onMapped: function(controlingSize) {
-      this._setChildsArrowSide();
+   _onMapped: function(actor, event) {
+      this._updateTopMenu();
+      //this._setChildsArrowSide();
       if(this.requestedWidth != -1 || this.requestedHeight != -1)
          this.setSize(this.requestedWidth, this.requestedHeight);
    },
@@ -3762,7 +3943,7 @@ ConfigurableMenu.prototype = {
       } else {
          if(bottomPosition) {
             if(!Main.panel2) {
-               if(this._arrowSide == St.Side.BOTTOM)
+               if(this._orientation == St.Side.BOTTOM)
                   return Main.panel.actor.height;
                else
                   return 0;
@@ -3771,7 +3952,7 @@ ConfigurableMenu.prototype = {
             }
          } else {
             if(!Main.panel2) {
-               if(this._arrowSide == St.Side.BOTTOM)
+               if(this._orientation == St.Side.BOTTOM)
                   return 0;
                else
                   return Main.panel.actor.height;
@@ -3852,7 +4033,7 @@ ConfigurableMenu.prototype = {
       let [cx, cy] = this.actor.get_transformed_position();
       let width, height;
 
-      switch (this._arrowSide) {
+      switch (this._orientation) {
          case St.Side.TOP:
             height = my - ay + 4 - this.mouseDy;
             if(cx < (monitor.x + monitor.width/2))
@@ -3925,7 +4106,7 @@ ConfigurableMenu.prototype = {
       let monitor = Main.layoutManager.findMonitorForActor(this.actor);
       let [cx, cy] = this.actor.get_transformed_position();
       this.relativeSide = this._boxPointer._relativeSide;
-      switch (this._arrowSide) {
+      switch (this._orientation) {
          case St.Side.TOP:
             if(my > ah - this._deltaMinResize) {
                if(this.relativeSide == St.Side.RIGHT)
@@ -4036,7 +4217,7 @@ ConfigurableMenu.prototype = {
       this._paintCount = 0;
       Main.popup_rendering = false;
    },
-
+/*
    _setChildsArrowSide: function() {
       let monitor = Main.layoutManager.findMonitorForActor(this.actor);
       if(monitor) {
@@ -4046,9 +4227,9 @@ ConfigurableMenu.prototype = {
          leftMenu = leftMenu - 20;
          let rightMenu = leftMenu + this.actor.width + 20;
          let childArrowSide = St.Side.LEFT;
-         if(this._arrowSide == St.Side.RIGHT)
-            childArrowSide = this._arrowSide;
-         else if((this._arrowSide == St.Side.TOP) || (this._arrowSide == St.Side.BOTTOM)) {
+         if(this._orientation == St.Side.RIGHT)
+            childArrowSide = this._orientation;
+         else if((this._orientation == St.Side.TOP) || (this._orientation == St.Side.BOTTOM)) {
             if(leftMenu + this.actor.width/2 > leftEdge + rightEdge/2)
                childArrowSide = St.Side.RIGHT;
          }
@@ -4060,14 +4241,14 @@ ConfigurableMenu.prototype = {
                } else if((childArrowSide == St.Side.RIGHT) && (leftMenu - menu.actor.width < leftEdge)) {
                   childArrowSide = St.Side.LEFT;
                }
-               menu.setArrowSide(childArrowSide);
+               menu.setOrientation(childArrowSide);
             }
          }
       } else {
          global.logError("Fail to get the monitor for oriented the arrow child side.");
       }
    },
-
+*/
    _boxGetPreferredWidth: function(actor, forHeight, alloc) {
       let columnWidths = this.getColumnWidths();
       this.setColumnWidths(columnWidths);
@@ -4107,23 +4288,23 @@ ConfigurableMenu.prototype = {
 
    _getClutterScapeKey: function() {
       let scapeKey = null;
-      if(this._arrowSide == St.Side.LEFT)
+      if(this._orientation == St.Side.LEFT)
          scapeKey = Clutter.KEY_Left;
-      else if(this._arrowSide == St.Side.RIGHT)
+      else if(this._orientation == St.Side.RIGHT)
          scapeKey = Clutter.KEY_Right;
       else if(this._getBorderMenuItem(this) == this._activeMenuItem) {
-         if(this._arrowSide == St.Side.TOP)
+         if(this._orientation == St.Side.TOP)
             scapeKey = Clutter.KEY_Up;
-         else if(this._arrowSide == St.Side.BOTTOM)
+         else if(this._orientation == St.Side.BOTTOM)
             scapeKey = Clutter.KEY_Down;
       }
       return scapeKey;
    },
 
    _getBorderMenuItem: function(menu) {
-      if(this._arrowSide == St.Side.TOP)
+      if(this._orientation == St.Side.TOP)
          return this._getFirstMenuItem(menu);
-      else if(this._arrowSide == St.Side.BOTTOM)
+      else if(this._orientation == St.Side.BOTTOM)
          return this._getLastMenuItem(menu);
       return true;
    },
@@ -4380,7 +4561,7 @@ ConfigurableMenu.prototype = {
 
    _effectHideVerticalOpen: function() {
       let startY = this.sourceActor.height;
-      if(this._arrowSide == St.Side.BOTTOM) {
+      if(this._orientation == St.Side.BOTTOM) {
          let monitor = Main.layoutManager.findMonitorForActor(this.sourceActor);
          startY =  monitor.height - startY;
       }
@@ -4396,7 +4577,7 @@ ConfigurableMenu.prototype = {
 
    _effectHideVerticalClose: function() {
       let startY = this.sourceActor.height;
-      if(this._arrowSide == St.Side.BOTTOM) {
+      if(this._orientation == St.Side.BOTTOM) {
          let monitor = Main.layoutManager.findMonitorForActor(this.sourceActor);
          startY =  monitor.height - startY;
       }
@@ -4419,7 +4600,7 @@ ConfigurableMenu.prototype = {
       let startY = this.sourceActor.height;
       if(startX > monitor.x + monitor.width/2)
          startX += this.sourceActor.width;
-      if(this._arrowSide == St.Side.BOTTOM)
+      if(this._orientation == St.Side.BOTTOM)
          startY =  monitor.height - startY;
       this.actor.x = startX;
       this.actor.y = startY;
@@ -4439,7 +4620,7 @@ ConfigurableMenu.prototype = {
       let startY = this.sourceActor.height;
       if(startX > monitor.x + monitor.width/2)
          startX += this.sourceActor.width;
-      if(this._arrowSide == St.Side.BOTTOM)
+      if(this._orientation == St.Side.BOTTOM)
          startY =  monitor.height - startY;
       Tweener.addTween(this.actor, {
          x: startX, y: startY,
@@ -4667,9 +4848,16 @@ ConfigurableMenu.prototype = {
    },
 
    setFloatingState: function(floating) {
-      this.close();
-      this.actor.hide();
       if(this._floating != floating) {
+         this._setFloatingStateInternal(floating);
+         this._updateTopMenu();
+         this.emit('floating-state-changed', this._floating);
+      }
+   },
+
+   _setFloatingStateInternal: function(floating) {
+      if(this._floating != floating) {
+         this.close();
          this._floating = floating;
          let parent = this.actor.get_parent();
          if(parent)
@@ -4684,10 +4872,9 @@ ConfigurableMenu.prototype = {
             this.actor.set_style_class_name('');
             this._scroll.set_style_class_name('popup-sub-menu');
             this._boxPointer.clearPosition(); 
-            //this._insertMenuOnLauncher();
+            this._insertMenuOnLauncher();
          }
       }
-      this._updateTopMenu();
    },
 
    isInFloatingState: function(animate) {
@@ -4735,14 +4922,19 @@ ConfigurableMenu.prototype = {
       this._effectTime = effectTime;
    },
 
-   setArrowSide: function(side) {
-      if(this._arrowSide != side) {
-         this._arrowSide = side;
-         this._boxPointer.setArrowSide(this._arrowSide);
-         if(this.launcher.setArrowSide) {
-            this.launcher.setArrowSide(this._arrowSide);
-         }
+   getArrowSide: function() {
+      return this._boxPointer._arrowSide;
+   },
+
+   setOrientation: function(side) {
+      if(this._orientation != side) {
+         this._orientation = side;
+         this._boxPointer.setArrowSide(this._orientation);
       }
+   },
+
+   setArrowSide: function(side) {
+      this.setOrientation(side);
    },
 
    setArrowOrigin: function(origin) {
@@ -4803,8 +4995,12 @@ ConfigurableMenu.prototype = {
    },
 
    repositionActor: function(actor) {
-      if((this._floating)&&(this.launcher.actor)&&(this.launcher.actor != actor)) {
-         this._boxPointer.trySetPosition(actor, this._arrowAlignment);
+      if(this._floating && this.launcher.actor) {
+         if(!actor) {
+            this._boxPointer.trySetPosition(this.launcher.actor, this._arrowAlignment);
+         } else if(this.launcher.actor != actor) { 
+            this._boxPointer.trySetPosition(actor, this._arrowAlignment);
+         }
       }
       //if(this.sourceActor != actor)
       //   Main.notify("error " + actor + " " + this.sourceActor + " " + this.launcher.actor);
@@ -4891,13 +5087,12 @@ ConfigurablePopupMenuSection.prototype = {
       this._showItemIcon = true;
       this._desaturateItemIcon = false;
       this._vectorBlocker = null;
-      this.idSignalMapped = this.actor.connect('notify::mapped', Lang.bind(this, this._onMapped));
    },
 
    getContainer: function() {
       let parentBox = this.actor.get_parent();
       while(parentBox) {
-         if(parentBox._delegate)
+         if(parentBox._delegate && parentBox._delegate instanceof ConfigurablePopupMenuBase)
              return parentBox._delegate;
          parentBox = parentBox.get_parent();
       }
@@ -4910,17 +5105,9 @@ ConfigurablePopupMenuSection.prototype = {
          containerParent.removeMenuItem(this);
    },
 
-   _onMapped: function() {
-      this._topMenu = this._getTopMenu(this.actor.get_parent());
-   },
-
    // deliberately ignore any attempt to open() or close()
    open: function(animate) { },
    close: function() { },
-
-   setVertical: function(vertical) {
-      this.box.set_vertical(vertical);
-   },
 
    _getTopMenu: function(actor) {
       while(actor) {
@@ -4941,7 +5128,7 @@ ConfigurablePopupMenuSection.prototype = {
    },
 
    getTopMenu: function() {
-      return this._topMenu;
+      return this._getTopMenu(this.actor.get_parent());
    },
 
    setActive: function(active) {
@@ -5115,9 +5302,11 @@ ConfigurableSeparatorMenuItem.prototype = {
    },
 
    setVertical: function(vertical) { //FIXME: we want to support vertical separators.
-      if(this.actor.get_vertical() != vertical) {
-         this.actor.set_vertical(vertical);
-      }
+      this.actor.set_vertical(vertical);
+   },
+
+   getVertical: function() {
+      return this.actor.get_vertical();
    },
 
    setStyleClass: function(style_class) { //FIXME: we want to support vertical separators.
@@ -6419,6 +6608,14 @@ ConfigurableGridSection.prototype = {
       return this._activeMenuItem;
    },
 
+   setVertical: function(vertical) {
+      this.actor.set_vertical(vertical);
+   },
+
+   getVertical: function() {
+      return this.actor.get_vertical();
+   },
+
    _onMapped: function(actor, event) {
       //this._topMenu = this._getTopMenu(this.actor.get_parent());
       //this._topMenu.connect('resize-mode-changed',  Lang.bind(this, this._onResizeModeChanged));
@@ -7015,7 +7212,12 @@ ConfigurableMenuApplet.prototype = {
       this._menuManager = menuManager;
       this._isSubMenuOpen = false;
       this._openOnHover = false;
-
+      this._sensitive = true;
+      this._reactivity = true;
+      this._setReactivity(!global.settings.get_boolean('panel-edit-mode'));
+      global.settings.connect('changed::panel-edit-mode', Lang.bind(this, function() {
+         this._setReactivity(!global.settings.get_boolean('panel-edit-mode'));
+      }));
       this.launcher.actor.set_track_hover(this._floating);
       let parent = this.actor.get_parent();
       if(parent)
@@ -7031,31 +7233,66 @@ ConfigurableMenuApplet.prototype = {
          this.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
          this.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent));
       }
+
    },
 
-   setFloatingState: function(floating) {
-      ConfigurableMenu.prototype.setFloatingState.call(this, floating);
-      if(this.launcher)
-         this.launcher.actor.set_track_hover(this._floating);
-      if(this._floating) {
-         this.box.set_style_class_name('popup-menu-content');
-         this.box.set_vertical(true);
-      } else {
-         if(this.launcher && !this.actor.get_parent())
-            this.launcher.actor.add(this.actor);
-         this.actor.set_style_class_name('applet-container-box');
-         this.box.set_style_class_name('applet-menu-content');
-         this.box.set_vertical(false);
-         this._scroll.set_style_class_name('');
+   //Called by the api.
+   _setReactivity: function(sensitive) {
+      if(this._reactivity != sensitive) {
+         this._reactivity = sensitive;
+         let items = this.getMenuItems();
+         for(let pos in items) {
+            let menuItem = items[pos];
+            if(menuItem._activatable && menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+               menuItem.actor.reactive = sensitive;
+               menuItem.actor.can_focus = sensitive;
+            }
+         }
       }
-      let items = this.getMenuItems();
-      for(let pos in items) {
-         let menuItem = items[pos];
-         if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-            this._setMenuInPosition(menuItem);
-            this._setIconVisible(menuItem);
-            if(menuItem.menu)
-               menuItem.menu.fixToCorner(menuItem.menu.fixCorner);
+   },
+
+   setSensitive: function(sensitive) {
+      if(this._sensitive != sensitive) {
+         this._sensitive = sensitive;
+         let items = this.getMenuItems();
+         for(let pos in items) {
+            let menuItem = items[pos];
+            if(menuItem.setSensitive) {
+               menuItem.setSensitive(this._sensitive);
+            }
+         }
+      }
+   },
+
+   isSensitive: function() {
+      return this._sensitive;
+   },
+
+   _setFloatingStateInternal: function(floating) {
+      if(this._floating != floating) {
+         ConfigurableMenu.prototype._setFloatingStateInternal.call(this, floating);
+         if(this.launcher)
+            this.launcher.actor.set_track_hover(this._floating);
+         if(this._floating) {
+            this.box.set_style_class_name('popup-menu-content');
+            this.box.set_vertical(true);
+         } else {
+            if(this.launcher && !this.actor.get_parent())
+               this.launcher.actor.add(this.actor);
+            this.actor.set_style_class_name('applet-container-box');
+            this.box.set_style_class_name('applet-menu-content');
+            this.box.set_vertical(false);
+            this._scroll.set_style_class_name('');
+         }
+         let items = this.getMenuItems();
+         for(let pos in items) {
+            let menuItem = items[pos];
+            if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+               this._setMenuInPosition(menuItem);
+               this._setIconVisible(menuItem);
+               if(menuItem.menu)
+                  menuItem.menu.fixToCorner(menuItem.menu.fixCorner);
+            }
          }
       }
    },
@@ -7099,7 +7336,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    _onMapped: function() {
-      this._setChildsArrowSide();
+      //this._setChildsArrowSide();
    },
 
    _onEnterEvent: function() {
@@ -7118,7 +7355,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    openSubmenu: function(animate) {
-      if(!this._isSubMenuOpen) {
+      if(this._sensitive && this._reactivity && !this._isSubMenuOpen) {
          if(this._floating) {
             this.open(animate);
          } else {
@@ -7159,18 +7396,20 @@ ConfigurableMenuApplet.prototype = {
    },
 
    open: function(animate) {
-      if(this._floating) {
-         if(this._childMenus.length > 0)
-            ConfigurableMenu.prototype.open.call(this, false);
-      } else if(!this.isOpen) {
-         if(global.menuStackLength == undefined)
-            global.menuStackLength = 0;
-         global.menuStackLength += 1;
-         this.actor.show();
-         this.isOpen = true;
-         this.emit('open-state-changed', true);
+      if(this._sensitive && this._reactivity) {
+         if(this._floating) {
+            if(this._childMenus.length > 0)
+               ConfigurableMenu.prototype.open.call(this, false);
+         } else if(!this.isOpen) {
+            if(global.menuStackLength == undefined)
+               global.menuStackLength = 0;
+            global.menuStackLength += 1;
+            this.actor.show();
+            this.isOpen = true;
+            this.emit('open-state-changed', true);
+         }
+         this._updatePanelVisibility();
       }
-      this._updatePanelVisibility();
    },
 
    close: function(animate, forced) {
@@ -7195,13 +7434,13 @@ ConfigurableMenuApplet.prototype = {
           this.open(false);
    },
 
-   setArrowSide: function(side) {
-      ConfigurableMenu.prototype.setArrowSide.call(this, side);
-      if(!this._floating) {
+   setOrientation: function(orientation) {
+      ConfigurableMenu.prototype.setOrientation.call(this, orientation);
+      /*if(!this._floating) {
          for(let pos in this._childMenus) {
-            this._childMenus[pos].setArrowSide(side);
+            this._childMenus[pos].setOrientation(orientation);
          }
-      }
+      }*/
    },
 
    setOpenOnHover: function(openOnHover) {
@@ -7300,13 +7539,13 @@ ConfigurableMenuApplet.prototype = {
 
    _getGtkScapeDirectionType: function() {
       let scapeKey = null;
-      if(this._arrowSide == St.Side.LEFT)
+      if(this._orientation == St.Side.LEFT)
          scapeKey = Gtk.DirectionType.LEFT;
-      else if(this._arrowSide == St.Side.RIGHT)
+      else if(this._orientation == St.Side.RIGHT)
          scapeKey = Gtk.DirectionType.RIGHT;
-      else if(this._arrowSide == St.Side.TOP)
+      else if(this._orientation == St.Side.TOP)
          scapeKey = Gtk.DirectionType.UP;
-      else if(this._arrowSide == St.Side.BOTTOM)
+      else if(this._orientation == St.Side.BOTTOM)
          scapeKey = Gtk.DirectionType.DOWN;
       return scapeKey;
    },
@@ -7323,18 +7562,17 @@ ConfigurableMenuApplet.prototype = {
          scapeKey = Gtk.DirectionType.DOWN;
       return scapeKey;
    },
-
+/*
    _setChildsArrowSide: function() {
       if(this._floating) {
          ConfigurableMenu.prototype._setChildsArrowSide.call(this);
       } else {
          for(let pos in this._childMenus) {
-            let menu = this._childMenus[pos];
-            menu.setArrowSide(this._arrowSide);
+            this._childMenus[pos].setOrientation(this._orientation);
          }
       }
    },
-
+*/
    _setDesaturateItemIcon: function(menuItem) {
       if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu && menuItem.menu.desaturateItemIcon)
@@ -7357,14 +7595,14 @@ ConfigurableMenuApplet.prototype = {
    _setMenuInPosition: function(menuItem) {
       if(this._floating) {
          if(menuItem.menu)
-            menuItem.menu.setArrowSide(St.Side.LEFT);
+            menuItem.menu.setOrientation(St.Side.LEFT);
          menuItem._triangle.show();
          menuItem.label.set_style_class_name('');
          menuItem.actor.set_style_class_name('popup-menu-item');
          menuItem.actor.add_style_class_name('popup-submenu-menu-item');
       } else {
          if(menuItem.menu)
-            menuItem.menu.setArrowSide(this._arrowSide);
+            menuItem.menu.setOrientation(this._orientation);
          menuItem._triangle.hide();
          menuItem._icon.hide();
          menuItem.label.set_style_class_name('applet-label');

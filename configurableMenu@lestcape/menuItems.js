@@ -525,13 +525,14 @@ CategoryButton.prototype = {
       this.textBox = new St.BoxLayout({ vertical: true });
       this.setVertical(false);
       this.label.get_parent().remove_actor(this.label);
+      //this._triangle.get_parent().remove_actor(this._triangle);
       this.textBox.add(this.label, { x_align: St.Align.MIDDLE, x_fill: false, y_fill: false, expand: true });
 
       this.setIconSize(iconSize);
       this.setIconType(St.IconType.FULLCOLOR);
       this._setCategoryProperties(category);
-
-      this.actor.add(this.textBox);
+      this.actor.insert_child_above(this.textBox, this._icon);
+      //this.actor.add(this._triangle);
       this.setIconVisible(iconVisible);
 
       this.actor.set_style_class_name('menu-category-button');
@@ -568,23 +569,7 @@ CategoryButton.prototype = {
 
    setArrow: function(haveArrow, always, orientation) {
       this.setArrowVisible(haveArrow);
-   /*   this.haveArrow = haveArrow;
-      this.haveArrowalways = always;
-     // Main.notify("haveArrow:" + haveArrow);
-      let parentArrow = this.arrowIcon.get_parent();
-      if(parentArrow)
-         parentArrow.remove_actor(this.arrowIcon);
-
-      if(haveArrow) {
-         this.arrowOrientation = orientation;
-         if(orientation == St.Side.RIGHT) {
-            this.arrowIcon.set_icon_name('media-playback-start');
-            this.actor.add(this.arrowIcon, { x_fill: false, expand: false, x_align: St.Align.END });
-         } else if(orientation == St.Side.LEFT) {
-            this.arrowIcon.set_icon_name('media-playback-start-rtl');
-            this.actor.add(this.arrowIcon, { x_fill: false, expand: false, x_align: St.Align.END });
-         }
-      }*/
+      //this.setArrowVisibleOnActivationOnly(always);
    },
 
    setVertical: function(vertical) {
