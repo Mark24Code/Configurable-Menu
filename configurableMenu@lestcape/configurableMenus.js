@@ -366,459 +366,457 @@ function BoxPointer() {
 }
 
 BoxPointer.prototype = {
-    _init: function(arrowSide, binProperties) {
-        this._arrowSide = arrowSide;
-        this._arrowOrigin = 0;
-        this.actor = new St.Bin({ x_fill: true,
-                                  y_fill: true });
-        this._container = new Cinnamon.GenericContainer();
-        this.actor.set_child(this._container);
-        this._container.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
-        this._container.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
-        this._container.connect('allocate', Lang.bind(this, this._allocate));
-        this.bin = new St.Bin(binProperties);
-        this._container.add_actor(this.bin);
-        this._border = new St.DrawingArea();
-        this._border.connect('repaint', Lang.bind(this, this._drawBorder));
-        this._container.add_actor(this._border);
-        this.bin.raise(this._border);
-        this._xOffset = 0;
-        this._yOffset = 0;
-        this._xPosition = 0;
-        this._yPosition = 0;
-        this._sourceAlignment = 0.5;
-    },
+   _init: function(arrowSide, binProperties) {
+      this._arrowSide = arrowSide;
+      this._arrowOrigin = 0;
+      this.actor = new St.Bin({ x_fill: true,
+                                y_fill: true });
+      this._container = new Cinnamon.GenericContainer();
+      this.actor.set_child(this._container);
+      this._container.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
+      this._container.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
+      this._container.connect('allocate', Lang.bind(this, this._allocate));
+      this.bin = new St.Bin(binProperties);
+      this._container.add_actor(this.bin);
+      this._border = new St.DrawingArea();
+      this._border.connect('repaint', Lang.bind(this, this._drawBorder));
+      this._container.add_actor(this._border);
+      this.bin.raise(this._border);
+      this._xOffset = 0;
+      this._yOffset = 0;
+      this._xPosition = 0;
+      this._yPosition = 0;
+      this._sourceAlignment = 0.5;
+   },
 
-    show: function(animate, onComplete) {
-        let themeNode = this.actor.get_theme_node();
-        let rise = themeNode.get_length('-arrow-rise');
-        if(animate) {
-            this.opacity = 0;
-            this.actor.show();
-            switch (this._arrowSide) {
-                case St.Side.TOP:
-                    this.yOffset = -rise;
-                    break;
-                case St.Side.BOTTOM:
-                    this.yOffset = rise;
-                    break;
-                case St.Side.LEFT:
-                    this.xOffset = -rise;
-                    break;
-                case St.Side.RIGHT:
-                    this.xOffset = rise;
-                    break;
-            }
-            Tweener.addTween(this, { opacity: 255,
-                                     xOffset: 0,
-                                     yOffset: 0,
-                                     transition: 'linear',
-                                     onComplete: onComplete,
-                                     time: POPUP_ANIMATION_TIME });
-        } else {
-            this.opacity = 255;
-            this.actor.show();
-        }
-    },
-
-    hide: function(animate, onComplete) {
-        let xOffset = 0;
-        let yOffset = 0;
-        let themeNode = this.actor.get_theme_node();
-        let rise = themeNode.get_length('-arrow-rise');
-
-        if(animate) {
-            switch (this._arrowSide) {
-                case St.Side.TOP:
-                    yOffset = rise;
-                    break;
-                case St.Side.BOTTOM:
-                    yOffset = -rise;
-                    break;
-                case St.Side.LEFT:
-                    xOffset = rise;
-                    break;
-                case St.Side.RIGHT:
-                    xOffset = -rise;
-                    break;
-            }
-            Tweener.addTween(this, { opacity: 0,
-                                     xOffset: xOffset,
-                                     yOffset: yOffset,
-                                     transition: 'linear',
-                                     time: POPUP_ANIMATION_TIME,
-                                     onComplete: Lang.bind(this, function() {
-                                         this.actor.hide();
-                                         this.xOffset = 0;
-                                         this.yOffset = 0;
-                                         if(onComplete)
-                                             onComplete();
-                                         })
-                                     });
-        } else {
-            this.actor.hide();
-        }
-    },
-
-    /**
-     * setArrowSide:
-     * @side (St.Side): The new side of the menu
-     * 
-     * Sets the arrow side of the menu. Note that the side is the side
-     * of the source actor, not the menu, e.g. if St.Side.TOP is set, 
-     * then the menu will appear below the source actor (the source
-     * actor will be on top of the menu)
-     */
-    setArrowSide: function(side) {
-	// Need not trigger any other function. Menu position is
-        // recalculated every time it is shown
-	this._arrowSide = side;
-    },
-
-    _adjustAllocationForArrow: function(isWidth, alloc) {
-        let themeNode = this.actor.get_theme_node();
-        let borderWidth = themeNode.get_length('-arrow-border-width');
-        alloc.min_size += borderWidth * 2;
-        alloc.natural_size += borderWidth * 2;
-        if((!isWidth && (this._arrowSide == St.Side.TOP || this._arrowSide == St.Side.BOTTOM))
-            || (isWidth && (this._arrowSide == St.Side.LEFT || this._arrowSide == St.Side.RIGHT))) {
-            let rise = themeNode.get_length('-arrow-rise');
-            alloc.min_size += rise;
-            alloc.natural_size += rise;
-        }
-    },
-
-    _getPreferredWidth: function(actor, forHeight, alloc) {
-        let [minInternalSize, natInternalSize] = this.bin.get_preferred_width(forHeight);
-        alloc.min_size = minInternalSize;
-        alloc.natural_size = natInternalSize;
-        this._adjustAllocationForArrow(true, alloc);
-    },
-
-    _getPreferredHeight: function(actor, forWidth, alloc) {
-        let [minSize, naturalSize] = this.bin.get_preferred_height(forWidth);
-        alloc.min_size = minSize;
-        alloc.natural_size = naturalSize;
-        this._adjustAllocationForArrow(false, alloc);
-    },
-
-    _allocate: function(actor, box, flags) {
-        let themeNode = this.actor.get_theme_node();
-        let borderWidth = themeNode.get_length('-arrow-border-width');
-        let rise = themeNode.get_length('-arrow-rise');
-        let childBox = new Clutter.ActorBox();
-        let availWidth = box.x2 - box.x1;
-        let availHeight = box.y2 - box.y1;
-
-        childBox.x1 = 0;
-        childBox.y1 = 0;
-        childBox.x2 = availWidth;
-        childBox.y2 = availHeight;
-        this._border.allocate(childBox, flags);
-
-        childBox.x1 = borderWidth;
-        childBox.y1 = borderWidth;
-        childBox.x2 = availWidth - borderWidth;
-        childBox.y2 = availHeight - borderWidth;
-        switch (this._arrowSide) {
+   show: function(animate, onComplete) {
+      let themeNode = this.actor.get_theme_node();
+      let rise = themeNode.get_length('-arrow-rise');
+      if(animate) {
+         this.opacity = 0;
+         this.actor.show();
+         switch (this._arrowSide) {
             case St.Side.TOP:
-                childBox.y1 += rise;
-                break;
+               this.yOffset = -rise;
+               break;
             case St.Side.BOTTOM:
-                childBox.y2 -= rise;
-                break;
+               this.yOffset = rise;
+               break;
             case St.Side.LEFT:
-                childBox.x1 += rise;
-                break;
+               this.xOffset = -rise;
+               break;
             case St.Side.RIGHT:
-                childBox.x2 -= rise;
-                break;
-        }
-        this.bin.allocate(childBox, flags);
+               this.xOffset = rise;
+               break;
+         }
+         Tweener.addTween(this, {
+            opacity: 255,
+            xOffset: 0,
+            yOffset: 0,
+            transition: 'linear',
+            onComplete: onComplete,
+            time: POPUP_ANIMATION_TIME
+         });
+      } else {
+         this.opacity = 255;
+         this.actor.show();
+      }
+   },
 
-        if(this._sourceActor && this._sourceActor.mapped)
-            this._reposition(this._sourceActor, this._arrowAlignment);
-    },
+   hide: function(animate, onComplete) {
+      let xOffset = 0;
+      let yOffset = 0;
+      let themeNode = this.actor.get_theme_node();
+      let rise = themeNode.get_length('-arrow-rise');
 
-    _drawBorder: function(area) {
-        let themeNode = this.actor.get_theme_node();
+      if(animate) {
+         switch (this._arrowSide) {
+            case St.Side.TOP:
+               yOffset = rise;
+               break;
+            case St.Side.BOTTOM:
+               yOffset = -rise;
+               break;
+            case St.Side.LEFT:
+               xOffset = rise;
+               break;
+            case St.Side.RIGHT:
+               xOffset = -rise;
+               break;
+         }
+         Tweener.addTween(this, {
+            opacity: 0,
+            xOffset: xOffset,
+            yOffset: yOffset,
+            transition: 'linear',
+            time: POPUP_ANIMATION_TIME,
+            onComplete: Lang.bind(this, function() {
+               this.actor.hide();
+               this.xOffset = 0;
+               this.yOffset = 0;
+               if(onComplete)
+                  onComplete();
+            })
+         });
+      } else {
+         this.actor.hide();
+      }
+   },
 
-        let borderWidth = themeNode.get_length('-arrow-border-width');
-        let base = themeNode.get_length('-arrow-base');
-        let rise = themeNode.get_length('-arrow-rise');
-        let borderRadius = themeNode.get_length('-arrow-border-radius');
+   /**
+    * setArrowSide:
+    * @side (St.Side): The new side of the menu
+    * 
+    * Sets the arrow side of the menu. Note that the side is the side
+    * of the source actor, not the menu, e.g. if St.Side.TOP is set, 
+    * then the menu will appear below the source actor (the source
+    * actor will be on top of the menu)
+    */
+   setArrowSide: function(side) {
+      // Need not trigger any other function. Menu position is
+      // recalculated every time it is shown
+      this._arrowSide = side;
+   },
 
-        let halfBorder = borderWidth / 2;
-        let halfBase = Math.floor(base/2);
+   _adjustAllocationForArrow: function(isWidth, alloc) {
+      let themeNode = this.actor.get_theme_node();
+      let borderWidth = themeNode.get_length('-arrow-border-width');
+      alloc.min_size += borderWidth * 2;
+      alloc.natural_size += borderWidth * 2;
+      if((!isWidth && (this._arrowSide == St.Side.TOP || this._arrowSide == St.Side.BOTTOM))
+         || (isWidth && (this._arrowSide == St.Side.LEFT || this._arrowSide == St.Side.RIGHT))) {
+         let rise = themeNode.get_length('-arrow-rise');
+         alloc.min_size += rise;
+         alloc.natural_size += rise;
+      }
+   },
 
-        let [succBorderColor, borderColor] = this.themeNode.lookup_color('-arrow-border-color', false);
-        let [succBackgroundColor, backgroundColor] = this.themeNode.lookup_color('-arrow-background-color', false);
+   _getPreferredWidth: function(actor, forHeight, alloc) {
+      let [minInternalSize, natInternalSize] = this.bin.get_preferred_width(forHeight);
+      alloc.min_size = minInternalSize;
+      alloc.natural_size = natInternalSize;
+      this._adjustAllocationForArrow(true, alloc);
+   },
 
-        let [width, height] = area.get_surface_size();
-        let [boxWidth, boxHeight] = [width, height];
-        if(this._arrowSide == St.Side.TOP || this._arrowSide == St.Side.BOTTOM) {
-            boxHeight -= rise;
-        } else {
-            boxWidth -= rise;
-        }
-        let cr = area.get_context();
-        Clutter.cairo_set_source_color(cr, borderColor);
+   _getPreferredHeight: function(actor, forWidth, alloc) {
+      let [minSize, naturalSize] = this.bin.get_preferred_height(forWidth);
+      alloc.min_size = minSize;
+      alloc.natural_size = naturalSize;
+      this._adjustAllocationForArrow(false, alloc);
+   },
 
-        // Translate so that box goes from 0,0 to boxWidth,boxHeight,
-        // with the arrow poking out of that
-        if(this._arrowSide == St.Side.TOP) {
-            cr.translate(0, rise);
-        } else if(this._arrowSide == St.Side.LEFT) {
-            cr.translate(rise, 0);
-        }
+   _allocate: function(actor, box, flags) {
+      let themeNode = this.actor.get_theme_node();
+      let borderWidth = themeNode.get_length('-arrow-border-width');
+      let rise = themeNode.get_length('-arrow-rise');
+      let childBox = new Clutter.ActorBox();
+      let availWidth = box.x2 - box.x1;
+      let availHeight = box.y2 - box.y1;
 
-        let [x1, y1] = [halfBorder, halfBorder];
-        let [x2, y2] = [boxWidth - halfBorder, boxHeight - halfBorder];
+      childBox.x1 = 0;
+      childBox.y1 = 0;
+      childBox.x2 = availWidth;
+      childBox.y2 = availHeight;
+      this._border.allocate(childBox, flags);
 
-        cr.moveTo(x1 + borderRadius, y1);
-        if(this._arrowSide == St.Side.TOP) {
-            if(this._arrowOrigin < (x1 + (borderRadius + halfBase))) {
-                cr.lineTo(this._arrowOrigin, y1 - rise);
-                cr.lineTo(Math.max(x1 + borderRadius, this._arrowOrigin) + halfBase, y1);
-            } else if(this._arrowOrigin > (x2 - (borderRadius + halfBase))) {
-                cr.lineTo(Math.min(x2 - borderRadius, this._arrowOrigin) - halfBase, y1);
-                cr.lineTo(this._arrowOrigin, y1 - rise);
-            } else {
-                cr.lineTo(this._arrowOrigin - halfBase, y1);
-                cr.lineTo(this._arrowOrigin, y1 - rise);
-                cr.lineTo(this._arrowOrigin + halfBase, y1);
-            }
-        }
-
-        cr.lineTo(x2 - borderRadius, y1);
-
-        // top-right corner
-        cr.arc(x2 - borderRadius, y1 + borderRadius, borderRadius,
-               3*Math.PI/2, Math.PI*2);
-
-        if(this._arrowSide == St.Side.RIGHT) {
-            if(this._arrowOrigin < (y1 + (borderRadius + halfBase))) {
-                cr.lineTo(x2 + rise, this._arrowOrigin);
-                cr.lineTo(x2, Math.max(y1 + borderRadius, this._arrowOrigin) + halfBase);
-            } else if(this._arrowOrigin > (y2 - (borderRadius + halfBase))) {
-                cr.lineTo(x2, Math.min(y2 - borderRadius, this._arrowOrigin) - halfBase);
-                cr.lineTo(x2 + rise, this._arrowOrigin);
-            } else {
-                cr.lineTo(x2, this._arrowOrigin - halfBase);
-                cr.lineTo(x2 + rise, this._arrowOrigin);
-                cr.lineTo(x2, this._arrowOrigin + halfBase);
-            }
-        }
-
-        cr.lineTo(x2, y2 - borderRadius);
-
-        // bottom-right corner
-        cr.arc(x2 - borderRadius, y2 - borderRadius, borderRadius,
-               0, Math.PI/2);
-
-        if(this._arrowSide == St.Side.BOTTOM) {
-            if(this._arrowOrigin < (x1 + (borderRadius + halfBase))) {
-                cr.lineTo(Math.max(x1 + borderRadius, this._arrowOrigin) + halfBase, y2);
-                cr.lineTo(this._arrowOrigin, y2 + rise);
-            } else if(this._arrowOrigin > (x2 - (borderRadius + halfBase))) {
-                cr.lineTo(this._arrowOrigin, y2 + rise);
-                cr.lineTo(Math.min(x2 - borderRadius, this._arrowOrigin) - halfBase, y2);
-            } else {
-                cr.lineTo(this._arrowOrigin + halfBase, y2);
-                cr.lineTo(this._arrowOrigin, y2 + rise);
-                cr.lineTo(this._arrowOrigin - halfBase, y2);
-            }
-        }
-
-        cr.lineTo(x1 + borderRadius, y2);
-
-        // bottom-left corner
-        cr.arc(x1 + borderRadius, y2 - borderRadius, borderRadius,
-               Math.PI/2, Math.PI);
-
-        if(this._arrowSide == St.Side.LEFT) {
-            if(this._arrowOrigin < (y1 + (borderRadius + halfBase))) {
-                cr.lineTo(x1, Math.max(y1 + borderRadius, this._arrowOrigin) + halfBase);
-                cr.lineTo(x1 - rise, this._arrowOrigin);
-            } else if(this._arrowOrigin > (y2 - (borderRadius + halfBase))) {
-                cr.lineTo(x1 - rise, this._arrowOrigin);
-                cr.lineTo(x1, Math.min(y2 - borderRadius, this._arrowOrigin) - halfBase);
-            } else {
-                cr.lineTo(x1, this._arrowOrigin + halfBase);
-                cr.lineTo(x1 - rise, this._arrowOrigin);
-                cr.lineTo(x1, this._arrowOrigin - halfBase);
-            }
-        }
-
-        cr.lineTo(x1, y1 + borderRadius);
-
-        // top-left corner
-        cr.arc(x1 + borderRadius, y1 + borderRadius, borderRadius,
-               Math.PI, 3*Math.PI/2);
-
-        Clutter.cairo_set_source_color(cr, backgroundColor);
-        cr.fillPreserve();
-        Clutter.cairo_set_source_color(cr, borderColor);
-        cr.setLineWidth(borderWidth);
-        cr.stroke();
-
-        cr.$dispose();
-    },
-
-    setPosition: function(sourceActor, alignment) {
-        // We need to show it now to force an allocation,
-        // so that we can query the correct size.
-        this.actor.show();
-
-        this._sourceActor = sourceActor;
-        this._arrowAlignment = alignment;
-
-        this._reposition(sourceActor, alignment);
-    },
-
-    setSourceAlignment: function(alignment) {
-        this._sourceAlignment = alignment;
-
-        if(!this._sourceActor)
-            return;
-
-        // We need to show it now to force an allocation,
-        // so that we can query the correct size.
-        this.actor.show();
-
-        this._reposition(this._sourceActor, this._arrowAlignment);
-    },
-
-    clearPosition: function() {
-        this._sourceActor = null;
-        this._xPosition = 0;
-        this._yPosition = 0;
-        this._xOffset = 0;
-        this._yOffset = 0;
-        this._shiftActor();
-    },
-
-    _reposition: function(sourceActor, alignment) {
-        // Position correctly relative to the sourceActor
-        let sourceNode = sourceActor.get_theme_node();
-        let sourceContentBox = sourceNode.get_content_box(sourceActor.get_allocation_box());
-        let sourceAllocation = Cinnamon.util_get_transformed_allocation(sourceActor);
-        let sourceCenterX = sourceAllocation.x1 + sourceContentBox.x1 + (sourceContentBox.x2 - sourceContentBox.x1) * this._sourceAlignment;
-        let sourceCenterY = sourceAllocation.y1 + sourceContentBox.y1 + (sourceContentBox.y2 - sourceContentBox.y1) * this._sourceAlignment;
-        let [minWidth, minHeight, natWidth, natHeight] = this.actor.get_preferred_size();
-
-        // We also want to keep it onscreen, and separated from the
-        // edge by the same distance as the main part of the box is
-        // separated from its sourceActor
-        let monitor = Main.layoutManager.findMonitorForActor(sourceActor);
-        let themeNode = this.actor.get_theme_node();
-        let borderWidth = themeNode.get_length('-arrow-border-width');
-        let arrowBase = themeNode.get_length('-arrow-base');
-        let borderRadius = themeNode.get_length('-arrow-border-radius');
-        let margin = (4 * borderRadius + borderWidth + arrowBase);
-        let halfMargin = margin / 2;
-
-        let themeNode = this.actor.get_theme_node();
-        let gap = themeNode.get_length('-boxpointer-gap');
-
-        let resX, resY;
-
-        switch (this._arrowSide) {
-        case St.Side.TOP:
-            resY = sourceAllocation.y2 + gap;
+      childBox.x1 = borderWidth;
+      childBox.y1 = borderWidth;
+      childBox.x2 = availWidth - borderWidth;
+      childBox.y2 = availHeight - borderWidth;
+      switch (this._arrowSide) {
+         case St.Side.TOP:
+            childBox.y1 += rise;
             break;
-        case St.Side.BOTTOM:
-            resY = sourceAllocation.y1 - natHeight - gap;
+         case St.Side.BOTTOM:
+            childBox.y2 -= rise;
             break;
-        case St.Side.LEFT:
-            resX = sourceAllocation.x2 + gap;
+         case St.Side.LEFT:
+            childBox.x1 += rise;
             break;
-        case St.Side.RIGHT:
-            resX = sourceAllocation.x1 - natWidth - gap;
+         case St.Side.RIGHT:
+            childBox.x2 -= rise;
             break;
-        }
+      }
+      this.bin.allocate(childBox, flags);
 
-        // Now align and position the pointing axis, making sure
-        // it fits on screen
-        switch (this._arrowSide) {
-        case St.Side.TOP:
-        case St.Side.BOTTOM:
-            resX = sourceCenterX - (halfMargin + (natWidth - margin) * alignment);
+      if(this._sourceActor && this._sourceActor.mapped)
+         this._reposition(this._sourceActor, this._arrowAlignment);
+   },
 
-            resX = Math.max(resX, monitor.x + 10);
-            resX = Math.min(resX, monitor.x + monitor.width - (10 + natWidth));
-            this.setArrowOrigin(sourceCenterX - resX);
-            break;
+   _drawBorder: function(area) {
+      let themeNode = this.actor.get_theme_node();
 
-        case St.Side.LEFT:
-        case St.Side.RIGHT:
-            resY = sourceCenterY - (halfMargin + (natHeight - margin) * alignment);
+      let borderWidth = themeNode.get_length('-arrow-border-width');
+      let base = themeNode.get_length('-arrow-base');
+      let rise = themeNode.get_length('-arrow-rise');
+      let borderRadius = themeNode.get_length('-arrow-border-radius');
 
-            resY = Math.max(resY, monitor.y + 10);
-            resY = Math.min(resY, monitor.y + monitor.height - (10 + natHeight));
+      let halfBorder = borderWidth / 2;
+      let halfBase = Math.floor(base/2);
 
-            this.setArrowOrigin(sourceCenterY - resY);
-            break;
-        }
+      let [succBorderColor, borderColor] = themeNode.lookup_color('-arrow-border-color', false);
+      let [succBackgroundColor, backgroundColor] = themeNode.lookup_color('-arrow-background-color', false);
 
-        let parent = this.actor.get_parent();
-        let success, x, y;
-        while (!success) {
-            [success, x, y] = parent.transform_stage_point(resX, resY);
-            parent = parent.get_parent();
-        }
+      let [width, height] = area.get_surface_size();
+      let [boxWidth, boxHeight] = [width, height];
+      if(this._arrowSide == St.Side.TOP || this._arrowSide == St.Side.BOTTOM) {
+         boxHeight -= rise;
+      } else {
+         boxWidth -= rise;
+      }
+      let cr = area.get_context();
+      Clutter.cairo_set_source_color(cr, borderColor);
 
-        this._xPosition = Math.floor(x);
-        this._yPosition = Math.floor(y);
-        this._shiftActor();
-    },
+      // Translate so that box goes from 0,0 to boxWidth,boxHeight,
+      // with the arrow poking out of that
+      if(this._arrowSide == St.Side.TOP) {
+         cr.translate(0, rise);
+      } else if(this._arrowSide == St.Side.LEFT) {
+         cr.translate(rise, 0);
+      }
 
-    // @origin: Coordinate specifying middle of the arrow, along
-    // the Y axis for St.Side.LEFT, St.Side.RIGHT from the top and X axis from
-    // the left for St.Side.TOP and St.Side.BOTTOM.
-    setArrowOrigin: function(origin) {
-        if(this._arrowOrigin != origin) {
-            this._arrowOrigin = origin;
-            this._border.queue_repaint();
-        }
-    },
+      let [x1, y1] = [halfBorder, halfBorder];
+      let [x2, y2] = [boxWidth - halfBorder, boxHeight - halfBorder];
 
-    _shiftActor : function() {
-        // Since the position of the BoxPointer depends on the allocated size
-        // of the BoxPointer and the position of the source actor, trying
-        // to position the BoxPoiner via the x/y properties will result in
-        // allocation loops and warnings. Instead we do the positioning via
-        // the anchor point, which is independent of allocation, and leave
-        // x == y == 0.
-        this.actor.set_anchor_point(-(this._xPosition + this._xOffset),
-                                    -(this._yPosition + this._yOffset));
-    },
+      cr.moveTo(x1 + borderRadius, y1);
+      if(this._arrowSide == St.Side.TOP) {
+         if(this._arrowOrigin < (x1 + (borderRadius + halfBase))) {
+            cr.lineTo(this._arrowOrigin, y1 - rise);
+            cr.lineTo(Math.max(x1 + borderRadius, this._arrowOrigin) + halfBase, y1);
+         } else if(this._arrowOrigin > (x2 - (borderRadius + halfBase))) {
+            cr.lineTo(Math.min(x2 - borderRadius, this._arrowOrigin) - halfBase, y1);
+            cr.lineTo(this._arrowOrigin, y1 - rise);
+         } else {
+            cr.lineTo(this._arrowOrigin - halfBase, y1);
+            cr.lineTo(this._arrowOrigin, y1 - rise);
+            cr.lineTo(this._arrowOrigin + halfBase, y1);
+         }
+      }
 
-    set xOffset(offset) {
-        this._xOffset = offset;
-        this._shiftActor();
-    },
+      cr.lineTo(x2 - borderRadius, y1);
 
-    get xOffset() {
-        return this._xOffset;
-    },
+      // top-right corner
+      cr.arc(x2 - borderRadius, y1 + borderRadius, borderRadius,
+             3*Math.PI/2, Math.PI*2);
 
-    set yOffset(offset) {
-        this._yOffset = offset;
-        this._shiftActor();
-    },
+      if(this._arrowSide == St.Side.RIGHT) {
+         if(this._arrowOrigin < (y1 + (borderRadius + halfBase))) {
+            cr.lineTo(x2 + rise, this._arrowOrigin);
+            cr.lineTo(x2, Math.max(y1 + borderRadius, this._arrowOrigin) + halfBase);
+         } else if(this._arrowOrigin > (y2 - (borderRadius + halfBase))) {
+            cr.lineTo(x2, Math.min(y2 - borderRadius, this._arrowOrigin) - halfBase);
+            cr.lineTo(x2 + rise, this._arrowOrigin);
+         } else {
+            cr.lineTo(x2, this._arrowOrigin - halfBase);
+            cr.lineTo(x2 + rise, this._arrowOrigin);
+            cr.lineTo(x2, this._arrowOrigin + halfBase);
+         }
+      }
 
-    get yOffset() {
-        return this._yOffset;
-    },
+      cr.lineTo(x2, y2 - borderRadius);
 
-    set opacity(opacity) {
-        this.actor.opacity = opacity;
-    },
+      // bottom-right corner
+      cr.arc(x2 - borderRadius, y2 - borderRadius, borderRadius,
+             0, Math.PI/2);
 
-    get opacity() {
-        return this.actor.opacity;
-    }
+      if(this._arrowSide == St.Side.BOTTOM) {
+         if(this._arrowOrigin < (x1 + (borderRadius + halfBase))) {
+            cr.lineTo(Math.max(x1 + borderRadius, this._arrowOrigin) + halfBase, y2);
+            cr.lineTo(this._arrowOrigin, y2 + rise);
+         } else if(this._arrowOrigin > (x2 - (borderRadius + halfBase))) {
+            cr.lineTo(this._arrowOrigin, y2 + rise);
+            cr.lineTo(Math.min(x2 - borderRadius, this._arrowOrigin) - halfBase, y2);
+         } else {
+            cr.lineTo(this._arrowOrigin + halfBase, y2);
+            cr.lineTo(this._arrowOrigin, y2 + rise);
+            cr.lineTo(this._arrowOrigin - halfBase, y2);
+         }
+      }
+
+      cr.lineTo(x1 + borderRadius, y2);
+
+      // bottom-left corner
+      cr.arc(x1 + borderRadius, y2 - borderRadius, borderRadius,
+             Math.PI/2, Math.PI);
+
+      if(this._arrowSide == St.Side.LEFT) {
+         if(this._arrowOrigin < (y1 + (borderRadius + halfBase))) {
+            cr.lineTo(x1, Math.max(y1 + borderRadius, this._arrowOrigin) + halfBase);
+            cr.lineTo(x1 - rise, this._arrowOrigin);
+         } else if(this._arrowOrigin > (y2 - (borderRadius + halfBase))) {
+            cr.lineTo(x1 - rise, this._arrowOrigin);
+            cr.lineTo(x1, Math.min(y2 - borderRadius, this._arrowOrigin) - halfBase);
+         } else {
+            cr.lineTo(x1, this._arrowOrigin + halfBase);
+            cr.lineTo(x1 - rise, this._arrowOrigin);
+            cr.lineTo(x1, this._arrowOrigin - halfBase);
+         }
+      }
+
+      cr.lineTo(x1, y1 + borderRadius);
+
+      // top-left corner
+      cr.arc(x1 + borderRadius, y1 + borderRadius, borderRadius,
+             Math.PI, 3*Math.PI/2);
+
+      Clutter.cairo_set_source_color(cr, backgroundColor);
+      cr.fillPreserve();
+      Clutter.cairo_set_source_color(cr, borderColor);
+      cr.setLineWidth(borderWidth);
+      cr.stroke();
+
+      cr.$dispose();
+   },
+
+   setPosition: function(sourceActor, alignment) {
+      // We need to show it now to force an allocation,
+      // so that we can query the correct size.
+      this.actor.show();
+
+      this._sourceActor = sourceActor;
+      this._arrowAlignment = alignment;
+
+      this._reposition(sourceActor, alignment);
+   },
+
+   setSourceAlignment: function(alignment) {
+      this._sourceAlignment = alignment;
+
+      if(!this._sourceActor)
+         return;
+
+      // We need to show it now to force an allocation,
+      // so that we can query the correct size.
+      this.actor.show();
+
+      this._reposition(this._sourceActor, this._arrowAlignment);
+   },
+
+   clearPosition: function() {
+      this._sourceActor = null;
+      this._xPosition = 0;
+      this._yPosition = 0;
+      this._xOffset = 0;
+      this._yOffset = 0;
+      this._shiftActor();
+   },
+
+   _reposition: function(sourceActor, alignment) {
+      // Position correctly relative to the sourceActor
+      let sourceNode = sourceActor.get_theme_node();
+      let sourceContentBox = sourceNode.get_content_box(sourceActor.get_allocation_box());
+      let sourceAllocation = Cinnamon.util_get_transformed_allocation(sourceActor);
+      let sourceCenterX = sourceAllocation.x1 + sourceContentBox.x1 + (sourceContentBox.x2 - sourceContentBox.x1) * this._sourceAlignment;
+      let sourceCenterY = sourceAllocation.y1 + sourceContentBox.y1 + (sourceContentBox.y2 - sourceContentBox.y1) * this._sourceAlignment;
+      let [minWidth, minHeight, natWidth, natHeight] = this.actor.get_preferred_size();
+
+      // We also want to keep it onscreen, and separated from the
+      // edge by the same distance as the main part of the box is
+      // separated from its sourceActor
+      let monitor = Main.layoutManager.findMonitorForActor(sourceActor);
+      let themeNode = this.actor.get_theme_node();
+      let borderWidth = themeNode.get_length('-arrow-border-width');
+      let arrowBase = themeNode.get_length('-arrow-base');
+      let borderRadius = themeNode.get_length('-arrow-border-radius');
+      let gap = themeNode.get_length('-boxpointer-gap');
+      let margin = (4 * borderRadius + borderWidth + arrowBase);
+      let halfMargin = margin / 2;
+
+      let resX, resY;
+
+      switch (this._arrowSide) {
+      case St.Side.TOP:
+         resY = sourceAllocation.y2 + gap;
+         break;
+      case St.Side.BOTTOM:
+         resY = sourceAllocation.y1 - natHeight - gap;
+         break;
+      case St.Side.LEFT:
+         resX = sourceAllocation.x2 + gap;
+         break;
+      case St.Side.RIGHT:
+         resX = sourceAllocation.x1 - natWidth - gap;
+         break;
+      }
+
+      // Now align and position the pointing axis, making sure
+      // it fits on screen
+      switch (this._arrowSide) {
+      case St.Side.TOP:
+      case St.Side.BOTTOM:
+         resX = sourceCenterX - (halfMargin + (natWidth - margin) * alignment);
+         resX = Math.max(resX, monitor.x + 10);
+         resX = Math.min(resX, monitor.x + monitor.width - (10 + natWidth));
+         this.setArrowOrigin(sourceCenterX - resX);
+         break;
+
+      case St.Side.LEFT:
+      case St.Side.RIGHT:
+         resY = sourceCenterY - (halfMargin + (natHeight - margin) * alignment);
+         resY = Math.max(resY, monitor.y + 10);
+         resY = Math.min(resY, monitor.y + monitor.height - (10 + natHeight));
+         this.setArrowOrigin(sourceCenterY - resY);
+         break;
+      }
+
+      let parent = this.actor.get_parent();
+      let success, x, y;
+      while (!success) {
+         [success, x, y] = parent.transform_stage_point(resX, resY);
+         parent = parent.get_parent();
+      }
+
+      this._xPosition = Math.floor(x);
+      this._yPosition = Math.floor(y);
+      this._shiftActor();
+   },
+
+   // @origin: Coordinate specifying middle of the arrow, along
+   // the Y axis for St.Side.LEFT, St.Side.RIGHT from the top and X axis from
+   // the left for St.Side.TOP and St.Side.BOTTOM.
+   setArrowOrigin: function(origin) {
+      if(this._arrowOrigin != origin) {
+         this._arrowOrigin = origin;
+         this._border.queue_repaint();
+      }
+   },
+
+   _shiftActor : function() {
+      // Since the position of the BoxPointer depends on the allocated size
+      // of the BoxPointer and the position of the source actor, trying
+      // to position the BoxPoiner via the x/y properties will result in
+      // allocation loops and warnings. Instead we do the positioning via
+      // the anchor point, which is independent of allocation, and leave
+      // x == y == 0.
+      this.actor.set_anchor_point(-(this._xPosition + this._xOffset),
+                                  -(this._yPosition + this._yOffset));
+   },
+
+   set xOffset(offset) {
+      this._xOffset = offset;
+      this._shiftActor();
+   },
+
+   get xOffset() {
+      return this._xOffset;
+   },
+
+   set yOffset(offset) {
+      this._yOffset = offset;
+      this._shiftActor();
+   },
+
+   get yOffset() {
+      return this._yOffset;
+   },
+
+   set opacity(opacity) {
+      this.actor.opacity = opacity;
+   },
+
+   get opacity() {
+      return this.actor.opacity;
+   }
 };
 
 /**
@@ -927,7 +925,7 @@ ConfigurablePointer.prototype = {
    },
 
    _maxPanelSize: function() {
-      if(Main.panelManager) {
+      /*if(Main.panelManager) {
          if(this._sourceActor) {
             let [x, y] = this._sourceActor.get_transformed_position();
             let i = 0;
@@ -958,7 +956,7 @@ ConfigurablePointer.prototype = {
                return [Main.panel.actor.height, 0];
          }
          return [Main.panel2.actor.height, Main.panel.actor.height];
-      }
+      }*/
       return 0;
    },
 
@@ -1032,15 +1030,14 @@ ConfigurablePointer.prototype = {
        if(!alignment)
           alignment = this._arrowAlignment;
       if(!sourceActor) Main.notify("Error")
-      /*if(sourceActor._delegate && sourceActor._delegate.categoryName == "System") {
-         if(this.nameT != sourceActor._delegate.categoryName)
-            Main.notify(sourceActor._delegate.categoryName);
-         this.nameT = sourceActor._delegate.categoryName;
-      }*/
+      //if(sourceActor._delegate && sourceActor._delegate.categoryName == "System") {
+      //   if(this.nameT != sourceActor._delegate.categoryName)
+      //      Main.notify(sourceActor._delegate.categoryName);
+      //   this.nameT = sourceActor._delegate.categoryName;
+      //}
 
       // Position correctly relative to the sourceActor
-      let themeNode = sourceActor.get_theme_node();
-      let sourceContentBox = themeNode.get_content_box(sourceActor.get_allocation_box());
+      let sourceContentBox = sourceActor.get_theme_node().get_content_box(sourceActor.get_allocation_box());
       let sourceAllocation = Cinnamon.util_get_transformed_allocation(sourceActor);
       let sourceCenterX = sourceAllocation.x1 + sourceContentBox.x1 + (sourceContentBox.x2 - sourceContentBox.x1) * this._sourceAlignment;
       let sourceCenterY = sourceAllocation.y1 + sourceContentBox.y1 + (sourceContentBox.y2 - sourceContentBox.y1) * this._sourceAlignment;
@@ -1054,13 +1051,11 @@ ConfigurablePointer.prototype = {
       let borderWidth = this.themeNode.get_length('-arrow-border-width');
       let arrowBase = this.themeNode.get_length('-arrow-base');
       let borderRadius = this.themeNode.get_length('-arrow-border-radius');
+      let gap = this.themeNode.get_length('-boxpointer-gap');
       let margin = (4 * borderRadius + borderWidth + arrowBase);
       let halfMargin = margin / 2;
 
-      let gap = this.themeNode.get_length('-boxpointer-gap');
-
       let resX, resY;
-      let maxPHV = 0;
 
       switch (this._arrowSide) {
       case St.Side.TOP:
@@ -1076,6 +1071,7 @@ ConfigurablePointer.prototype = {
           resX = sourceAllocation.x1 - natWidth - gap;
           break;
       }
+      let maxPHV = 10;
 
       // Now align and position the pointing axis, making sure
       // it fits on screen
@@ -1091,11 +1087,16 @@ ConfigurablePointer.prototype = {
       case St.Side.LEFT:
       case St.Side.RIGHT:
          resY = sourceCenterY - (halfMargin + (natHeight - margin) * alignment);
+         resY = Math.max(resY, monitor.y + 10);
+         resY = Math.min(resY, monitor.y + monitor.height - (10 + natHeight));
+         this.setArrowOrigin(sourceCenterY - resY);
+         break;
+         /*resY = sourceCenterY - (halfMargin + (natHeight - margin) * alignment);
          let [maxHeightBottom, maxHeightTop] = this._maxPanelSize();
          maxPHV = Math.max(maxHeightBottom, maxHeightTop);
          resY = Math.max(resY, monitor.y + maxPHV);
          let topMenu = this._getTopMenu(sourceActor);
-         if(Main.panelManager) {
+         /*if(Main.panelManager) {
             if(((maxHeightBottom == 0)||(maxHeightTop==0))&&(topMenu)&&(topMenu.getOrientation() == St.Side.TOP)) {
                resY = Math.min(resY, monitor.y + monitor.height - (natHeight));
             } else {
@@ -1110,9 +1111,9 @@ ConfigurablePointer.prototype = {
          }
 
          this.setArrowOrigin(sourceCenterY - resY);
-         break;
+         break;*/
       }
-
+ 
       let parent = this.actor.get_parent();
       let success, x, y;
       while(!success) {
@@ -1361,7 +1362,7 @@ ConfigurablePointer.prototype = {
          cr.stroke();
       }
       cr.$dispose();
-   }
+   },
 };
 
 // http://stackoverflow.com/questions/2049582/how-to-determine-a-point-in-a-triangle
@@ -2217,6 +2218,10 @@ ConfigurablePopupMenuItem.prototype = {
 
    setLabelStyle: function(style) {
       this.label.set_style_class_name(style);
+   },
+
+   setLabelVisible: function(visible) {
+      this.label.visible = visible;
    },
 
    setText: function(text) {
@@ -3807,7 +3812,6 @@ ConfigurableMenu.prototype = {
       ConfigurablePopupMenuBase.prototype._init.call (this, (launcher ? launcher.actor: null), 'popup-menu-content');
       try {
          this._arrowAlignment = arrowAlignment;
-         this._orientation = orientation;
          this._effectType = "none";
          this._effectTime = POPUP_ANIMATION_TIME;
          this._automaticOpenControl = true;
@@ -3822,7 +3826,6 @@ ConfigurableMenu.prototype = {
 
          this.launcher = null;
          this._openedSubMenu = null;
-
          // Since a function of a submenu might be to provide a "More.." expander
          // with long content, we make it scrollable - the scrollbar will only take
          // effect if a CSS max-height is set on the top menu.
@@ -3879,6 +3882,7 @@ ConfigurableMenu.prototype = {
 
          this.setFloatingState(floating == true);
          this.setLauncher(launcher);
+         this.setOrientation(orientation);
 
          //Resize implementation
          this._controlingSize = false;
@@ -3920,7 +3924,7 @@ ConfigurableMenu.prototype = {
    },
 
    _processNewPanelSize: function(bottomPosition) {
-      if(Main.panelManager) {
+      /*if(Main.panelManager) {
          let [x, y] =this.launcher.actor.get_transformed_position();
 
          let i = 0;
@@ -3960,7 +3964,7 @@ ConfigurableMenu.prototype = {
                return Main.panel.actor.height;
             }
          }
-      }
+      }*/
       return 0;
    },
 
@@ -4411,12 +4415,6 @@ ConfigurableMenu.prototype = {
 
       if(this._floating) {
          this._boxPointer.hide(animate);
-         if(Main.panelManager) {
-            for(let i in Main.panelManager.panels) {
-               if(Main.panelManager.panels[i])
-                  Main.panelManager.panels[i]._hidePanel();
-            }
-         }
          if(global.menuStackLength > 0)
             global.menuStackLength -= 1;
          this._updatePanelVisibility();
@@ -4950,7 +4948,7 @@ ConfigurableMenu.prototype = {
    // scrollable so the minimum height is smaller than the natural height
    setMaxHeight: function() {
       let scale = this.getScale();
-      if(Main.panelManager) {
+      /*if(Main.panelManager) {
          if(this.launcher && this.launcher.actor) {
             let [x, y] = this.launcher.actor.get_transformed_position();
 
@@ -4972,12 +4970,13 @@ ConfigurableMenu.prototype = {
             }
             this.actor.style = ('max-height: ' + maxHeight / scale + 'px;');
          }
-      } else {
+      } else {*/
          let monitor = Main.layoutManager.primaryMonitor;
-         let maxHeight = Math.round(monitor.height - Main.panel.actor.height - this.actor.get_theme_node().get_length('-boxpointer-gap'));
-         if(Main.panel2!=null) maxHeight -= Main.panel2.actor.height;
-            this.actor.style = ('max-height: ' + maxHeight / scale + 'px;');
-      }
+         //let maxHeight = Math.round(monitor.height - Main.panel.actor.height - this.actor.get_theme_node().get_length('-boxpointer-gap'));
+         //if(Main.panel2!=null) maxHeight -= Main.panel2.actor.height;
+         //   this.actor.style = ('max-height: ' + maxHeight / scale + 'px;');
+         this.actor.style = ('max-height: ' + monitor.height / scale + 'px;');
+      //}
    },
 
    showBoxPointer: function(show) {
@@ -7233,7 +7232,6 @@ ConfigurableMenuApplet.prototype = {
          this.actor.connect('enter-event', Lang.bind(this, this._onEnterEvent));
          this.actor.connect('leave-event', Lang.bind(this, this._onLeaveEvent));
       }
-
    },
 
    //Called by the api.
@@ -7418,7 +7416,7 @@ ConfigurableMenuApplet.prototype = {
       } else if((forced)&&(this.isOpen)) {
          this.actor.hide();
          if(global.menuStackLength > 0)
-             global.menuStackLength -= 1;
+            global.menuStackLength -= 1;
          this._activeSubMenuItem = null;
          this._isSubMenuOpen = false;
          this.isOpen = false;
@@ -7429,18 +7427,45 @@ ConfigurableMenuApplet.prototype = {
 
    forcedToggle: function() {
       if(this.isOpen)
-          this.close(false, true);
+         this.close(false, true);
       else
-          this.open(false);
+         this.open(false);
    },
 
    setOrientation: function(orientation) {
       ConfigurableMenu.prototype.setOrientation.call(this, orientation);
-      /*if(!this._floating) {
-         for(let pos in this._childMenus) {
-            this._childMenus[pos].setOrientation(orientation);
+      if((this._orientation == St.Side.TOP) || (this._orientation == St.Side.BOTTOM)) {
+         if(!this._floating) {
+            this.setVertical(false);
          }
-      }*/
+      } else {
+         if(!this._floating) {
+            this.setVertical(true);
+         }
+      }
+      let items = this.getMenuItems();
+      for(let pos in items) {
+         let menuItem = items[pos];
+         this._setMenuItemOrientation(menuItem);
+      }
+      //for(let pos in this._childMenus) {
+      //   this._childMenus[pos].setOrientation(orientation);
+      //}
+   },
+
+   _setMenuItemOrientation: function(menuItem) {
+      if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
+         if((this._orientation == St.Side.TOP) || (this._orientation == St.Side.BOTTOM)) {
+            menuItem.setLabelVisible(true);
+            menuItem._icon.set_margin_bottom(0);
+         } else {
+            menuItem.setLabelVisible(false);
+            menuItem._icon.set_margin_bottom(6.0);
+         }
+         if(menuItem.menu && menuItem.menu.setOrientation) {
+            menuItem.menu.setOrientation(this._orientation);
+         }
+      }
    },
 
    setOpenOnHover: function(openOnHover) {
@@ -7475,6 +7500,7 @@ ConfigurableMenuApplet.prototype = {
          this._setMenuInPosition(menuItem);
          this._setIconVisible(menuItem);
          this._setDesaturateItemIcon(menuItem);
+         this._setMenuItemOrientation(menuItem);
          if(menuItem.menu)
             this.addChildMenu(menuItem.menu);
          menuItem._pressId = menuItem.actor.connect('button-press-event', Lang.bind(this, this._onButtonPressEvent));
@@ -7582,32 +7608,22 @@ ConfigurableMenuApplet.prototype = {
           menuItem.desaturateItemIcon(this._desaturateItemIcon);
    },
 
-   _setIconVisible: function(menuItem) {
-      if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
-         if(menuItem.menu && menuItem.menu.setIconVisible)
-             menuItem.menu.setIconVisible(this._showItemIcon);
-         if(menuItem.setIconVisible)
-             menuItem.setIconVisible((this._showItemIcon)&&(this._floating));
-      } else if(menuItem.setIconVisible)
-         menuItem.setIconVisible(this._showItemIcon);
-   },
-
    _setMenuInPosition: function(menuItem) {
       if(this._floating) {
          if(menuItem.menu)
             menuItem.menu.setOrientation(St.Side.LEFT);
-         menuItem._triangle.show();
          menuItem.label.set_style_class_name('');
          menuItem.actor.set_style_class_name('popup-menu-item');
          menuItem.actor.add_style_class_name('popup-submenu-menu-item');
       } else {
          if(menuItem.menu)
             menuItem.menu.setOrientation(this._orientation);
-         menuItem._triangle.hide();
-         menuItem._icon.hide();
+         //FIXME: We need to find a better way:
+         //menuItem._icon.hide();
          menuItem.label.set_style_class_name('applet-label');
          menuItem.actor.add_style_class_name('applet-box');
       }
+      menuItem.setArrowVisible(this._floating);
    },
 
    _onButtonPressEvent: function(actor, event) {
@@ -7625,7 +7641,7 @@ ConfigurableMenuApplet.prototype = {
    }
 };
 
-//ConfigurableMenus
+/*
 function ConfigurableAppletMenu(parent) {
    this._init(parent);
 }
@@ -7787,6 +7803,7 @@ ConfigurableAppletMenu.prototype = {
       return -1;
    }
 };
+*/
 
 /**
  * PopupMenuAbstractFactory

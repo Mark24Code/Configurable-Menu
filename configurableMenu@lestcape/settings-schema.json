@@ -198,6 +198,42 @@
         "description": "Open the menu when I press my mouse over it",
         "tooltip": "Enable opening the menu when the mouse press over the applet."
     },
+    "separator-submenu-top": {
+        "type": "separator"
+    },
+    "header-submenu": {
+        "type": "header",
+        "description": "Submenu:"
+    },
+    "separator-submenu-bottom": {
+        "type": "separator"
+    },
+    "submenu-align": {
+        "type": "checkbox",
+        "default": false,
+        "description": "Align the submenu with the parent",
+        "tooltip": "Choose whether or not to align the submenu with the parent."
+    },
+    "submenu-width": {
+        "type": "spinbutton",
+        "default": 200,
+        "min": 80,
+        "max": 1000,
+        "step": 1,
+        "units": "pixels",
+        "description": "Submenu width:",
+        "tooltip": "Set the submenu width."
+    },
+    "submenu-height": {
+        "type": "spinbutton",
+        "default": 300,
+        "min": 100,
+        "max": 1000,
+        "step": 1,
+        "units": "pixels",
+        "description": "Submenu height:",
+        "tooltip": "Set the submenu height."
+    },
     "separator-categories-top": {
         "type": "separator"
     },
@@ -673,42 +709,6 @@
         "units": "pixels",
         "description": "GnoMenu icons size:",
         "tooltip": "Set the GnoMenu icons size."
-    },
-    "separator-submenu-top": {
-        "type": "separator"
-    },
-    "header-submenu": {
-        "type": "header",
-        "description": "Submenu:"
-    },
-    "separator-submenu-bottom": {
-        "type": "separator"
-    },
-    "submenu-align": {
-        "type": "checkbox",
-        "default": false,
-        "description": "Align the submenu with the parent",
-        "tooltip": "Choose whether or not to align the submenu with the parent."
-    },
-    "submenu-width": {
-        "type": "spinbutton",
-        "default": 200,
-        "min": 80,
-        "max": 1000,
-        "step": 1,
-        "units": "pixels",
-        "description": "Submenu width:",
-        "tooltip": "Set the submenu width."
-    },
-    "submenu-height": {
-        "type": "spinbutton",
-        "default": 300,
-        "min": 100,
-        "max": 1000,
-        "step": 1,
-        "units": "pixels",
-        "description": "Submenu height:",
-        "tooltip": "Set the submenu height."
     },
     "separator-search-top": {
         "type": "separator"

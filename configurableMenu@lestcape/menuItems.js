@@ -383,23 +383,17 @@ PackageItem.prototype = {
    }
 };
 
-function GnomeCategoryButton() {
+function AppletCategoryButton() {
    this._init.apply(this, arguments);
 }
 
-GnomeCategoryButton.prototype = {
+AppletCategoryButton.prototype = {
    __proto__: ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype,
 
-   _init: function(parent, name, icon, symbolic, orientation, panel_height) {
-      ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype._init.call(this, "", false, true, {hover: true, focusOnHover: false});
-      this.parent = parent;
+   _init: function(name, orientation, size) {
+      ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype._init.call(this, name, false, true, {hover: true, focusOnHover: false});
       this.categoryName = name;
-      if(symbolic)
-         this.__icon_type = St.IconType.SYMBOLIC;
-      else
-         this.__icon_type = St.IconType.FULLCOLOR;
-      this.__icon_name = icon;
-      this._panelHeight = panel_height ? panel_height : 25;
+      this._size = size ? size : 25;
       this._scaleMode = global.settings.get_boolean('panel-scale-text-icons') && global.settings.get_boolean('panel-resizable');
       this.actor.set_style_class_name('applet-box');
       this.actor.add_style_class_name('menu-applet-category-box');
@@ -408,12 +402,9 @@ GnomeCategoryButton.prototype = {
       this.label.style_class = 'applet-label';
       this.label.reactive = true;
       this.label.track_hover = true;
-      this._label_height = (this._panelHeight / Applet.DEFAULT_PANEL_HEIGHT) * Applet.PANEL_FONT_DEFAULT_HEIGHT;
       this.label.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
-
       this.setIconVisible(true);
-      this.setIconSymbolic(symbolic);
-      this.set_applet_label(_(name));
+      this.setLabel(name);
       this.actor._delegate = this;
       this._openMenuOnActivation = true;
    },
@@ -437,40 +428,83 @@ GnomeCategoryButton.prototype = {
       return DND.DragMotionResult.NO_DROP;
    },
 
-   set_applet_icon_symbolic_name: function(icon_name) {
+   setIconSymbolicName: function(iconName) {
+      ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype.setIconName.call(this, iconName);
+      this.setIconType(St.IconType.SYMBOLIC);
+      this._icon.style_class = 'system-status-icon';
       if(this._scaleMode) {
-         let height = (this._panelHeight / DEFAULT_PANEL_HEIGHT) * Applet.PANEL_SYMBOLIC_ICON_DEFAULT_HEIGHT;
-         this.setIconName(icon_name);
+         let height = (this._size / DEFAULT_PANEL_HEIGHT) * Applet.PANEL_SYMBOLIC_ICON_DEFAULT_HEIGHT;
          this.setIconSize(height);
-         this.setIconType(St.IconType.SYMBOLIC);
-         this._icon.style_class = 'system-status-icon';
       } else {
-         this.setIconName(icon_name);
-         this.setIconSize(-1);
-         this.setIconType(St.IconType.SYMBOLIC);
-         this._icon.style_class = 'system-status-icon';
-      }
-      this.__icon_type = St.IconType.SYMBOLIC;
-      this.__icon_name = icon_name;
-   },
-
-   set_applet_icon_name: function(icon_name) {
-      if(this._scaleMode) {
-         this.setIconName(icon_name);
-         this.setIconSize(this._panelHeight * Applet.COLOR_ICON_HEIGHT_FACTOR);
-         this.setIconType(St.IconType.FULLCOLOR);
-         this._icon.style_class = 'applet-icon';
-      } else {
-         this.setIconName(icon_name);
          this.setIconSize(22);
-         this.setIconType(St.IconType.FULLCOLOR);
-         this._icon.style_class = 'applet-icon';
       }
-      this.__icon_type = St.IconType.FULLCOLOR;
-      this.__icon_name = icon_name;
    },
 
-   set_applet_label: function(text) {
+   setIconName: function(iconName) {
+      ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype.setIconName.call(this, iconName);
+      this.setIconType(St.IconType.FULLCOLOR);
+      this._icon.style_class = 'applet-icon';
+      if(this._scaleMode) {
+         this.setIconSize(this._size * Applet.COLOR_ICON_HEIGHT_FACTOR);
+      } else {
+         this.setIconSize(22);
+      }
+   },
+
+   setIconPath: function(iconPath) {
+      try {
+         ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype.setIconName.call(this, iconPath);
+         this._icon.visible = ((this._displayIcon) && (iconPath && iconPath != ""));
+         let file = Gio.file_new_for_path(iconPath);
+         this.setGIcon(new Gio.FileIcon({ file: file }));
+         this.setIconType(St.IconType.FULLCOLOR);
+         this._icon.style_class = 'applet-icon';
+         if(this._scaleMode) {
+            this.setIconSize(this._size * Applet.COLOR_ICON_HEIGHT_FACTOR);
+         } else {
+            this.setIconSize(22);
+         }
+      } catch (e) {
+         global.log(e);
+      }
+   },
+
+   setIconSymbolicPath: function(iconPath) {
+      try {
+         ConfigurableMenus.ConfigurablePopupSubMenuMenuItem.prototype.setIconName.call(this, iconPath);
+         this._icon.visible = ((this._displayIcon) && (iconPath && iconPath != ""));
+         let file = Gio.file_new_for_path(iconPath);
+         this.setGIcon(new Gio.FileIcon({ file: file }));
+         this.setIconType(St.IconType.SYMBOLIC);
+         this._icon.style_class = 'system-status-icon';
+         if(this._scaleMode) {
+            let height = (this._size / DEFAULT_PANEL_HEIGHT) * Applet.PANEL_SYMBOLIC_ICON_DEFAULT_HEIGHT;
+            this.setIconSize(height);
+         } else {
+            this.setIconSize(22);
+         }
+      } catch (e) {
+         global.log(e);
+      }
+   },
+
+   setIconSymbolic: function(symbolic) {
+      if(this.haveIcon()) {
+         if(symbolic) {
+            if(this._icon.icon_name.charAt(0) == '/')
+               this.setIconSymbolicPath(this._icon.icon_name);
+            else
+               this.setIconSymbolicName(this._icon.icon_name);
+         } else {
+            if(this._icon.icon_name.charAt(0) == '/')
+               this.setIconPath(this._icon.icon_name);
+            else
+               this.setIconName(this._icon.icon_name);
+         }
+      }
+   },
+
+   setLabel: function(text) {
       this.label.set_text(text);
       if(text && text != "")
          this.label.set_margin_left(6.0);
@@ -478,32 +512,26 @@ GnomeCategoryButton.prototype = {
          this.label.set_margin_left(0);
    },
 
-   on_panel_height_changed: function(panel_height) {
-      this._panelHeight = panel_height;
+   setComponentSize: function(size) {
+      this._size = size;
       this._scaleMode = global.settings.get_boolean('panel-scale-text-icons') && global.settings.get_boolean('panel-resizable');
-      switch(this.__icon_type) {
+      switch(this._icon.icon_type) {
          case St.IconType.FULLCOLOR:
-            this.set_applet_icon_name(this.__icon_name);
+            if(this._icon.icon_name.charAt(0) == '/')
+               this.setIconPath(this._icon.icon_name);
+            else
+               this.setIconName(this._icon.icon_name);
             break;
          case St.IconType.SYMBOLIC:
-            this.set_applet_icon_symbolic_name(this.__icon_name);
-            break;
-         case -1:
-            this.set_applet_icon_path(this.__icon_name);
+            if(this._icon.icon_name.charAt(0) == '/')
+               this.setIconSymbolicPath(this._icon.icon_name);
+            else
+               this.setIconSymbolicName(this._icon.icon_name);
             break;
          default:
             break;
       }
    },
-
-   setIconSymbolic: function(symbolic) {
-      if((this.__icon_name)&&(this.__icon_name != "")) {
-         if(symbolic)
-            this.set_applet_icon_symbolic_name(this.__icon_name);
-         else
-            this.set_applet_icon_name(this.__icon_name);
-      }
-   }
 };
 
 function CategoryButton() {

@@ -155,12 +155,12 @@ MyApplet.prototype = {
          this.showAppDescription = true;
          this.controlingSize = false;
          this._timeOutSettings = 0;
-         this.idAppletEnter = 0;
-         this.idAppletLeave = 0;
          this._searchItems = [];
          this.pkg = new PakagesManager.PackageInstallerWrapper(this);
 
          this.execInstallLanguage();
+         if(this.setAllowedLayout)
+            this.setAllowedLayout(Applet.AllowedLayout.BOTH);
          //_ = Gettext.domain(this.uuid).gettext;
          Gettext.bindtextdomain(this.uuid, GLib.get_home_dir() + "/.local/share/locale");
          let iconPath = GLib.get_home_dir() + "/.local/share/cinnamon/applets/" + this.uuid + "/icons";
@@ -357,18 +357,6 @@ MyApplet.prototype = {
       this.emit('destroy');
    },
 
-   _changeHover: function(actor, event, hover) {
-      if(hover) {
-         if(this._applet_icon)
-            this._applet_icon.add_style_pseudo_class('hover');
-         this._applet_label.add_style_pseudo_class('hover');
-      } else {
-         if(this._applet_icon)
-            this._applet_icon.remove_style_pseudo_class('hover');
-         this._applet_label.remove_style_pseudo_class('hover');
-      }
-   },
-
    _updateKeybinding: function() {
       if(this.lastOverlayKey) {
          Main.keybindingManager.removeHotKey(this.lastOverlayKey);
@@ -440,30 +428,29 @@ MyApplet.prototype = {
                     this.menuIcon = "";
             }
          }
-
          if(GLib.path_is_absolute(this.menuIcon) &&
             GLib.file_test(this.menuIcon, GLib.FileTest.EXISTS)) {
             if(this.menuIcon.search("-symbolic") != -1)
-               this.set_applet_icon_symbolic_path(this.menuIcon);
+               this.mainMenu.setIconSymbolicPath(this.menuIcon);
             else
-                this.set_applet_icon_path(this.menuIcon);
+                this.mainMenu.setIconPath(this.menuIcon);
          } else if(Gtk.IconTheme.get_default().has_icon(this.menuIcon)) {
             if(this.menuIcon.search("-symbolic") != -1)
-               this.set_applet_icon_symbolic_name(this.menuIcon);
+               this.mainMenu.setIconSymbolicName(this.menuIcon);
             else
-               this.set_applet_icon_name(this.menuIcon);
+               this.mainMenu.setIconName(this.menuIcon);
          } else if(Gtk.IconTheme.get_default().has_icon("menu")) {
-            this.set_applet_icon_name("menu");
+           this.mainMenu.setIconName("menu");
          } else if(this.menuIcon == "") {
-            this.set_applet_icon_name("");
+            this.mainMenu.setIconName("");
          }
       } catch(e) {
          global.logWarning("Could not load icon file \""+this.menuIcon+"\" for menu button");
       }
-      /*if(this.menuLabel != "")
-         this.set_applet_label(_(this.menuLabel));
+      if(this.menuLabel != "")
+         this.mainMenu.setLabel(_(this.menuLabel));
       else
-         this.set_applet_label("");*/
+         this.mainMenu.setLabel("");
    },
 
 /* cinnamon 2.2
@@ -994,6 +981,7 @@ MyApplet.prototype = {
       else
          this.actor.add_style_class_name('menu-applet-panel-bottom-box');
 
+      this.appletMenu.setOrientation(orientation);
       this.menu.setOrientation(orientation);
       this.popupOrientation = null;
       return true;
@@ -2253,7 +2241,6 @@ MyApplet.prototype = {
       this._select_category(null, this._allAppsCategoryButton);
       this._select_category(null, this._allAppsCategoryButton);
       this._alignSubMenu();
-      this._appletHoverFixed();
    },
 
    _updateComplete: function() {
@@ -2293,25 +2280,6 @@ MyApplet.prototype = {
             this._clearCategories();
          }));
       }));
-   },
-
-
-   _appletHoverFixed: function() { //This is for error in cinnamon standar theme only and it's fixed
-      if(!this.appletMenu) {
-         if(this.idAppletEnter == 0)
-            this.idAppletEnter = this.actor.connect('enter-event', Lang.bind(this, this._changeHover, true));
-         if(this.idAppletLeave == 0)
-               this.idAppletLeave = this.actor.connect('leave-event', Lang.bind(this, this._changeHover, false));
-      } else {
-         if(this.idAppletEnter > 0) {
-            this.actor.disconnect(this.idAppletEnter);
-            this.idAppletEnter = 0;
-         }
-         if(this.idAppletLeave > 0) {
-            this.actor.disconnect(this.idAppletLeave);
-            this.idAppletLeave = 0;
-         }
-      }
    },
 
    _validateMenuSize: function() {
@@ -2561,6 +2529,7 @@ MyApplet.prototype = {
          this.appletMenu.destory();
       }
       this.menuManager.setCloseSubMenu(true);
+      //this.menuManager.setIconVisible(false);
 
       this.appletMenu = new ConfigurableMenus.ConfigurableMenuApplet(this, this.orientation, this.menuManager);
       this.appletMenu.actor.connect('key-press-event', Lang.bind(this, this._onMenuKeyPress));
@@ -2573,29 +2542,32 @@ MyApplet.prototype = {
       this.menu.connect('open-state-changed', Lang.bind(this, this._onOpenStateChanged));
       this.menu.actor.add_style_class_name('menu-background');
 
-
-      this.mainMenu = new ConfigurableMenus.ConfigurablePopupSubMenuMenuItem(_("Menu"), false, true, {hover: true, focusOnHover: false});
+      this.mainMenu = new MenuItems.AppletCategoryButton(_("Menu"), this.orientation, this._panelHeight);
       this.mainMenu.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
       this.mainMenu.setFloatingSubMenu(true);
       this.mainMenu.setMenu(this.menu);
       this.mainMenu.openMenuOnActivation(false);
       this.appletMenu.addMenuItem(this.mainMenu);
-    
 
-      this.gFavorites = new MenuItems.GnomeCategoryButton(this, "Favorites", "", false, this.orientation, this._panelHeight);
+    
+      this.gFavorites = new MenuItems.AppletCategoryButton(_("Favorites"), this.orientation, this._panelHeight);
       this.gFavorites.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
       this.gFavorites.setFloatingSubMenu(true);
       this.gFavorites.openMenuOnActivation(true);
+      this.gFavorites.setIconName("emblem-favorite");
 
-      this.gPlaces = new MenuItems.GnomeCategoryButton(this, "Places", "", false, this.orientation, this._panelHeight);
+
+      this.gPlaces = new MenuItems.AppletCategoryButton(_("Places"), this.orientation, this._panelHeight);
       this.gPlaces.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
       this.gPlaces.setFloatingSubMenu(true);
       this.gPlaces.openMenuOnActivation(true);
+      this.gPlaces.setIconName("folder");
 
-      this.gSystem = new MenuItems.GnomeCategoryButton(this, "System", "", false, this.orientation, this._panelHeight);
+      this.gSystem = new MenuItems.AppletCategoryButton(_("System"), this.orientation, this._panelHeight);
       this.gSystem.connect('ready-opened', Lang.bind(this, this.onCategoryGnomeChange));
       this.gSystem.setFloatingSubMenu(true);
       this.gSystem.openMenuOnActivation(true);
+      this.gSystem.setIconName("emblem-system");
 
       if(this._appMenu) {
          if(this._appMenu.isOpen)
