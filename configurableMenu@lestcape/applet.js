@@ -54,7 +54,8 @@ const AppFavorites = imports.ui.appFavorites;
 const GLib = imports.gi.GLib;
 const AccountsService = imports.gi.AccountsService;
 const FileUtils = imports.misc.fileUtils;
-const AppletPath = imports.ui.appletManager.applets['configurableMenu@lestcape'];
+const AppletManager = imports.ui.appletManager;
+const AppletPath = AppletManager.applets['configurableMenu@lestcape'];
 const ConfigurableMenus = AppletPath.configurableMenus;
 const PakagesManager = AppletPath.pakagesManager;
 const MenuItems = AppletPath.menuItems;
@@ -171,9 +172,7 @@ MyApplet.prototype = {
          if(this.orientation == St.Side.TOP)
             this.actor.set_style_class_name('menu-applet-panel-top-box');
          else
-            this.actor.set_style_class_name('menu-applet-panel-bottom-box'); 
-
-         this.menuManager = new ConfigurableMenus.ConfigurableMenuManager(this);
+            this.actor.set_style_class_name('menu-applet-panel-bottom-box');
          this._updateMenuSection();
 
          this.actor.connect('key-press-event', Lang.bind(this, this._onSourceKeyPress));
@@ -1814,7 +1813,7 @@ MyApplet.prototype = {
          this._setAppIconDirection();
          this._updateAppSize();
          this._refreshFavs();
-         this._updateSize();     
+         this._updateSize();
       }
       } catch(e) {
          Main.notify("Erp" + e.message);
@@ -2485,9 +2484,9 @@ MyApplet.prototype = {
       if(event.get_button() == 3) {
          this.menu.close();   
          if(this._applet_context_menu.getMenuItems().length > 0) {
-            this._applet_context_menu.setLauncher(this);
-            this._applet_context_menu.setOrientation(this.orientation);
-            this._applet_context_menu.toggle();	
+            this._applet_context_menu.setLauncher(this.appletMenu);
+            //this._applet_context_menu.setOrientation(this.orientation);
+            this._applet_context_menu.toggle();
          }
       }
    },
@@ -2519,19 +2518,17 @@ MyApplet.prototype = {
    },
 
    _updateMenuSection: function() {
-      if(this.menu) {
-         if(this.menu.isOpen)
-            this.menu.closeClean();
-         this.menuManager.removeMenu(this.menu);
-         this.menu.destroy();
+      // Swap applet_context_menu to Configurable Menu Api.
+      if(this._applet_context_menu) {
+         this._applet_context_menu.close();
+         this._menuManager.removeMenu(this._applet_context_menu);
+         this._applet_context_menu.destroy();
       }
-      if(this.appletMenu) {
-         this.appletMenu.destory();
-      }
-      this.menuManager.setCloseSubMenu(true);
-      //this.menuManager.setIconVisible(false);
+      this._menuManager = new ConfigurableMenus.ConfigurableMenuManager(this);
+      this._menuManager.setCloseSubMenu(true);
+      //this._menuManager.setIconVisible(false);
 
-      this.appletMenu = new ConfigurableMenus.ConfigurableMenuApplet(this, this.orientation, this.menuManager);
+      this.appletMenu = new ConfigurableMenus.ConfigurableMenuApplet(this, this.orientation, this._menuManager);
       this.appletMenu.actor.connect('key-press-event', Lang.bind(this, this._onMenuKeyPress));
       this.appletMenu.open();
 
@@ -2569,90 +2566,81 @@ MyApplet.prototype = {
       this.gSystem.openMenuOnActivation(true);
       this.gSystem.setIconName("emblem-system");
 
-      if(this._appMenu) {
-         if(this._appMenu.isOpen)
-            this._appMenu.closeClean();
-         this.menuManager.removeMenu(this._appMenu);
-         this._appMenu.destroy();
-      }
       this._appMenu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, this.orientation, true);
       this.menu.addChildMenu(this._appMenu);
       this.popupOrientation = null;
 
-      if(!this.listView) {
-         if(this._applet_context_menu) {
-            this._applet_context_menu.close();
-            this._menuManager.removeMenu(this._applet_context_menu);
-            this._applet_context_menu.destroy();
-         }
+      this._applet_context_menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, true);
+      this._menuManager.addMenu(this._applet_context_menu);
+      // FIXME: We don't have a way to declarate a real popup menu of a menu box, this need to be added to the API,
+      // We have also a way to control the orientation. This will be just a function to add one popup menu or several?
+      // In this way, we let the API working with his children and we don't need to set orientation or
+      // close the popup menu manually any more.
+      this.menu.addChildMenu(this._applet_context_menu);
+      let items = this._applet_context_menu.getMenuItems();
 
-         // Swap applet_context_menu to Configurable Menu Api.
-         this._menuManager = new ConfigurableMenus.ConfigurableMenuManager(this);
-         this._applet_context_menu = new ConfigurableMenus.ConfigurableMenu(this, 0.0, St.Side.LEFT, true);
-         this._menuManager.addMenu(this._applet_context_menu);
+      this.listView = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("List View"), {focusOnHover: false});
+      this.listView.setIconName("view-list-symbolic");
+      this.listView.setIconVisible(true);
+      this.listView.setIconType(St.IconType.SYMBOLIC);
+      this.listView.connect('activate', Lang.bind(this, function() {
+         this.iconView = !this.iconView;
+         this._changeView();
+      }));
+      if(items.indexOf(this.listView) == -1) {
+         this._applet_context_menu.addMenuItem(this.listView);
+         this.listView.setSensitive(this.iconView);
+      }
 
-         let items = this._applet_context_menu.getMenuItems();
+      this.gridView = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Grid View"), {focusOnHover: false});
+      this.gridView.setIconName("view-grid-symbolic");
+      this.gridView.setIconVisible(true);
+      this.gridView.setIconType(St.IconType.SYMBOLIC);
+      this.gridView.connect('activate', Lang.bind(this, function() {
+         this.iconView = !this.iconView;
+         this._changeView();
+      }));
+      if(items.indexOf(this.gridView) == -1) {
+         this._applet_context_menu.addMenuItem(this.gridView);
+         this.gridView.setSensitive(!this.iconView);
+      }
 
-         this.listView = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("List View"), {focusOnHover: false});
-         this.listView.setIconName("view-list-symbolic");
-         this.listView.setIconVisible(true);
-         this.listView.setIconType(St.IconType.SYMBOLIC);
-         this.listView.connect('activate', Lang.bind(this, function() {
-            this.iconView = !this.iconView;
-            this._changeView();
+      this.separatorResize = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
+      if(items.indexOf(this.separatorResize) == -1) {
+         this._applet_context_menu.addMenuItem(this.separatorResize);
+      }
+
+      this.allowResize = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Allow resizing"), 'changes-prevent', 'changes-allow', false, {focusOnHover: false});
+      this.allowResize.connect('activate', Lang.bind(this, function() {
+         Mainloop.idle_add(Lang.bind(this, function() {
+            this.controlingSize = !this.controlingSize;
+            this._activeResize();
          }));
-         if(items.indexOf(this.listView) == -1) {
-            this._applet_context_menu.addMenuItem(this.listView);
-            this.listView.setSensitive(this.iconView);
-         }
+      }));
+      if(items.indexOf(this.allowResize) == -1) {
+         this._applet_context_menu.addMenuItem(this.allowResize);
+      }
 
-         this.gridView = new ConfigurableMenus.ConfigurableBasicPopupMenuItem(_("Grid View"), {focusOnHover: false});
-         this.gridView.setIconName("view-grid-symbolic");
-         this.gridView.setIconVisible(true);
-         this.gridView.setIconType(St.IconType.SYMBOLIC);
-         this.gridView.connect('activate', Lang.bind(this, function() {
-            this.iconView = !this.iconView;
-            this._changeView();
+      this.fullScreenMenu = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Full Screen"), 'view-restore', 'view-fullscreen', false, {focusOnHover: false});
+      this.fullScreenMenu.connect('activate', Lang.bind(this, function() {
+         Mainloop.idle_add(Lang.bind(this, function() {
+            this.fullScreen = !this.fullScreen;
+            this._setFullScreen();
          }));
-         if(items.indexOf(this.gridView) == -1) {
-            this._applet_context_menu.addMenuItem(this.gridView);
-            this.gridView.setSensitive(!this.iconView);
-         }
-
-         this.separatorResize = new ConfigurableMenus.ConfigurableSeparatorMenuItem();
-         if(items.indexOf(this.separatorResize) == -1) {
-            this._applet_context_menu.addMenuItem(this.separatorResize);
-         }
-
-         this.allowResize = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Allow resizing"), 'changes-prevent', 'changes-allow', false, {focusOnHover: false});
-         this.allowResize.connect('activate', Lang.bind(this, function() {
-            Mainloop.idle_add(Lang.bind(this, function() {
-               this.controlingSize = !this.controlingSize;
-               this._activeResize();
-            }));
-         }));
-         if(items.indexOf(this.allowResize) == -1) {
-            this._applet_context_menu.addMenuItem(this.allowResize);
-         }
-
-         this.fullScreenMenu = new ConfigurableMenus.ConfigurablePopupSwitchMenuItem(_("Full Screen"), 'view-restore', 'view-fullscreen', false, {focusOnHover: false});
-         this.fullScreenMenu.connect('activate', Lang.bind(this, function() {
-            Mainloop.idle_add(Lang.bind(this, function() {
-               this.fullScreen = !this.fullScreen;
-               this._setFullScreen();
-            }));
-         }));
-         if(items.indexOf(this.fullScreenMenu) == -1) {
-            this._applet_context_menu.addMenuItem(this.fullScreenMenu);
-         }
+      }));
+      if(items.indexOf(this.fullScreenMenu) == -1) {
+         this._applet_context_menu.addMenuItem(this.fullScreenMenu);
       }
    },
 
    openAbout: function() {
-      if(Applet.Applet.prototype.openAbout)
+      if(Applet.Applet.prototype.openAbout) {
+         //Fixme: A Work around, the menu manager don't be closed when something else gain the focus.
+         this.menu.close();
          Applet.Applet.prototype.openAbout.call(this);
-      else
+      } else {
          Main.notify("Missing reference to the About Dialog");
+      }
    },
 
    configureApplet: function() {
@@ -2733,7 +2721,7 @@ MyApplet.prototype = {
                if(this.appMenu)
                   this.appMenu.close();
                this._applet_context_menu.setLauncher(this.menu);
-               this._applet_context_menu.setOrientation(this.popupOrientation);
+               //this._applet_context_menu.setOrientation(this.popupOrientation);
                this._applet_context_menu.toggle();
             }
          } else if(this._applet_context_menu.isOpen) {

@@ -2669,6 +2669,10 @@ ConfigurablePopupSubMenuMenuItem.prototype = {
       }
    },
 
+   _isArrowSpaceReserved: function() {
+      return (this._showArrowOnActivation || (this._triangle.visible && this._triangle.icon_name));
+   },
+
    setReservedArrowSpace: function(reserved) {
       this._reserveArrowSpace = reserved;
       this.setArrowVisible(this._triangle.visible && this._triangle.icon_name);
@@ -3565,11 +3569,11 @@ ConfigurablePopupMenuBase.prototype = {
             }
          }));
          menuItem._sensitiveChangeId = menuItem.connect('sensitive-changed', Lang.bind(this, function(menuItem, sensitive) {
-            if(!sensitive && this._activeMenuItem == menuItem) {
+            if(!sensitive && this._activeMenuItem == menuItem && global.stage.get_key_focus() == menuItem.actor) {
                if(!this.actor.navigate_focus(menuItem.actor, Gtk.DirectionType.TAB_FORWARD, true))
                   this.actor.grab_key_focus();
             } else if(sensitive && this._activeMenuItem == null) {
-               if(global.stage.get_key_focus() == this.actor)
+               if((global.stage.get_key_focus() == this.actor) && menuItem.actor.can_focus)
                   menuItem.actor.grab_key_focus();
             }
          }));
@@ -3918,7 +3922,7 @@ ConfigurableMenu.prototype = {
 
    _onMapped: function(actor, event) {
       this._updateTopMenu();
-      //this._setChildsArrowSide();
+      this._setChildsOrientation();
       if(this.requestedWidth != -1 || this.requestedHeight != -1)
          this.setSize(this.requestedWidth, this.requestedHeight);
    },
@@ -4221,8 +4225,8 @@ ConfigurableMenu.prototype = {
       this._paintCount = 0;
       Main.popup_rendering = false;
    },
-/*
-   _setChildsArrowSide: function() {
+
+   _setChildsOrientation: function() {
       let monitor = Main.layoutManager.findMonitorForActor(this.actor);
       if(monitor) {
          let leftEdge = monitor.x;
@@ -4239,7 +4243,7 @@ ConfigurableMenu.prototype = {
          }
          for(let pos in this._childMenus) {
             let menu = this._childMenus[pos];
-            if(menu.actor) {
+            if(menu.actor && menu.launcher == this) {
                if((childArrowSide == St.Side.LEFT) && (rightMenu + menu.actor.width  > rightEdge)) {
                   childArrowSide = St.Side.RIGHT;
                } else if((childArrowSide == St.Side.RIGHT) && (leftMenu - menu.actor.width < leftEdge)) {
@@ -4252,7 +4256,7 @@ ConfigurableMenu.prototype = {
          global.logError("Fail to get the monitor for oriented the arrow child side.");
       }
    },
-*/
+
    _boxGetPreferredWidth: function(actor, forHeight, alloc) {
       let columnWidths = this.getColumnWidths();
       this.setColumnWidths(columnWidths);
@@ -4890,6 +4894,8 @@ ConfigurableMenu.prototype = {
                this._boxPointer.trySetPosition(this.sourceActor, this._arrowAlignment);
             else
                this._boxPointer.clearPosition();
+            if(launcher._setChildsOrientation)
+               launcher._setChildsOrientation();
             this._updateTopMenu();
          }
       }
@@ -7334,7 +7340,7 @@ ConfigurableMenuApplet.prototype = {
    },
 
    _onMapped: function() {
-      //this._setChildsArrowSide();
+      this._setChildsOrientation();
    },
 
    _onEnterEvent: function() {
@@ -7588,17 +7594,17 @@ ConfigurableMenuApplet.prototype = {
          scapeKey = Gtk.DirectionType.DOWN;
       return scapeKey;
    },
-/*
-   _setChildsArrowSide: function() {
+
+   _setChildsOrientation: function() {
       if(this._floating) {
-         ConfigurableMenu.prototype._setChildsArrowSide.call(this);
+         ConfigurableMenu.prototype._setChildsOrientation.call(this);
       } else {
          for(let pos in this._childMenus) {
             this._childMenus[pos].setOrientation(this._orientation);
          }
       }
    },
-*/
+
    _setDesaturateItemIcon: function(menuItem) {
       if(menuItem instanceof ConfigurablePopupSubMenuMenuItem) {
          if(menuItem.menu && menuItem.menu.desaturateItemIcon)

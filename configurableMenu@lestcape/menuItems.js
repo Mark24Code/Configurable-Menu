@@ -568,9 +568,6 @@ CategoryButton.prototype = {
       this.actor._delegate = this;
    },
 
-   setActive: function(active) {
-   },
-
    _setCategoryProperties: function(category) {
       let labelName;
       let icon = null;
@@ -596,7 +593,7 @@ CategoryButton.prototype = {
    },
 
    setArrow: function(haveArrow, always, orientation) {
-      this.setArrowVisible(haveArrow);
+      //this.setArrowVisible(haveArrow);
       //this.setArrowVisibleOnActivationOnly(always);
    },
 
