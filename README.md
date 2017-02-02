@@ -4,6 +4,9 @@ Last version release date: 26 Nov 2016
 
 Contact: lestcape@gmail.com
 
+This applet have not suport for cinnamon desktop anymore, will be migrate to Gnome Shell soon.
+--------------
+
 --------------
 ![](https://raw.github.com/wiki/lestcape/Configurable-Menu/img/Capture.png)
 --------------
