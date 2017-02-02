@@ -1,4 +1,4 @@
-Cinnamon Applet: Configurable Menu Version: v1.8-Beta
+Configurable Menu Version: v1.8-Beta
 
 Last version release date: 26 Nov 2016
 
@@ -11,13 +11,13 @@ Contact: lestcape@gmail.com
 Authors:
 --------------
 - [Lester Carballo Pérez](https://github.com/lestcape)
-- [Garibaldo](https://github.com/Garibaldo).
+- [Garibaldo](https://github.com/Garibaldo)
 
 Special thanks to:
 --------------
-- [Bernard](https://github.com/zagortenay333) (Help adding support to the Cinnamon themes).
+- [Bernard](https://github.com/zagortenay333) (Help adding support to themes).
 - Eliermi Cunha Junior(jpegrande@gmail.com) (Help finding errors, promotion and several more things).
-- [mtwebster](https://github.com/mtwebster)  (Help increasing the speed of Configurable Menu in Cinnamon 2.2).
+- [mtwebster](https://github.com/mtwebster)  (Help increasing the speed of Configurable Menu).
 
 
 Author of language translation:
@@ -54,27 +54,23 @@ This latest version brings a lot of cool new stuff, like:
 A more detail list can be found [here](https://github.com/lestcape/Configurable-Menu/wiki/Some-features).
 And much more coming...
 
-Warning:
---------------
-After install Configurable Menu 1.1 or higher and if you have installed an older version, please delete the file, /home/USER/.cinnamon/configs/configurableMenu@lestcape  and then restart cinnamon, to allow display correctly the system buttons. This only a thing that need to be done when some key was changed, not always. Sorry for the inconvenients.
-
 Help
 --------------
 Here you can find interesting information about Configurable Menu.
    - [Layouts](https://github.com/lestcape/Configurable-Menu/wiki/Menu-layouts)
    - [Components](https://github.com/lestcape/Configurable-Menu/wiki/Menu-components)
    - [Settings](https://github.com/lestcape/Configurable-Menu/wiki/Settings)
-   - [Cinnamon themes support](https://github.com/lestcape/Configurable-Menu/wiki/Theme-Support)
+   - [Themes support](https://github.com/lestcape/Configurable-Menu/wiki/Theme-Support)
    - [New languages](https://github.com/lestcape/Configurable-Menu/wiki/Add-new-languages)
    - [Install nightly build](https://github.com/lestcape/Configurable-Menu/wiki/Install-Nightly-Build)
 
-Cinnamon Installer
+Shell Installer
 --------------
-Configurable Menu is a applet of the Cinnamon desktop. This desktop can be installed on different Linux distributions and therefore managing the packages that Configurable Menu makes, needs the help of the Cinnamon Installer tool.
+Configurable Menu is a applet of the shell. Like the desktop can be installed on different Linux distributions and therefore managing the packages that Configurable Menu makes, needs the help of the Shell Installer tool.
 
-The main objective of Cinnamon Installer is that it may be implemented in most of the distributions. However this is far from happening for now. Any help will be well received.
+The main objective of the Shell Installer is that it may be implemented in most of the distributions. However this is far from happening for now. Any help will be well received.
 
-You can found more information about Cinnamon Installer on the [Cinnamon Installer website](https://github.com/lestcape/Cinnamon-Installer).
+You can found more information about Shell Installer on the [Shell Installer website](https://github.com/lestcape/Shell-Installer).
 
 Change log
 --------------
